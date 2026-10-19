@@ -48,8 +48,96 @@ else:
     PathLog.setLevel(PathLog.Level.NOTICE, PathLog.thisModule())
 
 
+class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
+    '''
+    CAM's Base Geometry page, titled "Z Range", with a note explaining how
+    the turning operations use the selection (only for its extent along Z)
+    and a line showing the resulting front and back and which faces set
+    them.
+    '''
+
+    NOTE = QtCore.QT_TRANSLATE_NOOP(
+        "PathTurn",
+        "Turning uses the selected faces only for their position along the Z axis: "
+        "the operation is limited to the Z range from the front-most to the back-most "
+        "selected face, and everything in that range is turned, including faces between "
+        "them that are not selected. This sets Start Depth and Final Depth. With nothing "
+        "selected, the operation covers the whole stock.")
+
+    def getTitle(self, obj):
+        return FreeCAD.Qt.translate("PathTurn", "Z Range")
+
+    def modifyPanel(self, panel):
+        super().modifyPanel(panel)
+        label = QtGui.QLabel(FreeCAD.Qt.translate("PathTurn", self.NOTE))
+        label.setWordWrap(True)
+        label.setObjectName("turningBaseGeometryNote")
+        # the resulting front and back, updated whenever the list changes
+        self.rangeLabel = QtGui.QLabel()
+        self.rangeLabel.setWordWrap(True)
+        self.rangeLabel.setObjectName("turningBaseGeometryRange")
+        layout = panel.layout()
+        if layout is None:
+            return
+        if hasattr(layout, "insertWidget"):
+            # box layout: put the note and the range first
+            layout.insertWidget(0, label)
+            layout.insertWidget(1, self.rangeLabel)
+        else:
+            # grid layout: add them below the existing widgets, full width
+            columns = max(1, layout.columnCount())
+            layout.addWidget(label, layout.rowCount(), 0, 1, columns)
+            layout.addWidget(self.rangeLabel, layout.rowCount(), 0, 1, columns)
+
+    def rangeText(self):
+        '''The front and back of the selection, and which faces set them.'''
+        front = back = None
+        for base_obj, subs in (self.obj.Base or []):
+            for sub in (subs or [""]):
+                try:
+                    shape = base_obj.Shape.getElement(sub) if sub else base_obj.Shape
+                except Exception:
+                    continue
+                bb = shape.BoundBox
+                name = sub or base_obj.Label
+                if front is None or bb.ZMax > front[0]:
+                    front = (bb.ZMax, name)
+                if back is None or bb.ZMin < back[0]:
+                    back = (bb.ZMin, name)
+        if front is None:
+            return FreeCAD.Qt.translate("PathTurn", "Nothing selected: the whole stock.")
+
+        def z(value):
+            return FreeCAD.Units.Quantity(value, FreeCAD.Units.Length).UserString
+
+        return FreeCAD.Qt.translate("PathTurn", "Front: Z {} ({})    Back: Z {} ({})").format(
+            z(front[0]), front[1], z(back[0]), back[1])
+
+    def updateRangeLabel(self):
+        label = getattr(self, "rangeLabel", None)
+        if label is not None:
+            label.setText(self.rangeText())
+
+    # the list is refreshed through these; update the range after each
+    def setFields(self, obj):
+        super().setFields(obj)
+        self.updateRangeLabel()
+
+    def updateBase(self):
+        super().updateBase()
+        self.updateRangeLabel()
+
+    def clearBase(self):
+        super().clearBase()
+        self.updateRangeLabel()
+
+
 class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
     '''Page controller class for turning operations '''
+
+    def taskPanelBaseGeometryPage(self, obj, features):
+        '''Use the Base Geometry page with the turning note.'''
+        return TaskPanelTurnBaseGeometryPage(obj, features)
 
     def initPage(self, obj):
         self.updating = False  # pylint: disable=attribute-defined-outside-init
