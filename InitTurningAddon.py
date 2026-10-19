@@ -22,8 +22,9 @@
 # *                                                                         *
 # ***************************************************************************
 
+import os
+
 import FreeCADGui
-from PySide import QtGui
 
 # register the ISO turning-insert toolbit shape
 from PathTurnScripts import TurnToolShapes  # noqa: F401
@@ -35,69 +36,45 @@ from PathTurnScripts import PathTurnProfileGui  # noqa: F401
 from PathTurnScripts import PathTurnRoughGui  # noqa: F401
 from PathTurnScripts import PathTurnToolHelperGui  # noqa: F401
 from PathTurnScripts import TurnAssets  # noqa: F401
-import os
-import re
 
 __dir__ = os.path.dirname(__file__)
 iconPath = os.path.join(__dir__, 'Gui/Resources/Icons')
 
+# The commands' pixmaps are named after the icon files (e.g. 'CAM-TurnFace'),
+# so adding the folder to the icon search path lets FreeCAD resolve them.
+FreeCADGui.addIconPath(iconPath)
 
-def getIcon(iconName):
-    return os.path.join(iconPath, iconName)
+# Turning commands, in menu order
+COMMANDS = ['CAM_TurnFace', 'CAM_TurnRough', 'CAM_TurnProfile', 'CAM_TurnPartoff', 'CAM_TurnToolHelper',
+            'CAM_TurnInstallTools']
 
-
-def updateMenu(workbench):
-    if workbench == 'CAMWorkbench':
-
-        print('FreeCAD Turning Addon loaded:', workbench)
-
-        mw = FreeCADGui.getMainWindow()
-        addonMenu = None
-
-        # Find the main path menu
-        CAMMenu = mw.findChild(QtGui.QMenu, "&CAM")
-
-        for menu in CAMMenu.actions():
-            if menu.text() == "Turning Addon":
-                # create a new addon menu
-                addonMenu = menu.menu()
-                break
-
-        if addonMenu is None:
-            addonMenu = QtGui.QMenu("Turning Addon")
-            addonMenu.setObjectName("Turning_Addons")
-            addonMenu.setIcon(QtGui.QPixmap(getIcon('CAM-TurningAddon.svg')))
-
-            # Find the dressup menu entry
-            dressupMenu = mw.findChild(QtGui.QMenu, "Path Dressup")
-
-            CAMMenu.insertMenu(dressupMenu.menuAction(), addonMenu)
-
-        # list of commands to add to the menu, add new commands here:
-        commands = ['TurnFace', 'TurnProfile', 'TurnPartoff', 'TurnRough', 'TurnToolHelper', 'TurnInstallTools']
-
-        # load the commands to the FreeCAD Menu
-        for command in commands:
-            print('Loading Command: ', command)
-            # create an action for this addon
-            action = createAction(addonMenu, command)
-            # append this addon to addon menu
-            addonMenu.addAction(action)
+# Existing CAM command to insert after. It only exists in the CAM workbench's
+# menu, so the manipulator is a no-op in every other workbench.
+ANCHOR = 'CAM_Pocket3D'
 
 
-def createAction(menu, actionName):
-    # space the actionName at caps
-    text = re.sub(r"(\w)([A-Z])", r"\1 \2", actionName)
-    command = "CAM_" + actionName
-    icon = "CAM-" + actionName + ".svg"
+class TurningMenuManipulator:
+    """
+    Adds the turning commands to the CAM menu.
 
-    action = QtGui.QAction(menu)
-    action.setText(text)
-    action.setIcon(QtGui.QPixmap(getIcon(icon)))
-    action.setStatusTip("CAM " + actionName + " Operation")
-    action.triggered.connect(lambda: FreeCADGui.runCommand(command, 0))
+    FreeCAD rebuilds a workbench's menus every time it is activated and
+    removes anything it didn't put there itself, which is why the old
+    Qt-level submenu disappeared after switching workbenches. A workbench
+    manipulator is applied by FreeCAD during every rebuild, so the entries
+    persist.
+    """
 
-    return action
+    def modifyMenuBar(self):
+        # Result: ... CAM_Pocket3D, Separator, <turning commands>, Separator ...
+        items = []
+        previous = ANCHOR
+        for cmd in COMMANDS:
+            # chain each insert after the previous one to keep the order
+            items.append({"insert": cmd, "menuItem": previous, "after": ""})
+            previous = cmd
+        # finally put a separator between the anchor and the first turning command
+        items.append({"insert": "Separator", "menuItem": ANCHOR, "after": ""})
+        return items
 
 
-FreeCADGui.getMainWindow().workbenchActivated.connect(updateMenu)
+FreeCADGui.addWorkbenchManipulator(TurningMenuManipulator())
