@@ -58,11 +58,12 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
 
     NOTE = QtCore.QT_TRANSLATE_NOOP(
         "PathTurn",
-        "Turning uses the selected faces only for their position along the Z axis: "
-        "the operation is limited to the Z range from the front-most to the back-most "
-        "selected face, and everything in that range is turned, including faces between "
-        "them that are not selected. This sets Start Depth and Final Depth. With nothing "
-        "selected, the operation covers the whole stock.")
+        "Turning uses the selection only for its position along the Z axis: the "
+        "operation is limited to the Z range from the front-most to the back-most "
+        "selected face, edge or object (e.g. a sketch or wire), and everything in that "
+        "range is turned, including geometry between them that is not selected. This "
+        "sets Start Depth and Final Depth. With nothing selected, the operation covers "
+        "the whole stock.")
 
     def getTitle(self, obj):
         return FreeCAD.Qt.translate("PathTurn", "Z Range")
@@ -115,7 +116,7 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         if front[0] - back[0] <= 1e-4:
             text += "\n" + FreeCAD.Qt.translate(
                 "PathTurn",
-                "The selection has no length along Z: select faces at two different Z positions.")
+                "The selection has no length along Z: select geometry at two different Z positions.")
         return text
 
     def updateRangeLabel(self):

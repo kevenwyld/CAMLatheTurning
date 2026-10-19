@@ -45,8 +45,11 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
     '''Proxy class for turning profile operations.'''
 
     def opFeatures(self, obj):
-        '''Turning features plus base faces: selected faces set the Z range.'''
-        return super().opFeatures(obj) | PathTurnBase.PathOp.FeatureBaseFaces
+        '''Turning features plus base geometry: the selected faces, edges and
+        whole objects (e.g. a sketch or wire) set the Z range.'''
+        PathOp = PathTurnBase.PathOp
+        return (super().opFeatures(obj)
+                | PathOp.FeatureBaseFaces | PathOp.FeatureBaseEdges | PathOp.FeatureBaseModels)
 
     def op_generate_gcode(self, obj, turnTool):
         '''
@@ -73,7 +76,7 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
         print('opSetDefaultValues:', obj.OpStartDepth.Value, obj.OpFinalDepth.Value)
 
     def opUpdateDepths(self, obj):
-        # selected faces set the Z range, otherwise the whole stock
+        # the selected geometry sets the Z range, otherwise the whole stock
         self.update_depths_from_base(obj)
 
 

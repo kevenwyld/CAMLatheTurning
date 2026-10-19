@@ -81,8 +81,9 @@ class ObjectOp(PathOp.ObjectOp):
     def depths_from_base(self, obj):
         '''
         Z extent of the selected base geometry as (start depth, final depth),
-        or None when nothing is selected. Selecting faces confines Rough and
-        Profile to the Z range of those faces.
+        or None when nothing is selected. Selecting faces, edges or whole
+        objects (e.g. a sketch or wire) confines Rough and Profile to the Z
+        range they span.
         '''
         base = getattr(obj, "Base", None)
         if not base:
@@ -126,8 +127,8 @@ class ObjectOp(PathOp.ObjectOp):
         if obj.StartDepth.Value - obj.FinalDepth.Value <= 1e-4:
             if self.depths_from_base(obj):
                 raise RuntimeError(translate('PathTurn',
-                    "The selected faces have no length along Z (e.g. a single shoulder face): "
-                    "select faces at two different Z positions, or set the depths"))
+                    "The selection has no length along Z (e.g. a single shoulder face or circular "
+                    "edge): select geometry at two different Z positions, or set the depths"))
             raise RuntimeError(translate('PathTurn', "Start depth is equal or less than final depth"))
 
         self.startOffset = 0

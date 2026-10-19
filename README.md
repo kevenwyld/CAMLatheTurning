@@ -41,8 +41,11 @@ Rough and Profile only cut inside the operation's limits:
   chuck: no tool move goes past it, so set it short of the jaws. If Start
   Depth is behind the front of the stock, passes are entered radially from
   outside the stock instead of along Z (this assumes the tool can plunge).
-* **Selected faces.** Selecting faces in the operation's Base Geometry sets
-  Start and Final Depth to the Z range of those faces.
+* **Z Range selection.** Selecting faces, edges or whole objects (for
+  example a sketch or Draft wire drawn to mark the range) on the operation's
+  Z Range page sets Start and Final Depth to the Z range they span.
+  Everything in that range is turned. A selection with no length along Z,
+  such as a single shoulder face or circular edge, is rejected.
 * **Min Diameter.** No cutting below this diameter. Rough skips passes below
   it and Profile stops at it, re-entering at feed where the profile comes
   back above it.
