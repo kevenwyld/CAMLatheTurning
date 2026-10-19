@@ -44,6 +44,10 @@ def translate(context, text, disambig=None):
 class ObjectTurnRough(PathTurnBase.ObjectOp):
     '''Proxy class for turning roughing operations.'''
 
+    def opFeatures(self, obj):
+        '''Turning features plus base faces: selected faces set the Z range.'''
+        return super().opFeatures(obj) | PathTurnBase.PathOp.FeatureBaseFaces
+
     def op_generate_gcode(self, obj, turnTool):
         '''
         Generate GCode for the op
@@ -69,9 +73,8 @@ class ObjectTurnRough(PathTurnBase.ObjectOp):
         print('opSetDefaultValues:', obj.OpStartDepth.Value, obj.OpFinalDepth.Value)
 
     def opUpdateDepths(self, obj):
-        obj.OpStartDepth = obj.OpStockZMax
-        obj.OpFinalDepth = obj.OpStockZMin
-        print('opUpdateDepths:', obj.OpStartDepth.Value, obj.OpFinalDepth.Value)
+        # selected faces set the Z range, otherwise the whole stock
+        self.update_depths_from_base(obj)
 
 
 def SetupProperties():

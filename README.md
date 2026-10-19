@@ -24,6 +24,25 @@ This addon when installed will appear in the Path Workbench toolbar menu and wil
 
 Note: If the LibLathe folder inside the addon is empty or missing you may need to add the submodule manually: `git submodule update --init --recursive`
 
+## Limits
+Rough and Profile only cut inside the operation's limits:
+
+* **Start Depth / Final Depth** (Z). Final Depth is a hard stop toward the
+  chuck: no tool move goes past it, so set it short of the jaws. If Start
+  Depth is behind the front of the stock, passes are entered radially from
+  outside the stock instead of along Z (this assumes the tool can plunge).
+* **Selected faces.** Selecting faces in the operation's Base Geometry sets
+  Start and Final Depth to the Z range of those faces.
+* **Min Diameter.** No cutting below this diameter. Rough skips passes below
+  it and Profile stops at it, re-entering at feed where the profile comes
+  back above it.
+* **Max Diameter.** The outer diameter roughing starts from (default: the
+  stock diameter).
+
+The limits apply to the tool tip. At Start Depth the round nose of the insert
+can reach up to one nose diameter past the limit; at Final Depth and Min
+Diameter the whole nose stays inside.
+
 ## Turning tools
 The turning operations need a turning tool bit. FreeCAD's tool library has no
 turning shape, so the addon provides an ISO turning insert shape and an

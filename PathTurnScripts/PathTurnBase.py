@@ -78,6 +78,38 @@ class ObjectOp(PathOp.ObjectOp):
         obj.FinishPasses = 2
         obj.StockToLeave = 0
 
+    def depths_from_base(self, obj):
+        '''
+        Z extent of the selected base geometry as (start depth, final depth),
+        or None when nothing is selected. Selecting faces confines Rough and
+        Profile to the Z range of those faces.
+        '''
+        base = getattr(obj, "Base", None)
+        if not base:
+            return None
+        zmax = zmin = None
+        for base_obj, subs in base:
+            for sub in (subs or [""]):
+                try:
+                    shape = base_obj.Shape.getElement(sub) if sub else base_obj.Shape
+                except Exception:
+                    continue
+                bb = shape.BoundBox
+                zmax = bb.ZMax if zmax is None else max(zmax, bb.ZMax)
+                zmin = bb.ZMin if zmin is None else min(zmin, bb.ZMin)
+        if zmax is None:
+            return None
+        return zmax, zmin
+
+    def update_depths_from_base(self, obj):
+        '''Set OpStartDepth / OpFinalDepth from the selection, or the stock.'''
+        depths = self.depths_from_base(obj)
+        if depths:
+            obj.OpStartDepth, obj.OpFinalDepth = depths
+        else:
+            obj.OpStartDepth = obj.OpStockZMax
+            obj.OpFinalDepth = obj.OpStockZMin
+
     def opExecute(self, obj):
         '''opExecute(obj) ... processes all Base features
         '''
@@ -108,8 +140,6 @@ class ObjectOp(PathOp.ObjectOp):
         self.generate_gcode(obj)
 
     def getProps(self, obj):
-        # TODO: use the start and final depths
-        # print('getProps - Start Depth: ', obj.OpStartDepth.Value, 'Final Depth: ', obj.OpFinalDepth.Value)
         parentJob = PathUtils.findParentJob(obj)
 
         props = {}
@@ -129,6 +159,12 @@ class ObjectOp(PathOp.ObjectOp):
     def get_stock_silhoutte(self, obj):
         '''
         Get Stock Silhoutte
+
+        The plane covers the whole stock. The operation's Z limits are passed
+        to liblathe separately, as offsets from the stock ends:
+            start_offset = StartDepth - stock ZMax  (negative: inside the stock)
+            end_offset   = stock ZMin - FinalDepth  (negative: short of the stock end)
+        so liblathe's window runs from StartDepth to FinalDepth.
         '''
         stockBB = self.stock.Shape.BoundBox
         stock_z_pos = stockBB.ZMax
@@ -136,7 +172,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.startOffset = obj.StartDepth.Value - stockBB.ZMax
         self.endOffset = stockBB.ZMin - obj.FinalDepth.Value
 
-        stock_plane_length = obj.StartDepth.Value - obj.FinalDepth.Value
+        stock_plane_length = stockBB.ZLength
         stock_plane_width = stockBB.XLength / 2
         stock_plane = Part.makePlane(stock_plane_length, stock_plane_width,
                                      FreeCAD.Vector(-stock_plane_width, 0, stock_z_pos), FreeCAD.Vector(0, -1, 0))
