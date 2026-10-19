@@ -29,7 +29,7 @@ import sys
 pathScripts = os.path.dirname(__file__)
 __dir__ = os.path.dirname(pathScripts)
 liblathePath = os.path.join(__dir__, 'LibLathe')
-sys.path.append(liblathePath)
+sys.path.insert(0, liblathePath)
 
 from liblathe.base.boundbox import BoundBox
 from liblathe.base.point import Point

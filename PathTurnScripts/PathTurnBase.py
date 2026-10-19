@@ -165,39 +165,42 @@ class ObjectOp(PathOp.ObjectOp):
         # Cut the part section from the cut plane
         path_area = cut_plane.cut(part_silhoutte)
 
-        part_edges = []
-        part_segments = []
-
-        # interate through the edges and check if each is inside the bound_face
+        # collect the outline edges that lie on the part
+        items = []
         for edge in path_area.Edges:
             edge_in = True
             for vertex in edge.Vertexes:
                 if not part_bound_face.isInside(vertex.Point, 0.1, True):
                     edge_in = False
+            if not edge_in:
+                continue
 
-            if edge_in:
-                part_edges.append(edge)
-                vert = edge.Vertexes
-                pt1 = Point(vert[0].X, vert[0].Y, vert[0].Z)
-                pt2 = Point(vert[-1].X, vert[-1].Y, vert[-1].Z)
-                seg = Segment(pt1, pt2)
+            p0 = edge.Vertexes[0].Point
+            p1 = edge.Vertexes[-1].Point
+            item = {"p0": (p0.x, p0.z), "p1": (p1.x, p1.z), "mid": None, "angle": 0}
+            if isinstance(edge.Curve, Part.Circle):
+                m = edge.valueAt((edge.FirstParameter + edge.LastParameter) / 2.0)
+                item["mid"] = (m.x, m.z)
+                item["angle"] = abs(edge.LastParameter - edge.FirstParameter)
+            items.append(item)
 
-                if isinstance(edge.Curve, Part.Circle):
-                    line1 = Part.makeLine(edge.Curve.Location, edge.Vertexes[0].Point)
-                    line2 = Part.makeLine(edge.Curve.Location, edge.Vertexes[-1].Point)
-                    part_edges.append(line1)
-                    part_edges.append(line2)
+        # FreeCAD returns the edges in arbitrary order and direction; liblathe
+        # needs one continuous chain from the front (X=0, max Z) to the back.
+        chain, unchained = chain_profile(items)
+        if unchained:
+            FreeCAD.Console.PrintWarning(
+                "Turning: %d outline edge(s) are not connected to the main profile and were ignored\n" % unchained)
 
-                    angle = edge.LastParameter - edge.FirstParameter
-                    direction = edge.Curve.Axis.y
-                    # print('bulge angle', direction, angle * direction)
-                    # TODO: set the correct sign for the bulge +-
-                    seg.set_bulge(angle * direction)
+        part_segments = []
+        for s, e, signed_angle in chain:
+            seg = Segment(Point(s[0], 0, s[1]), Point(e[0], 0, e[1]))
+            if signed_angle:
+                seg.set_bulge(signed_angle)
+            part_segments.append(seg)
 
-                part_segments.append(seg)
-
-        # path_profile = Part.makeCompound(part_edges)
-        # Part.show(path_profile, 'Final_pass')
+        # Debug: uncomment to show the extracted profile in the document
+        # Part.show(Part.makePolygon([FreeCAD.Vector(s[0], 0, s[1]) for s, e, a in chain] +
+        #                            [FreeCAD.Vector(chain[-1][1][0], 0, chain[-1][1][1])]), 'TurnProfile')
         return part_segments
 
     def generate_gcode(self, obj):
@@ -235,3 +238,54 @@ class ObjectOp(PathOp.ObjectOp):
         Called after the receiver has been fully created with all properties.
         Should be overwritten by subclasses.'''
         pass  # pylint: disable=unnecessary-pass
+
+
+def chain_profile(items, tol=1e-4):
+    """
+    Order and orient outline edges into one continuous chain for liblathe.
+
+    items: list of dicts with keys
+        p0, p1 : (x, z) end points, in the edge's own (arbitrary) direction
+        mid    : (x, z) point at the middle of the edge, or None for lines
+        angle  : included angle in radians for arcs (positive), 0 for lines
+    Returns a list of (start, end, signed_angle) running from the front of
+    the part (X=0, max Z) to the back, with arc angles signed in liblathe's
+    convention (positive = anticlockwise in the Z-horizontal / X-vertical view).
+    Also returns the number of edges that couldn't be chained.
+    """
+    def close(a, b):
+        return abs(a[0] - b[0]) < tol and abs(a[1] - b[1]) < tol
+
+    remaining = list(items)
+    ends = [it["p0"] for it in items] + [it["p1"] for it in items]
+    on_axis = [p for p in ends if abs(p[0]) < tol]
+    start = max(on_axis or ends, key=lambda p: p[1])
+
+    out = []
+    current = start
+    while remaining:
+        for i, it in enumerate(remaining):
+            if close(it["p0"], current):
+                s, e = it["p0"], it["p1"]
+                break
+            if close(it["p1"], current):
+                s, e = it["p1"], it["p0"]
+                break
+        else:
+            break  # no connected edge: chain ends here
+        remaining.pop(i)
+
+        signed = 0.0
+        if it["mid"] is not None and it["angle"]:
+            # u = Z (horizontal), v = X (vertical); cross < 0 => anticlockwise
+            du1, dv1 = e[1] - s[1], e[0] - s[0]
+            du2, dv2 = it["mid"][1] - s[1], it["mid"][0] - s[0]
+            cross = du1 * dv2 - dv1 * du2
+            signed = it["angle"] if cross < 0 else -it["angle"]
+        # snap near-axis X to exactly 0 (liblathe validate() checks X == 0)
+        s = (0.0 if abs(s[0]) < tol else s[0], s[1])
+        e = (0.0 if abs(e[0]) < tol else e[0], e[1])
+        out.append((s, e, signed))
+        current = e
+
+    return out, len(remaining)

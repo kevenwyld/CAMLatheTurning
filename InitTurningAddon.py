@@ -25,12 +25,16 @@
 import FreeCADGui
 from PySide import QtGui
 
+# register the ISO turning-insert toolbit shape
+from PathTurnScripts import TurnToolShapes  # noqa: F401
+
 # import all turning operations
 from PathTurnScripts import PathTurnFaceGui  # noqa: F401
 from PathTurnScripts import PathTurnPartoffGui  # noqa: F401
 from PathTurnScripts import PathTurnProfileGui  # noqa: F401
 from PathTurnScripts import PathTurnRoughGui  # noqa: F401
 from PathTurnScripts import PathTurnToolHelperGui  # noqa: F401
+from PathTurnScripts import TurnAssets  # noqa: F401
 import os
 import re
 
@@ -70,7 +74,7 @@ def updateMenu(workbench):
             CAMMenu.insertMenu(dressupMenu.menuAction(), addonMenu)
 
         # list of commands to add to the menu, add new commands here:
-        commands = ['TurnFace', 'TurnProfile', 'TurnPartoff', 'TurnRough', 'TurnToolHelper']
+        commands = ['TurnFace', 'TurnProfile', 'TurnPartoff', 'TurnRough', 'TurnToolHelper', 'TurnInstallTools']
 
         # load the commands to the FreeCAD Menu
         for command in commands:

@@ -24,6 +24,21 @@ This addon when installed will appear in the Path Workbench toolbar menu and wil
 
 Note: If the LibLathe folder inside the addon is empty or missing you may need to add the submodule manually: `git submodule update --init --recursive`
 
+## Turning tools
+The turning operations need a turning tool bit. FreeCAD's tool library has no
+turning shape, so the addon provides an ISO turning insert shape and an
+example bit. To add them to your CAM tool assets, switch to the CAM workbench
+and run **Install Turning Tools** from the Turning Addon menu. Existing files
+are never overwritten. Then add the example bit to a tool library, or create
+your own bits from the **ISO Turning Insert** shape.
+
+To install them by hand instead, copy `Assets/Shape/isoshape.fcstd` and
+`Assets/Shape/isoshape.svg` into the `Tools/Shape` folder of your CAM asset
+directory, and import `Assets/Bit/CCMT060204R.fctb` from the tool library.
+
+Set TipRadius to your insert's nose radius. Rotation must be greater than 0
+and TipAngle less than 90 degrees.
+
 ## Feedback  
 If you have feedback or need to report bugs please participate on the related [Path Forum](https://forum.freecadweb.org/viewtopic.php?f=15&t=30563&start=0). 
 
