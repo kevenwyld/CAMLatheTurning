@@ -44,6 +44,20 @@ def translate(context, text, disambig=None):
 class ObjectTurnRough(PathTurnBase.ObjectOp):
     '''Proxy class for turning roughing operations.'''
 
+    def initOperation(self, obj):
+        super().initOperation(obj)
+        self.add_cleanup_property(obj)
+
+    def opOnDocumentRestored(self, obj):
+        super().opOnDocumentRestored(obj)
+        if not hasattr(obj, "CleanupPass"):
+            self.add_cleanup_property(obj)
+
+    def add_cleanup_property(self, obj):
+        obj.addProperty("App::PropertyBool", "CleanupPass", "Turn Path",
+                        translate("TurnPath", "Finish roughing with a contour pass at the stock to leave"))
+        obj.CleanupPass = True
+
     def opFeatures(self, obj):
         '''Turning features plus base faces: selected faces set the Z range.'''
         return super().opFeatures(obj) | PathTurnBase.PathOp.FeatureBaseFaces
@@ -54,6 +68,7 @@ class ObjectTurnRough(PathTurnBase.ObjectOp):
         '''
         RoughOP = LLP.RoughOP()
         RoughOP.set_params(self.getProps(obj))
+        RoughOP.set_params({'cleanup_pass': obj.CleanupPass})
 
         stockBoundbox = PathTurnHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox)
         RoughOP.add_stock(stockBoundbox)
@@ -82,6 +97,7 @@ def SetupProperties():
     setup.append("StepOver")
     setup.append("FinishPasses")
     setup.append("AllowGrooving")
+    setup.append("CleanupPass")
     return setup
 
 

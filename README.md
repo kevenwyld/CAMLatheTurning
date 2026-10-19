@@ -24,6 +24,16 @@ This addon when installed will appear in the Path Workbench toolbar menu and wil
 
 Note: If the LibLathe folder inside the addon is empty or missing you may need to add the submodule manually: `git submodule update --init --recursive`
 
+## Roughing
+Rough finishes with a cleanup pass: a contour along the part at the stock to
+leave, so the finishing pass meets an even amount of material instead of the
+staircase the roughing passes leave on tapers and curves. Turn it off with the
+operation's CleanupPass property.
+
+Every operation starts and ends at a safe position outside the stock diameter
+and a clearance in front of the stock, and only moves straight in X or along
+Z outside the stock to get there.
+
 ## Limits
 Rough and Profile only cut inside the operation's limits:
 
