@@ -121,7 +121,13 @@ class ObjectOp(PathOp.ObjectOp):
         if self.minDia >= self.maxDia:
             raise RuntimeError(translate('PathTurn', "Minimum diameter is equal or greater than maximum diameter"))
 
-        if obj.StartDepth.Value <= obj.FinalDepth.Value:
+        # bounding boxes are padded by the modelling tolerance (~1e-7 mm), so a
+        # flat face selected on the Z Range page gives a tiny positive range
+        if obj.StartDepth.Value - obj.FinalDepth.Value <= 1e-4:
+            if self.depths_from_base(obj):
+                raise RuntimeError(translate('PathTurn',
+                    "The selected faces have no length along Z (e.g. a single shoulder face): "
+                    "select faces at two different Z positions, or set the depths"))
             raise RuntimeError(translate('PathTurn', "Start depth is equal or less than final depth"))
 
         self.startOffset = 0

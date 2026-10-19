@@ -110,8 +110,13 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         def z(value):
             return FreeCAD.Units.Quantity(value, FreeCAD.Units.Length).UserString
 
-        return FreeCAD.Qt.translate("PathTurn", "Front: Z {} ({})    Back: Z {} ({})").format(
+        text = FreeCAD.Qt.translate("PathTurn", "Front: Z {} ({})    Back: Z {} ({})").format(
             z(front[0]), front[1], z(back[0]), back[1])
+        if front[0] - back[0] <= 1e-4:
+            text += "\n" + FreeCAD.Qt.translate(
+                "PathTurn",
+                "The selection has no length along Z: select faces at two different Z positions.")
+        return text
 
     def updateRangeLabel(self):
         label = getattr(self, "rangeLabel", None)
