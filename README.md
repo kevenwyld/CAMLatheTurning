@@ -36,8 +36,16 @@ Note: If the LibLathe folder inside the addon is empty or missing you may need t
   with different values corners stay sharp instead of being rounded by the
   stock. Documents with the older single Stock to leave are converted when
   opened.
-* **Finish passes** and **Spring pass**: Profile and Turn Groove can repeat
-  the last finish pass once more, with no step over.
+* **Finish passes**, **Finish step over** (their spacing) and **Spring
+  pass** (repeat the last one once more, with no step over): Profile and
+  Turn Groove.
+* **Profile** follows the part's outline but leaves the front face to Turn
+  Face; turn on **Finish front face** to include it.
+* **Turn Groove** plunges across each stretch the blade can reach, then
+  finishes each pass from both walls toward the middle, so the walls are cut
+  moving straight down them. It never cuts sideways deeper than the insert's
+  Turning Depth: where plunges cannot rough the groove it adds side-turning
+  passes, and says so in the Report view.
 
 ## Grooving, parting and full radius inserts
 Two tool shapes cover these inserts:

@@ -200,14 +200,28 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
 
     # length fields, as CAM's own op pages do them: Gui::QuantitySpinBox bound
     # to the property (units, styling, and the fx button for expressions)
-    QUANTITY_FIELDS = (("stepOver", "StepOver"), ("stockToLeaveX", "StockToLeaveX"), ("stockToLeaveZ", "StockToLeaveZ"))
+    QUANTITY_FIELDS = (("stepOver", "StepOver"), ("stockToLeaveX", "StockToLeaveX"), ("stockToLeaveZ", "StockToLeaveZ"),
+                       ("finishStepOver", "FinishStepOver"))
 
     def _spinboxes(self, obj):
         if getattr(self, "_quantity_boxes", None) is None:
             self._quantity_boxes = [PathGuiUtil.QuantitySpinBox(getattr(self.form, widget), obj, prop)
-                                    for widget, prop in self.QUANTITY_FIELDS]
+                                    for widget, prop in self.QUANTITY_FIELDS if hasattr(obj, prop)]
             FreeCADGui.ExpressionBinding(self.form.finishPasses).bind(obj, "FinishPasses")
         return self._quantity_boxes
+
+    def _show_fields(self, obj):
+        '''Show only the fields the operation uses.'''
+        has_finish = hasattr(obj, "SpringPass")          # Profile, Turn Groove
+        is_profile = hasattr(obj, "FinishFrontFace")
+        # Profile's passes are spaced by Finish step over, not Step over
+        self.form.stepOver.setVisible(not is_profile)
+        self.form.label_4.setVisible(not is_profile)
+        for widget in (self.form.finishPasses, self.form.label_5, self.form.springPass):
+            widget.setVisible(has_finish)
+        for widget in (self.form.finishStepOver, self.form.label_8):
+            widget.setVisible(hasattr(obj, "FinishStepOver"))
+        self.form.finishFrontFace.setVisible(is_profile)
 
     def getFields(self, obj):
         '''getFields(obj) ... transfers values from UI to obj's proprties'''
@@ -221,6 +235,9 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
 
         if hasattr(obj, "SpringPass") and obj.SpringPass != self.form.springPass.isChecked():
             obj.SpringPass = self.form.springPass.isChecked()
+
+        if hasattr(obj, "FinishFrontFace") and obj.FinishFrontFace != self.form.finishFrontFace.isChecked():
+            obj.FinishFrontFace = self.form.finishFrontFace.isChecked()
 
         if obj.AllowGrooving != self.form.allowGrooving.isChecked():
             obj.AllowGrooving = self.form.allowGrooving.isChecked()
@@ -238,10 +255,11 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         self.setupToolController(obj, self.form.toolController)
         self.setupCoolant(obj, self.form.coolantController)
 
-        # the spring pass only exists on operations with finish passes
-        self.form.springPass.setVisible(hasattr(obj, "SpringPass"))
+        self._show_fields(obj)
         if hasattr(obj, "SpringPass"):
             self.form.springPass.setChecked(obj.SpringPass)
+        if hasattr(obj, "FinishFrontFace"):
+            self.form.finishFrontFace.setChecked(obj.FinishFrontFace)
 
         if obj.AllowGrooving:
             self.form.allowGrooving.setCheckState(QtCore.Qt.Checked)
@@ -259,6 +277,8 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.stockToLeaveZ.editingFinished)
         signals.append(self.form.finishPasses.valueChanged)
         signals.append(self.form.springPass.stateChanged)
+        signals.append(self.form.finishStepOver.editingFinished)
+        signals.append(self.form.finishFrontFace.stateChanged)
         signals.append(self.form.allowGrooving.stateChanged)
 
         signals.append(self.form.toolController.currentIndexChanged)

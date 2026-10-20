@@ -190,8 +190,11 @@ class ObjectOp(PathOp.ObjectOp):
         props['stock_to_leave'] = max(self.stockToLeaveX, self.stockToLeaveZ)
         props['stock_to_leave_x'] = self.stockToLeaveX
         props['stock_to_leave_z'] = self.stockToLeaveZ
+        props['finish_step_over'] = obj.FinishStepOver.Value if hasattr(obj, "FinishStepOver") else 0.0
+        props['face_front'] = bool(getattr(obj, "FinishFrontFace", False))
         props['hfeed'] = obj.ToolController.HorizFeed.Value
-        props['vfeed'] = obj.ToolController.VertFeed.Value
+        # an unset (zero) vertical feed falls back to the horizontal feed
+        props['vfeed'] = obj.ToolController.VertFeed.Value or obj.ToolController.HorizFeed.Value
         props['clearance'] = parentJob.SetupSheet.SafeHeightOffset.Value
         return props
 

@@ -47,11 +47,15 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
     def initOperation(self, obj):
         super().initOperation(obj)
         add_spring_pass_property(obj)
+        add_finish_properties(obj)
 
     def opOnDocumentRestored(self, obj):
         super().opOnDocumentRestored(obj)
         if not hasattr(obj, "SpringPass"):
             add_spring_pass_property(obj)
+        if not hasattr(obj, "FinishStepOver"):
+            # the finish passes used to be spaced by Step Over
+            add_finish_properties(obj, obj.StepOver.Value)
 
     def opFeatures(self, obj):
         '''Turning features plus base geometry: the selected faces, edges and
@@ -96,6 +100,15 @@ def add_spring_pass_property(obj):
     obj.SpringPass = False
 
 
+def add_finish_properties(obj, step_over=0.5):
+    obj.addProperty("App::PropertyLength", "FinishStepOver", "Turn Path",
+                    translate("TurnPath", "Spacing of the finish passes"))
+    obj.FinishStepOver = FreeCAD.Units.Quantity(step_over, FreeCAD.Units.Length)
+    obj.addProperty("App::PropertyBool", "FinishFrontFace", "Turn Path",
+                    translate("TurnPath", "Also finish the front face (normally left to Turn Face)"))
+    obj.FinishFrontFace = False
+
+
 def SetupProperties():
     setup = []
     setup.append("StepOver")
@@ -104,6 +117,7 @@ def SetupProperties():
     setup.append("StockToLeaveX")
     setup.append("StockToLeaveZ")
     setup.append("SpringPass")
+    setup.append("FinishStepOver")
     return setup
 
 

@@ -41,7 +41,8 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
             self.add_groove_properties(obj)
         for prop, typ, group, tip in (
                 ("SpringPass", "App::PropertyBool", "Turn Path", "Repeat the last finish pass once more, with no step over"),
-                ("OpToolWidth", "App::PropertyLength", "Op Values", "Width of the operation's insert, for expressions such as Step Over's")):
+                ("OpToolWidth", "App::PropertyLength", "Op Values", "Width of the operation's insert, for expressions such as Step Over's"),
+                ("FinishStepOver", "App::PropertyLength", "Turn Path", "Spacing of the finish passes; 0 splits the finish allowance equally")):
             if not hasattr(obj, prop):
                 obj.addProperty(typ, prop, group, translate("TurnPath", tip))
         obj.setEditorMode("OpToolWidth", 1)
@@ -51,6 +52,9 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
                         translate("TurnPath", "Material the roughing plunges leave for the finish passes (per side)"))
         obj.addProperty("App::PropertyBool", "SpringPass", "Turn Path",
                         translate("TurnPath", "Repeat the last finish pass once more, with no step over"))
+        obj.addProperty("App::PropertyLength", "FinishStepOver", "Turn Path",
+                        translate("TurnPath", "Spacing of the finish passes; 0 splits the finish allowance equally"))
+        obj.FinishStepOver = FreeCAD.Units.Quantity(0.1, FreeCAD.Units.Length)
         obj.addProperty("App::PropertyLength", "OpToolWidth", "Op Values",
                         translate("TurnPath", "Width of the operation's insert, for expressions such as Step Over's"))
         obj.setEditorMode("OpToolWidth", 1)  # read-only
@@ -118,7 +122,7 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
 
 
 def SetupProperties():
-    return ["FinishPasses", "FinishAllowance", "StockToLeaveX", "StockToLeaveZ", "SpringPass"]
+    return ["FinishPasses", "FinishAllowance", "FinishStepOver", "StockToLeaveX", "StockToLeaveZ", "SpringPass"]
 
 
 def Create(name, obj=None, parentJob=None):
