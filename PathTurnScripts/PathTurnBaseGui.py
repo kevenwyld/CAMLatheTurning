@@ -26,6 +26,8 @@ import FreeCAD
 import FreeCADGui
 import Path.Log as PathLog
 import Path.Op.Gui.Base as PathOpGui
+import Path.Op.Gui.Selection as PathSelection
+import Path.Preferences
 #import PathGui
 
 import Path.Base.Gui.Util as PathGuiUtil
@@ -46,6 +48,48 @@ if LOGLEVEL:
     PathLog.trackModule(PathLog.thisModule())
 else:
     PathLog.setLevel(PathLog.Level.NOTICE, PathLog.thisModule())
+
+
+# --- selection gate -------------------------------------------------------
+# CAM picks the selection gate for an operation from a fixed table of names
+# (Path.Op.Gui.Selection.select). It lists the original turning operations,
+# but sends them to TURNGate, which only accepts what CAM's drilling test
+# considers a hole, and raises "expected a Face or Edge. Got a Vertex" for
+# every vertex under the pointer; TurnGroove is not listed at all (KeyError).
+# The turning operations use the selection for its Z extent, and accept
+# faces, edges and whole objects, so give them a gate that allows exactly
+# that.
+
+TURNING_OPS = ("TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove")
+
+
+class TurningGate:
+    """Allow faces, edges and whole objects with a shape; not vertices."""
+
+    def allow(self, doc, obj, sub):
+        if not hasattr(obj, "Shape"):
+            return False
+        if not sub:
+            return True
+        return sub.startswith("Face") or sub.startswith("Edge")
+
+
+def turning_select():
+    FreeCADGui.Selection.addSelectionGate(TurningGate())
+    if not Path.Preferences.suppressSelectionModeWarning():
+        FreeCAD.Console.PrintWarning("Turning Select Mode\n")
+
+
+if not getattr(PathSelection.select, "_turning", False):
+    _cam_select = PathSelection.select
+
+    def _select(op):
+        if op in TURNING_OPS:
+            return turning_select
+        return _cam_select(op)
+
+    _select._turning = True
+    PathSelection.select = _select
 
 
 class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
