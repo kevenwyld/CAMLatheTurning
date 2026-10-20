@@ -46,6 +46,17 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
             if not hasattr(obj, prop):
                 obj.addProperty(typ, prop, group, translate("TurnPath", tip))
         obj.setEditorMode("OpToolWidth", 1)
+        if not hasattr(obj, "FinishDirection"):
+            self.add_direction_property(obj)
+
+    FINISH_DIRECTIONS = ("In, across and out", "From each wall to the middle")
+
+    def add_direction_property(self, obj):
+        obj.addProperty("App::PropertyEnumeration", "FinishDirection", "Turn Path",
+                        translate("TurnPath", "In, across and out: down one wall, along the bottom and up the other "
+                                              "(best finish). From each wall to the middle: down each wall and along "
+                                              "the bottom toward the middle"))
+        obj.FinishDirection = list(self.FINISH_DIRECTIONS)
 
     def add_groove_properties(self, obj):
         obj.addProperty("App::PropertyLength", "FinishAllowance", "Turn Path",
@@ -55,6 +66,7 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
         obj.addProperty("App::PropertyLength", "FinishStepOver", "Turn Path",
                         translate("TurnPath", "Spacing of the finish passes; 0 splits the finish allowance equally"))
         obj.FinishStepOver = FreeCAD.Units.Quantity(0.1, FreeCAD.Units.Length)
+        self.add_direction_property(obj)
         obj.addProperty("App::PropertyLength", "OpToolWidth", "Op Values",
                         translate("TurnPath", "Width of the operation's insert, for expressions such as Step Over's"))
         obj.setEditorMode("OpToolWidth", 1)  # read-only
@@ -88,6 +100,7 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
         op.set_params({
             'step_over': step,
             'spring_pass': obj.SpringPass,
+            'finish_two_sided': obj.FinishDirection == self.FINISH_DIRECTIONS[1],
             'groove_width': width,
             'corner_radius': length("CornerRadius", width / 2),
             'cutting_depth': length("GroovingDepth", length("CuttingDepth")),

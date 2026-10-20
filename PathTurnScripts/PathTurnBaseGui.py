@@ -222,6 +222,8 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         for widget in (self.form.finishStepOver, self.form.label_8):
             widget.setVisible(hasattr(obj, "FinishStepOver"))
         self.form.finishFrontFace.setVisible(is_profile)
+        for widget in (self.form.finishDirection, self.form.label_9b):
+            widget.setVisible(hasattr(obj, "FinishDirection"))
 
     def getFields(self, obj):
         '''getFields(obj) ... transfers values from UI to obj's proprties'''
@@ -238,6 +240,9 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
 
         if hasattr(obj, "FinishFrontFace") and obj.FinishFrontFace != self.form.finishFrontFace.isChecked():
             obj.FinishFrontFace = self.form.finishFrontFace.isChecked()
+
+        if hasattr(obj, "FinishDirection") and obj.FinishDirection != self.form.finishDirection.currentText():
+            obj.FinishDirection = self.form.finishDirection.currentText()
 
         if obj.AllowGrooving != self.form.allowGrooving.isChecked():
             obj.AllowGrooving = self.form.allowGrooving.isChecked()
@@ -260,6 +265,12 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             self.form.springPass.setChecked(obj.SpringPass)
         if hasattr(obj, "FinishFrontFace"):
             self.form.finishFrontFace.setChecked(obj.FinishFrontFace)
+        if hasattr(obj, "FinishDirection"):
+            self.form.finishDirection.blockSignals(True)
+            self.form.finishDirection.clear()
+            self.form.finishDirection.addItems(obj.getEnumerationsOfProperty("FinishDirection"))
+            self.form.finishDirection.setCurrentText(obj.FinishDirection)
+            self.form.finishDirection.blockSignals(False)
 
         if obj.AllowGrooving:
             self.form.allowGrooving.setCheckState(QtCore.Qt.Checked)
@@ -279,6 +290,7 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.springPass.stateChanged)
         signals.append(self.form.finishStepOver.editingFinished)
         signals.append(self.form.finishFrontFace.stateChanged)
+        signals.append(self.form.finishDirection.currentIndexChanged)
         signals.append(self.form.allowGrooving.stateChanged)
 
         signals.append(self.form.toolController.currentIndexChanged)

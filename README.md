@@ -42,10 +42,12 @@ Note: If the LibLathe folder inside the addon is empty or missing you may need t
 * **Profile** follows the part's outline but leaves the front face to Turn
   Face; turn on **Finish front face** to include it.
 * **Turn Groove** plunges across each stretch the blade can reach, then
-  finishes each pass from both walls toward the middle, so the walls are cut
-  moving straight down them. It never cuts sideways deeper than the insert's
-  Turning Depth: where plunges cannot rough the groove it adds side-turning
-  passes, and says so in the Report view.
+  finishes. **Finish direction**: *In, across and out* (default: down one
+  wall, along the bottom and up the other, for the best finish) or *From
+  each wall to the middle*. It never takes a cut more than the insert's
+  Turning Depth deep over more than the Turning Depth of length: where the
+  plunges leave more (e.g. a flat blade over a fillet, or a groove no plunge
+  fits), it adds short side-turning passes, and says so in the Report view.
 
 ## Grooving, parting and full radius inserts
 Two tool shapes cover these inserts:
