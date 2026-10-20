@@ -81,12 +81,31 @@ class ObjectOp(PathOp.ObjectOp):
 
         obj.addProperty("App::PropertyLength", "StepOver", "Turn Path", translate("TurnPath", "Operation Stepover"))
         obj.addProperty("App::PropertyInteger", "FinishPasses", "Turn Path", translate("TurnPath", "Number of Finish Passes"))
-        obj.addProperty("App::PropertyFloat", "StockToLeave", "Turn Path", translate("TurnPath", "Distance for stock to leave uncut"))
-        obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path", translate("TurnPath", "Minimum Diameter for Operation"))
+        self.add_stock_properties(obj)
+        obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
+                        translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
+                                              "cutting angle allows"))
 
         obj.StepOver = FreeCAD.Units.Quantity(1.0, FreeCAD.Units.Length)
         obj.FinishPasses = 2
-        obj.StockToLeave = 0
+
+    def add_stock_properties(self, obj, value=0.0):
+        '''Stock to leave, per side: X (radially, on diameters) and Z (axially, on faces).'''
+        obj.addProperty("App::PropertyLength", "StockToLeaveX", "Turn Path",
+                        translate("TurnPath", "Material to leave radially, per side (on diameters)"))
+        obj.addProperty("App::PropertyLength", "StockToLeaveZ", "Turn Path",
+                        translate("TurnPath", "Material to leave axially (on faces and shoulders)"))
+        obj.StockToLeaveX = FreeCAD.Units.Quantity(value, FreeCAD.Units.Length)
+        obj.StockToLeaveZ = FreeCAD.Units.Quantity(value, FreeCAD.Units.Length)
+
+    def opOnDocumentRestored(self, obj):
+        '''Migrate the single StockToLeave of earlier versions to X and Z.'''
+        super().opOnDocumentRestored(obj)
+        if not hasattr(obj, "StockToLeaveX"):
+            old = float(getattr(obj, "StockToLeave", 0.0) or 0.0)
+            self.add_stock_properties(obj, old)
+            if hasattr(obj, "StockToLeave"):
+                obj.removeProperty("StockToLeave")
 
     def depths_from_base(self, obj):
         '''
@@ -146,7 +165,8 @@ class ObjectOp(PathOp.ObjectOp):
         self.allowGrooving = obj.AllowGrooving
         self.stepOver = obj.StepOver.Value
         self.finishPasses = obj.FinishPasses
-        self.stockToLeave = obj.StockToLeave
+        self.stockToLeaveX = obj.StockToLeaveX.Value
+        self.stockToLeaveZ = obj.StockToLeaveZ.Value
 
         # Clear any existing gcode
         obj.Path.Commands = []
@@ -167,7 +187,9 @@ class ObjectOp(PathOp.ObjectOp):
         props['allow_grooving'] = self.allowGrooving
         props['step_over'] = self.stepOver
         props['finish_passes'] = self.finishPasses
-        props['stock_to_leave'] = self.stockToLeave
+        props['stock_to_leave'] = max(self.stockToLeaveX, self.stockToLeaveZ)
+        props['stock_to_leave_x'] = self.stockToLeaveX
+        props['stock_to_leave_z'] = self.stockToLeaveZ
         props['hfeed'] = obj.ToolController.HorizFeed.Value
         props['vfeed'] = obj.ToolController.VertFeed.Value
         props['clearance'] = parentJob.SetupSheet.SafeHeightOffset.Value

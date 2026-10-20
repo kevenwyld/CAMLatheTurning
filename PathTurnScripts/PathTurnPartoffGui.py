@@ -53,7 +53,8 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         self.form.stepOver.setEnabled(False)
         self.form.finishPasses.setEnabled(False)
         self.form.allowGrooving.setEnabled(False)
-        self.form.stockToLeave.setEnabled(False)
+        self.form.stockToLeaveX.setEnabled(False)
+        self.form.stockToLeaveZ.setEnabled(False)
 
 
 Command = PathOpGui.SetupOperation('TurnPartoff',

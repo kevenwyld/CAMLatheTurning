@@ -39,10 +39,21 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
         super().opOnDocumentRestored(obj)
         if not hasattr(obj, "FinishAllowance"):
             self.add_groove_properties(obj)
+        for prop, typ, group, tip in (
+                ("SpringPass", "App::PropertyBool", "Turn Path", "Repeat the last finish pass once more, with no step over"),
+                ("OpToolWidth", "App::PropertyLength", "Op Values", "Width of the operation's insert, for expressions such as Step Over's")):
+            if not hasattr(obj, prop):
+                obj.addProperty(typ, prop, group, translate("TurnPath", tip))
+        obj.setEditorMode("OpToolWidth", 1)
 
     def add_groove_properties(self, obj):
         obj.addProperty("App::PropertyLength", "FinishAllowance", "Turn Path",
                         translate("TurnPath", "Material the roughing plunges leave for the finish passes (per side)"))
+        obj.addProperty("App::PropertyBool", "SpringPass", "Turn Path",
+                        translate("TurnPath", "Repeat the last finish pass once more, with no step over"))
+        obj.addProperty("App::PropertyLength", "OpToolWidth", "Op Values",
+                        translate("TurnPath", "Width of the operation's insert, for expressions such as Step Over's"))
+        obj.setEditorMode("OpToolWidth", 1)  # read-only
         # a Quantity, not a bare float: the Job dialog's setup-sheet page shows
         # op defaults from a prototype that keeps the raw value
         obj.FinishAllowance = FreeCAD.Units.Quantity(0.2, FreeCAD.Units.Length)
@@ -55,9 +66,24 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
             return getattr(tool, name).Value if hasattr(tool, name) else default
 
         width = tool.Width.Value
+        if abs(obj.OpToolWidth.Value - width) > 1e-9:
+            obj.OpToolWidth = width
+        # Step Over defaults to an expression of the insert width (see
+        # opSetDefaultValues). Expressions are evaluated before execute, so
+        # evaluate it here with the width just set, in case the tool changed.
+        step = obj.StepOver.Value
+        for prop, expr in obj.ExpressionEngine:
+            if prop == "StepOver":
+                try:
+                    value = obj.evalExpression(expr)
+                    step = value.Value if hasattr(value, "Value") else float(value)
+                except Exception:
+                    pass
         # a Full Radius insert has no CornerRadius: its end is half the width.
         # GroovingDepth was called CuttingDepth in earlier versions of the shape.
         op.set_params({
+            'step_over': step,
+            'spring_pass': obj.SpringPass,
             'groove_width': width,
             'corner_radius': length("CornerRadius", width / 2),
             'cutting_depth': length("GroovingDepth", length("CuttingDepth")),
@@ -72,10 +98,19 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
         for warning in getattr(op, "warnings", []):
             FreeCAD.Console.PrintWarning("{}: {}\n".format(obj.Label, warning))
 
+    # plunge spacing for multiple grooving as a fraction of the insert width;
+    # Sandvik recommends 0.5-0.8 x the insert width for the cuts after the first
+    STEP_OVER_FACTOR = 0.7
+
     def opSetDefaultValues(self, obj, job):
         obj.OpStartDepth = job.Stock.Shape.BoundBox.ZMax
         obj.OpFinalDepth = job.Stock.Shape.BoundBox.ZMin
         obj.FinishPasses = 1
+        tc = getattr(obj, "ToolController", None)
+        if tc is not None and hasattr(tc.Tool, "Width"):
+            obj.OpToolWidth = tc.Tool.Width
+        # Step Over follows the insert width; clear the expression to set it by hand
+        obj.setExpression("StepOver", "OpToolWidth * {}".format(self.STEP_OVER_FACTOR))
 
     def opUpdateDepths(self, obj):
         # the selected geometry sets the Z range, otherwise the whole stock
@@ -83,7 +118,7 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
 
 
 def SetupProperties():
-    return ["StepOver", "FinishPasses", "FinishAllowance"]
+    return ["FinishPasses", "FinishAllowance", "StockToLeaveX", "StockToLeaveZ", "SpringPass"]
 
 
 def Create(name, obj=None, parentJob=None):

@@ -24,6 +24,21 @@ This addon when installed will appear in the Path Workbench toolbar menu and wil
 
 Note: If the LibLathe folder inside the addon is empty or missing you may need to add the submodule manually: `git submodule update --init --recursive`
 
+## Operation settings
+* **Step over**: Rough, the depth of cut per pass (per side); Profile, the
+  spacing of the finish passes; Face, the step along Z; Turn Groove, the
+  spacing of the plunges. Turn Groove's defaults to 0.7 x the insert width
+  (Sandvik recommends 0.5 to 0.8 x for the cuts after the first), as an
+  expression that follows the tool; clear the expression (the fx button) to
+  set it by hand.
+* **Stock to leave X / Z**: material left radially (per side, on diameters)
+  and axially (on faces and shoulders). With equal values the offset is exact;
+  with different values corners stay sharp instead of being rounded by the
+  stock. Documents with the older single Stock to leave are converted when
+  opened.
+* **Finish passes** and **Spring pass**: Profile and Turn Groove can repeat
+  the last finish pass once more, with no step over.
+
 ## Grooving, parting and full radius inserts
 Two tool shapes cover these inserts:
 

@@ -15,7 +15,8 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
 
     def setOpFields(self, obj):
         '''setFields(obj) ... transfers obj's property values to UI'''
-        pass
+        # a grooving insert reaches into grooves by itself
+        self.form.allowGrooving.setVisible(False)
 
 
 Command = PathOpGui.SetupOperation('TurnGroove',

@@ -100,6 +100,8 @@ def SetupProperties():
     setup.append("StepOver")
     setup.append("FinishPasses")
     setup.append("AllowGrooving")
+    setup.append("StockToLeaveX")
+    setup.append("StockToLeaveZ")
     setup.append("CleanupPass")
     return setup
 

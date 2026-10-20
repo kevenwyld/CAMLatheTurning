@@ -44,6 +44,15 @@ def translate(context, text, disambig=None):
 class ObjectTurnProfile(PathTurnBase.ObjectOp):
     '''Proxy class for turning profile operations.'''
 
+    def initOperation(self, obj):
+        super().initOperation(obj)
+        add_spring_pass_property(obj)
+
+    def opOnDocumentRestored(self, obj):
+        super().opOnDocumentRestored(obj)
+        if not hasattr(obj, "SpringPass"):
+            add_spring_pass_property(obj)
+
     def opFeatures(self, obj):
         '''Turning features plus base geometry: the selected faces, edges and
         whole objects (e.g. a sketch or wire) set the Z range.'''
@@ -57,6 +66,7 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
         '''
         profileOP = LLP.ProfileOP()
         profileOP.set_params(self.getProps(obj))
+        profileOP.set_params({'spring_pass': obj.SpringPass})
 
         stockBoundbox = PathTurnHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox)
         profileOP.add_stock(stockBoundbox)
@@ -80,11 +90,20 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
         self.update_depths_from_base(obj)
 
 
+def add_spring_pass_property(obj):
+    obj.addProperty("App::PropertyBool", "SpringPass", "Turn Path",
+                    translate("TurnPath", "Repeat the last finish pass once more, with no step over"))
+    obj.SpringPass = False
+
+
 def SetupProperties():
     setup = []
     setup.append("StepOver")
     setup.append("FinishPasses")
     setup.append("AllowGrooving")
+    setup.append("StockToLeaveX")
+    setup.append("StockToLeaveZ")
+    setup.append("SpringPass")
     return setup
 
 
