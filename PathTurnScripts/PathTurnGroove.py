@@ -51,11 +51,17 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
         '''Generate the path with liblathe's GrooveOP from the grooving insert's parameters.'''
         op = LLG.GrooveOP()
         op.set_params(self.getProps(obj))
+        def length(name, default=0.0):
+            return getattr(tool, name).Value if hasattr(tool, name) else default
+
+        width = tool.Width.Value
+        # a Full Radius insert has no CornerRadius: its end is half the width.
+        # GroovingDepth was called CuttingDepth in earlier versions of the shape.
         op.set_params({
-            'groove_width': tool.Width.Value,
-            'corner_radius': tool.CornerRadius.Value,
-            'cutting_depth': tool.CuttingDepth.Value if hasattr(tool, "CuttingDepth") else 0,
-            'turning_depth': tool.TurningDepth.Value if hasattr(tool, "TurningDepth") else 0,
+            'groove_width': width,
+            'corner_radius': length("CornerRadius", width / 2),
+            'cutting_depth': length("GroovingDepth", length("CuttingDepth")),
+            'turning_depth': length("TurningDepth"),
             'finish_allowance': obj.FinishAllowance.Value,
         })
         op.add_stock(PathTurnHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox))

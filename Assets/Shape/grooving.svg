@@ -18,25 +18,26 @@
 </g>
 <g id="dim-width">
 <path id="dim-width-ext1" d="M 70,229 L 70,259" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
-<path id="dim-width-ext2" d="M 130,214 L 130,259" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
+<path id="dim-width-ext2" d="M 130,219 L 130,259" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
 <path id="dim-width-line" d="M 70,253 L 130,253" style="fill:none;stroke:#ff0000;stroke-width:0.9"/><path id="dim-width-line-b" d="M 130.00,253.00 L 122.00,256.00 L 122.00,250.00 Z" style="fill:#ff0000;stroke:none"/><path id="dim-width-line-a" d="M 70.00,253.00 L 78.00,250.00 L 78.00,256.00 Z" style="fill:#ff0000;stroke:none"/>
 <text id="width" x="100.0" y="287" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">S</text>
+</g>
+<g id="dim-grooving_depth">
+<path id="dim-grooving_depth-ext1" d="M 66,112 L 28,112" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
+<path id="dim-grooving_depth-ext2" d="M 56,225 L 28,225" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
+<path id="dim-grooving_depth-line" d="M 34,112 L 34,225" style="fill:none;stroke:#ff0000;stroke-width:0.9"/><path id="dim-grooving_depth-line-b" d="M 34.00,225.00 L 31.00,217.00 L 37.00,217.00 Z" style="fill:#ff0000;stroke:none"/><path id="dim-grooving_depth-line-a" d="M 34.00,112.00 L 37.00,120.00 L 31.00,120.00 Z" style="fill:#ff0000;stroke:none"/>
+<text id="grooving_depth" x="22" y="178.5" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">La</text>
+</g>
+<g id="dim-turning_depth">
+<path id="dim-turning_depth-ext1" d="M 124,223 L 168,223" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
+<path id="dim-turning_depth-ext2" d="M 134,189 L 168,189" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
+<path id="dim-turning_depth-line" d="M 160,189 L 160,223" style="fill:none;stroke:#ff0000;stroke-width:0.9"/><path id="dim-turning_depth-line-b" d="M 160.00,223.00 L 157.00,215.00 L 163.00,215.00 Z" style="fill:#ff0000;stroke:none"/><path id="dim-turning_depth-line-a" d="M 160.00,189.00 L 163.00,197.00 L 157.00,197.00 Z" style="fill:#ff0000;stroke:none"/>
+<text id="turning_depth" x="182" y="216" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">T</text>
 </g>
 <g id="dim-corner_radius">
 <path id="dim-corner_radius-line" d="M 176,247 L 125.6,220.6" style="fill:none;stroke:#ff0000;stroke-width:0.9"/><path id="dim-corner_radius-line-b" d="M 125.60,220.60 L 134.08,221.65 L 131.29,226.97 Z" style="fill:#ff0000;stroke:none"/>
 <path id="dim-corner_radius-shelf" d="M 176,247 L 192,247" style="fill:none;stroke:#ff0000;stroke-width:0.9"/>
 <text id="corner_radius" x="186" y="275" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">R</text>
 </g>
-<g id="dim-cutting_depth">
-<path id="dim-cutting_depth-ext1" d="M 66,112 L 28,112" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
-<path id="dim-cutting_depth-ext2" d="M 56,225 L 28,225" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
-<path id="dim-cutting_depth-line" d="M 34,112 L 34,225" style="fill:none;stroke:#ff0000;stroke-width:0.9"/><path id="dim-cutting_depth-line-b" d="M 34.00,225.00 L 31.00,217.00 L 37.00,217.00 Z" style="fill:#ff0000;stroke:none"/><path id="dim-cutting_depth-line-a" d="M 34.00,112.00 L 37.00,120.00 L 31.00,120.00 Z" style="fill:#ff0000;stroke:none"/>
-<text id="cutting_depth" x="22" y="178.5" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">La</text>
-</g>
-<g id="dim-turning_depth">
-<path id="dim-turning_depth-ext1" d="M 117,225 L 168,225" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
-<path id="dim-turning_depth-ext2" d="M 134,191 L 168,191" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
-<path id="dim-turning_depth-line" d="M 160,191 L 160,225" style="fill:none;stroke:#ff0000;stroke-width:0.9"/><path id="dim-turning_depth-line-b" d="M 160.00,225.00 L 157.00,217.00 L 163.00,217.00 Z" style="fill:#ff0000;stroke:none"/><path id="dim-turning_depth-line-a" d="M 160.00,191.00 L 163.00,199.00 L 157.00,199.00 Z" style="fill:#ff0000;stroke:none"/>
-<text id="turning_depth" x="182" y="218" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">T</text>
-</g>
+<g id="corner_radius-note"><text x="184" y="293" style="font-size:14px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">R ≤ S/2</text></g>
 </svg>

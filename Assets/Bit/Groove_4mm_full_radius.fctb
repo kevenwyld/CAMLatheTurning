@@ -1,12 +1,11 @@
 {
   "version": 2,
-  "name": "Groove 4 mm full radius",
-  "shape": "grooving.fcstd",
-  "shape-type": "Grooving",
+  "name": "Full radius 4 mm",
+  "shape": "fullradius.fcstd",
+  "shape-type": "FullRadius",
   "parameter": {
     "Width": "4.00 mm",
-    "CornerRadius": "2.00 mm",
-    "CuttingDepth": "22.00 mm",
+    "GroovingDepth": "22.00 mm",
     "TurningDepth": "1.50 mm",
     "Diameter": "4.00 mm"
   },

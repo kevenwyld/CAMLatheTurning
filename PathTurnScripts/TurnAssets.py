@@ -13,14 +13,16 @@ it. It adds:
     Assets/Shape/isoshape.fcstd   ISO turning insert shape
     Assets/Shape/isoshape.svg     its icon
     Assets/Bit/CCMT060204R.fctb   example turning insert
-    Assets/Shape/grooving.fcstd   grooving / parting insert shape (+ .svg icon)
+    Assets/Shape/grooving.fcstd   grooving / parting insert shape (+ .svg drawing)
+    Assets/Shape/fullradius.fcstd full radius insert shape (+ .svg drawing)
     Assets/Bit/Groove_4mm_full_radius.fctb, ZTFD0303.fctb
                                   example full radius and parting inserts
 
 No tool library is written; add the bit to a library of your choice.
-Assets that already exist in the store are left alone, so user edits are
-never overwritten. To pick up a changed asset from the addon, delete the
-installed copy and run the command again.
+The shapes and their drawings belong to the addon: an installed copy that
+differs from the addon's is replaced, so running the command again after an
+update brings them up to date. Tool bits are the user's and are never
+overwritten.
 """
 
 import pathlib
@@ -38,6 +40,8 @@ ASSETS = [
     ("toolbit", "Bit/CCMT060204R.fctb", "CCMT060204R"),
     ("toolbitshape", "Shape/grooving.fcstd", "grooving"),
     ("toolbitshapesvg", "Shape/grooving.svg", "grooving.svg"),
+    ("toolbitshape", "Shape/fullradius.fcstd", "fullradius"),
+    ("toolbitshapesvg", "Shape/fullradius.svg", "fullradius.svg"),
     ("toolbit", "Bit/Groove_4mm_full_radius.fctb", "Groove_4mm_full_radius"),
     ("toolbit", "Bit/ZTFD0303.fctb", "ZTFD0303"),
 ]
@@ -47,21 +51,36 @@ def translate(context, text):
     return QtCore.QCoreApplication.translate(context, text)
 
 
+# The shapes and their drawings belong to the addon and are kept up to date;
+# tool bits are the user's and are never overwritten.
+ADDON_OWNED = ("toolbitshape", "toolbitshapesvg")
+
+
 def install_assets():
     """
-    Add any of the addon's assets that are missing from the local CAM store.
-    Returns three lists of relative paths: installed, already present, failed.
+    Add the addon's assets to the local CAM store. Missing assets are added;
+    shapes and drawings that differ from the addon's are replaced (they belong
+    to the addon); tool bits that already exist are left alone.
+    Returns four lists of relative paths: installed, updated, already present,
+    failed.
     """
     from Path.Tool.assets import AssetUri
     from Path.Tool.camassets import cam_assets
 
-    installed, present, failed = [], [], []
+    installed, updated, present, failed = [], [], [], []
     for asset_type, rel_path, asset_id in ASSETS:
         path = ASSET_DIR / rel_path
         try:
             uri = AssetUri.build(asset_type=asset_type, asset_id=asset_id)
             if cam_assets.exists(uri, store="local"):
-                present.append(rel_path)
+                if asset_type in ADDON_OWNED and cam_assets.get_raw(uri, store="local") != path.read_bytes():
+                    cam_assets.delete(uri, store="local")
+                    cam_assets.add_file(asset_type, path, store="local", asset_id=asset_id)
+                    updated.append(rel_path)
+                    FreeCAD.Console.PrintMessage(
+                        "TurningAddon: updated {} in the CAM asset store\n".format(rel_path))
+                else:
+                    present.append(rel_path)
                 continue
             cam_assets.add_file(asset_type, path, store="local", asset_id=asset_id)
             installed.append(rel_path)
@@ -71,7 +90,7 @@ def install_assets():
             failed.append(rel_path)
             FreeCAD.Console.PrintError(
                 "TurningAddon: could not install {}: {}\n".format(rel_path, e))
-    return installed, present, failed
+    return installed, updated, present, failed
 
 
 class CommandTurnInstallTools:
@@ -91,10 +110,12 @@ class CommandTurnInstallTools:
         return True
 
     def Activated(self):
-        installed, present, failed = install_assets()
+        installed, updated, present, failed = install_assets()
         lines = []
         if installed:
             lines.append(translate("CAM_TurnInstallTools", "Installed:") + "\n  " + "\n  ".join(installed))
+        if updated:
+            lines.append(translate("CAM_TurnInstallTools", "Updated to the addon's version:") + "\n  " + "\n  ".join(updated))
         if present:
             lines.append(translate("CAM_TurnInstallTools", "Already present (not changed):") + "\n  " + "\n  ".join(present))
         if failed:
