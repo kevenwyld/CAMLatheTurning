@@ -6,8 +6,25 @@ import FreeCAD
 import PathTurnScripts.PathTurnBaseGui as PathTurnBaseGui
 import PathTurnScripts.PathTurnGroove as PathTurnGroove
 import Path.Op.Gui.Base as PathOpGui
+import Path.Op.Gui.Selection as PathSelection
 
 from PySide import QtCore
+
+
+# CAM's selection gates are looked up in a fixed table of operation names
+# (Path.Op.Gui.Selection.select) that only lists the original four turning
+# operations, so editing a TurnGroove raised KeyError: 'TurnGroove'. Send it to
+# the same turning selection gate as the others.
+if not getattr(PathSelection.select, "_turn_groove", False):
+    _cam_select = PathSelection.select
+
+    def _select(op):
+        if op == "TurnGroove":
+            return PathSelection.turnselect
+        return _cam_select(op)
+
+    _select._turn_groove = True
+    PathSelection.select = _select
 
 
 class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):

@@ -79,8 +79,8 @@ class ToolBitShapeGroove(ToolBitShape):
     reference point at the origin: X at the edge's point closest to the axis,
     Z at the chuck-side flank, the blade extending toward +X and +Z.
     """
-    name = "Grooveshape"
-    aliases = ("grooveshape", "grooving", "parting")
+    name = "Grooving"
+    aliases = ("grooving", "parting")
 
     @classmethod
     def schema(cls) -> Mapping[str, Tuple[str, str]]:
@@ -110,7 +110,7 @@ class ToolBitShapeGroove(ToolBitShape):
 
     @property
     def label(self) -> str:
-        return FreeCAD.Qt.translate("ToolBitShape", "Grooving / Parting Insert")
+        return FreeCAD.Qt.translate("ToolBitShape", "Grooving")
 
 
 class ToolBitGroove(ToolBit):

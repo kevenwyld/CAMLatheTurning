@@ -60,7 +60,7 @@ else:
 
 
 def is_grooving_tool(tool):
-    '''True for a grooving/parting insert (Grooving / Parting Insert shape).'''
+    '''True for a grooving/parting insert (Grooving shape).'''
     return hasattr(tool, "Width") and hasattr(tool, "CornerRadius") and not hasattr(tool, "TipAngle")
 
 
@@ -266,7 +266,7 @@ class ObjectOp(PathOp.ObjectOp):
         if self.uses_grooving_tool:
             if not is_grooving_tool(opTool):
                 raise RuntimeError(translate('PathTurn',
-                    "This operation needs a grooving or parting insert (Grooving / Parting Insert shape)"))
+                    "This operation needs a grooving or parting insert (Grooving shape)"))
             self.op_generate_gcode(obj, opTool)
             return
         if is_grooving_tool(opTool):

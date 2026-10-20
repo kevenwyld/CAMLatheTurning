@@ -25,7 +25,7 @@ This addon when installed will appear in the Path Workbench toolbar menu and wil
 Note: If the LibLathe folder inside the addon is empty or missing you may need to add the submodule manually: `git submodule update --init --recursive`
 
 ## Grooving and parting inserts
-Grooving and parting inserts use the **Grooving / Parting Insert** tool shape:
+Grooving and parting inserts use the **Grooving** tool shape:
 
 * **Width** (S in most catalogs), **CornerRadius** (R; half the width makes a
   full radius insert), **CuttingDepth** (La max: the deepest the blade can go

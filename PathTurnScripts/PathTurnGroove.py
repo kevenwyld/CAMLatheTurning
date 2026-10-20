@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 """
 Turn Groove: grooving, parting-off style plunging and both-direction
-finishing with a grooving or parting insert (Grooving / Parting Insert
-shape). The path comes from liblathe's GrooveOP, which drop-cuts the blade's
+finishing with a grooving or parting insert (Grooving shape). The path comes from liblathe's GrooveOP, which drop-cuts the blade's
 actual cutting edge (flat bottom, corner radii, straight flanks) against the
 part, so it can follow a groove's walls in both directions.
 """
@@ -44,7 +43,9 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
     def add_groove_properties(self, obj):
         obj.addProperty("App::PropertyLength", "FinishAllowance", "Turn Path",
                         translate("TurnPath", "Material the roughing plunges leave for the finish passes (per side)"))
-        obj.FinishAllowance = 0.2
+        # a Quantity, not a bare float: the Job dialog's setup-sheet page shows
+        # op defaults from a prototype that keeps the raw value
+        obj.FinishAllowance = FreeCAD.Units.Quantity(0.2, FreeCAD.Units.Length)
 
     def op_generate_gcode(self, obj, tool):
         '''Generate the path with liblathe's GrooveOP from the grooving insert's parameters.'''
