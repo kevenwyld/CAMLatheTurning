@@ -7,8 +7,7 @@
     "Width": "3.00 mm",
     "CornerRadius": "0.30 mm",
     "GroovingDepth": "17.00 mm",
-    "TurningDepth": "0.50 mm",
-    "Diameter": "3.00 mm"
+    "TurningDepth": "0.50 mm"
   },
   "attribute": {}
 }

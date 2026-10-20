@@ -49,7 +49,8 @@ Two tool shapes cover these inserts:
 * **Full Radius**: a blade ending in a semicircle of half its width. Width,
   GroovingDepth and TurningDepth.
 
-Both also have Diameter, which CAM requires; set it to the width. The tool
+Both also have a Diameter, which CAM requires but turning does not use; it
+follows the width and is not shown in the tool editor. The tool
 is programmed to its reference point: X at the cutting edge's point closest
 to the axis, Z at the chuck-side flank. Touch it off the same way: X on a
 turned diameter, Z on a faced end with the chuck-side flank.

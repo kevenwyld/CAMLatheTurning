@@ -4,7 +4,6 @@
   "shape": "isoshape.fcstd",
   "shape-type": "Isoshape",
   "parameter": {
-    "Diameter": "0.80 mm",
     "EdgeLength": "6.35 mm",
     "Rotation": "45.00 \u00b0",
     "TipAngle": "80.00 \u00b0",

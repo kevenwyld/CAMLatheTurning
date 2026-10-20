@@ -11,10 +11,15 @@ register them. The class name must match the Body label in isoshape.fcstd
 
 import FreeCAD
 import Path
-from typing import Mapping, Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from Path.Tool.shape.models.base import ToolBitShape
 from Path.Tool.toolbit.models.base import ToolBit
+
+
+def _mm(value) -> float:
+    """A parameter's magnitude, whether it arrives as a Quantity or a number."""
+    return float(value.Value if hasattr(value, "Value") else value)
 
 
 class ToolBitShapeIso(ToolBitShape):
@@ -28,7 +33,7 @@ class ToolBitShapeIso(ToolBitShape):
             # tool (Op/Base.py setDefaultValues and execute). Turning ops don't
             # use it; set it to 2 x TipRadius.
             "Diameter": (
-                FreeCAD.Qt.translate("ToolBitShape", "Nominal diameter (2 x tip radius)"),
+                FreeCAD.Qt.translate("ToolBitShape", "Required by CAM, not used for turning; twice the tip radius"),
                 "App::PropertyLength",
             ),
             "EdgeLength": (
@@ -48,6 +53,15 @@ class ToolBitShapeIso(ToolBitShape):
                 "App::PropertyLength",
             ),
         }
+
+    @classmethod
+    def derived_parameters(cls) -> Mapping[str, Any]:
+        """
+        CAM's operations need a tool Diameter; the turning operations do not
+        use it. Derive it (the nose diameter) so it is kept out of the editor,
+        as CAM does for the chamfer mill's diameter.
+        """
+        return {"Diameter": lambda p: 2 * _mm(p["TipRadius"])}
 
     @property
     def label(self) -> str:
@@ -98,12 +112,18 @@ class ToolBitShapeGroove(ToolBitShape):
                 FreeCAD.Qt.translate("ToolBitShape", "Largest depth of cut when turning sideways (T)"),
                 "App::PropertyLength",
             ),
-            # CAM's operation base class requires a non-zero Tool.Diameter
+            # CAM's operation base class requires a non-zero Tool.Diameter;
+            # derived from the width (see derived_parameters), so not edited
             "Diameter": (
-                FreeCAD.Qt.translate("ToolBitShape", "Required by CAM; set it to the width"),
+                FreeCAD.Qt.translate("ToolBitShape", "Required by CAM, not used for turning; follows the width"),
                 "App::PropertyLength",
             ),
         }
+
+    @classmethod
+    def derived_parameters(cls) -> Mapping[str, Any]:
+        """CAM needs a tool Diameter; derive it from the width (kept out of the editor)."""
+        return {"Diameter": lambda p: _mm(p["Width"])}
 
     @property
     def label(self) -> str:
@@ -151,10 +171,15 @@ class ToolBitShapeFullRadius(ToolBitShape):
                 "App::PropertyLength",
             ),
             "Diameter": (
-                FreeCAD.Qt.translate("ToolBitShape", "Required by CAM; set it to the width"),
+                FreeCAD.Qt.translate("ToolBitShape", "Required by CAM, not used for turning; follows the width"),
                 "App::PropertyLength",
             ),
         }
+
+    @classmethod
+    def derived_parameters(cls) -> Mapping[str, Any]:
+        """CAM needs a tool Diameter; derive it from the width (kept out of the editor)."""
+        return {"Diameter": lambda p: _mm(p["Width"])}
 
     @property
     def label(self) -> str:
