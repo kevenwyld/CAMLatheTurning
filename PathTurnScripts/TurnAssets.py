@@ -13,6 +13,9 @@ it. It adds:
     Assets/Shape/isoshape.fcstd   ISO turning insert shape
     Assets/Shape/isoshape.svg     its icon
     Assets/Bit/CCMT060204R.fctb   example turning insert
+    Assets/Shape/grooveshape.fcstd grooving / parting insert shape (+ .svg icon)
+    Assets/Bit/Groove_4mm_full_radius.fctb, ZTFD0303.fctb
+                                  example full radius and parting inserts
 
 No tool library is written; add the bit to a library of your choice.
 Assets that already exist in the store are left alone, so user edits are
@@ -33,6 +36,10 @@ ASSETS = [
     ("toolbitshape", "Shape/isoshape.fcstd", "isoshape"),
     ("toolbitshapesvg", "Shape/isoshape.svg", "isoshape.svg"),
     ("toolbit", "Bit/CCMT060204R.fctb", "CCMT060204R"),
+    ("toolbitshape", "Shape/grooveshape.fcstd", "grooveshape"),
+    ("toolbitshapesvg", "Shape/grooveshape.svg", "grooveshape.svg"),
+    ("toolbit", "Bit/Groove_4mm_full_radius.fctb", "Groove_4mm_full_radius"),
+    ("toolbit", "Bit/ZTFD0303.fctb", "ZTFD0303"),
 ]
 
 

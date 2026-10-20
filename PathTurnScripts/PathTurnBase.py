@@ -59,7 +59,16 @@ else:
     PathLog.setLevel(PathLog.Level.INFO, PathLog.thisModule())
 
 
+def is_grooving_tool(tool):
+    '''True for a grooving/parting insert (Grooving / Parting Insert shape).'''
+    return hasattr(tool, "Width") and hasattr(tool, "CornerRadius") and not hasattr(tool, "TipAngle")
+
+
 class ObjectOp(PathOp.ObjectOp):
+
+    # operations that work with a grooving insert instead of a turning insert
+    uses_grooving_tool = False
+
     '''Base class for proxy objects of all turning operations.'''
 
     def opFeatures(self, obj):
@@ -253,9 +262,17 @@ class ObjectOp(PathOp.ObjectOp):
         '''
         opTool = obj.ToolController.Tool
 
-        # only toolbits are supported
-        #if isinstance(opTool, Path.Tool):
-        #    raise RuntimeError(translate('PathTurn', "Path Turn: Legacy Tools Not Supported "))
+        # the operation and the tool must agree on the kind of insert
+        if self.uses_grooving_tool:
+            if not is_grooving_tool(opTool):
+                raise RuntimeError(translate('PathTurn',
+                    "This operation needs a grooving or parting insert (Grooving / Parting Insert shape)"))
+            self.op_generate_gcode(obj, opTool)
+            return
+        if is_grooving_tool(opTool):
+            raise RuntimeError(translate('PathTurn',
+                "This operation needs a turning insert (ISO Turning Insert shape); "
+                "use Turn Groove for grooving and parting inserts"))
 
         # create a liblathe tool and assign the toolbit parameters
         turnTool = Tool()

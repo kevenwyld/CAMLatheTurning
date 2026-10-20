@@ -24,6 +24,29 @@ This addon when installed will appear in the Path Workbench toolbar menu and wil
 
 Note: If the LibLathe folder inside the addon is empty or missing you may need to add the submodule manually: `git submodule update --init --recursive`
 
+## Grooving and parting inserts
+Grooving and parting inserts use the **Grooving / Parting Insert** tool shape:
+
+* **Width** (S in most catalogs), **CornerRadius** (R; half the width makes a
+  full radius insert), **CuttingDepth** (La max: the deepest the blade can go
+  before the holder would touch), **TurningDepth** (T: the largest sideways
+  depth of cut), and **Diameter** (required by CAM; set it to the width).
+* The tool is programmed to its reference point: X at the cutting edge's
+  point closest to the axis, Z at the chuck-side flank. Touch it off the same
+  way: X on a turned diameter, Z on a faced end with the chuck-side flank.
+
+**Turn Groove** cuts with these inserts in both directions. It plunges
+straight in to rough (at most Step Over apart along Z), leaving Finish
+Allowance, then follows the profile front to back with the finish passes. It
+works within the Z Range and the diameter limits like the other operations;
+the blade may reach up to its width past Start Depth, never past Final Depth.
+The cutting depth is measured from Max Diameter (default: the stock), which is
+also where plunges start; if the surface has already been turned smaller, set
+Max Diameter to that diameter.
+
+Rough, Profile and Face need a turning insert, and Turn Groove a grooving
+insert; each refuses the other kind with a message.
+
 ## Roughing
 Rough finishes with a cleanup pass: a contour along the part at the stock to
 leave, so the finishing pass meets an even amount of material instead of the
@@ -59,8 +82,9 @@ Diameter the whole nose stays inside.
 ## Turning tools
 The turning operations need a turning tool bit. FreeCAD's tool library has no
 turning shape, so the addon provides an ISO turning insert shape and an
-example bit. To add them to your CAM tool assets, switch to the CAM workbench
-and run **Install Turning Tools** from the Turning Addon menu. Existing files
+example bit, and a grooving / parting insert shape with two example inserts.
+To add them to your CAM tool assets, switch to the CAM workbench and run
+**Install Turning Tools** from the CAM menu. Existing files
 are never overwritten. Then add the example bit to a tool library, or create
 your own bits from the **ISO Turning Insert** shape.
 

@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "name": "ZTFD0303 parting/grooving 3 mm",
+  "shape": "grooveshape.fcstd",
+  "shape-type": "Grooveshape",
+  "parameter": {
+    "Width": "3.00 mm",
+    "CornerRadius": "0.30 mm",
+    "CuttingDepth": "17.00 mm",
+    "TurningDepth": "0.50 mm",
+    "Diameter": "3.00 mm"
+  },
+  "attribute": {}
+}
