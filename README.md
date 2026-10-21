@@ -39,8 +39,8 @@ an internal thread (Type can also be set by hand).
   pass schedule, and warns in red when the selected diameter does not fit
   the size (over the major diameter, or well under it).
 * **Thread length** (0: the whole selected diameter), **Passes** (0: the recommended
-  number for the pitch), **First / Min pass depth**, **Degression** (2: the same area each pass, the
-  first deepest; 1.5 is closer to insert makers' tables), **Infeed** (modified
+  number for the pitch), **First / Min pass depth**, **Degression** (1.5 by default: a gentle schedule
+  with a light first pass; 2 removes the same area each pass, the first deepest), **Infeed** (modified
   flank 29.5 degrees by default, flank 30, or radial), **Spring passes**,
   **Lead-in** (0: three pitches, so Z is at speed).
 * Output: explicit passes using **G33** (spindle-synchronized motion; works

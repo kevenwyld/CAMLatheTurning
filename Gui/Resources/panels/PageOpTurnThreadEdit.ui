@@ -133,7 +133,7 @@
       </item>
       <item row="9" column="1">
        <widget class="QDoubleSpinBox" name="degression">
-        <property name="toolTip"><string>How pass depths decrease: 2 removes the same area each pass (first pass deepest), 1.5 is closer to insert makers' tables, 1 the same depth each pass</string></property>
+        <property name="toolTip"><string>How pass depths decrease: 1.5 (default) is gentle, with a light first pass, close to insert makers' tables; 2 removes the same area each pass, the first deepest; 1 the same depth each pass</string></property>
         <property name="decimals"><number>2</number></property>
         <property name="minimum"><double>1.000000000000000</double></property>
         <property name="maximum"><double>2.000000000000000</double></property>

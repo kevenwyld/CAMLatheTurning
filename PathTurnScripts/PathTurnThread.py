@@ -81,7 +81,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             translate("TurnPath", "Depth of the first pass; 0 sets it from the number of passes"))
         add("App::PropertyLength", "MinPassDepth", group, translate("TurnPath", "Smallest depth increase per pass"))
         add("App::PropertyFloat", "Degression", group,
-            translate("TurnPath", "How pass depths decrease: 2 removes the same area each pass, 1 the same depth"))
+            translate("TurnPath", "How pass depths decrease: 1.5 (default) is gentle, with a light first pass; 2 removes the same area each pass, the first deepest; 1 the same depth each pass"))
         add("App::PropertyEnumeration", "Infeed", group,
             translate("TurnPath", "How the insert feeds in: along the flank (29.5 or 30 degrees) or straight in"))
         add("App::PropertyInteger", "SpringPasses", group, translate("TurnPath", "Passes repeated at full depth"))
@@ -112,7 +112,9 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         obj.ThreadDepth = FreeCAD.Units.Quantity(ThreadData.depth(pitch, False), FreeCAD.Units.Length)
         obj.Passes = 0
         obj.MinPassDepth = FreeCAD.Units.Quantity(0.05, FreeCAD.Units.Length)
-        obj.Degression = 2.0
+        # 1.5, a gentler schedule than constant area (2): a lighter first pass,
+        # closer to insert makers' tables and kinder to light machines
+        obj.Degression = 1.5
         obj.SpringPasses = 1
         obj.setEditorMode("Pitch", 1)
         obj.setEditorMode("ThreadDepth", 1)
