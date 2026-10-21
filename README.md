@@ -225,9 +225,10 @@ the module their code is in, so an addon's are left out of the context
 menu (Active toggle, dressups, Array / Copy, Inspect, Post Selected). The
 addon extends CAM's check at start-up to include them. **TODO** (upstream):
 CAM's `Path.Dressup.Utils.isOp()` should check the class
-(`Path.Op.Base.ObjectOp`) instead; then the addon can drop this. Of the
-dressups, several are for milling only (e.g. Dogbone, Drag Knife, Tag);
-Axis Map can help on a mill used as a lathe.
+(`Path.Op.Base.ObjectOp`) instead; then the addon can drop this. For
+turning operations the menu offers only the dressups that make sense on a
+lathe path: Axis Map (which can help on a mill used as a lathe) and Path
+Boundary.
 
 ## Feedback
 If you have feedback or need to report bugs please participate on the related [Path Forum](https://forum.freecadweb.org/viewtopic.php?f=15&t=30563&start=0).

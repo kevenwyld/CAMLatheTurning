@@ -118,3 +118,44 @@ def accept_turning_ops_as_ops():
 
 
 accept_turning_ops_as_ops()
+
+
+# Dressups that make sense on a lathe path; CAM's others (Dogbone, Drag
+# Knife, Tag, Ramp Entry, ...) are for milling paths in the XY plane
+TURNING_DRESSUPS = ("CAM_DressupAxisMap", "CAM_DressupPathBoundary", "CAM_DressupPathBoundary2")
+
+
+def offer_turning_dressups():
+    """
+    For a selection of turning operations, CAM's context menu offers only
+    the dressups that make sense on a lathe path. CAM's workbench builds
+    the Dressup submenu from its dressupcmds list; while it builds the menu
+    for turning operations, that list is the shorter one.
+    """
+    try:
+        workbench = FreeCADGui.getWorkbench("CAMWorkbench")
+        from PathTurnScripts import PathTurnBase
+    except Exception:
+        return
+    cam_menu = getattr(type(workbench), "ContextMenu", None)
+    if cam_menu is None or getattr(cam_menu, "offers_turning_dressups", False):
+        return
+
+    def ContextMenu(self, recipient):
+        selection = FreeCADGui.Selection.getSelection()
+        turning = bool(selection) and all(
+            isinstance(getattr(o, "Proxy", None), PathTurnBase.ObjectOp) for o in selection)
+        saved = getattr(self, "dressupcmds", None)
+        if turning and saved is not None:
+            self.dressupcmds = [c for c in saved if c in TURNING_DRESSUPS]
+        try:
+            return cam_menu(self, recipient)
+        finally:
+            if turning and saved is not None:
+                self.dressupcmds = saved
+
+    ContextMenu.offers_turning_dressups = True
+    type(workbench).ContextMenu = ContextMenu
+
+
+offer_turning_dressups()
