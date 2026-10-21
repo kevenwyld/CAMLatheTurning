@@ -1,10 +1,10 @@
 # FreeCAD Turning Addon ![Python package](https://github.com/dubstar-04/FreeCAD_Turning_Addon/workflows/Python%20package/badge.svg?branch=master)
-A FreeCAD Path Addon to encourage the development of CNC turning functionality for the PATH workbench.  
+A FreeCAD Path Addon to encourage the development of CNC turning functionality for the PATH workbench.
 
 | :warning: WARNING: Turning Addon is currently experimental / proof of concept and only suitable for testing. |
 
 ## Description
-This addon when installed will appear in the Path Workbench toolbar menu and will allow the creation of turning paths for use with a CNC lathe. This addon includes [LibLathe](https://github.com/dubstar-04/LibLathe) as a submodule. 
+This addon when installed will appear in the Path Workbench toolbar menu and will allow the creation of turning paths for use with a CNC lathe. This addon includes [LibLathe](https://github.com/dubstar-04/LibLathe) as a submodule.
 
 ## Features
 * Turning Roughing operation
@@ -15,14 +15,36 @@ This addon when installed will appear in the Path Workbench toolbar menu and wil
 ## Requirements
 * FreeCAD v0.21
 * Path Toolbits (Legacy tools are not supported)
-* Python3  
+* Python3
 * Qt5
 
 ## Installation
-1. Use `git clone --recurse` or download the `.zip` file of this repo directly in to your [FreeCAD `Mod/` directory](https://www.freecadweb.org/wiki/Installing_more_workbenches).  
-2. Restart FreeCAD 
+1. Use `git clone --recurse` or download the `.zip` file of this repo directly in to your [FreeCAD `Mod/` directory](https://www.freecadweb.org/wiki/Installing_more_workbenches).
+2. Restart FreeCAD
 
 Note: If the LibLathe folder inside the addon is empty or missing you may need to add the submodule manually: `git submodule update --init --recursive`
+
+## Threading
+**Turn Thread** cuts a single-point thread with a **Threading** insert
+(ProfileAngle, TipRadius, Width; programmed to the profile's theoretical
+sharp point). Select the cylindrical face to thread on the Z Range page: it
+gives the thread's Z range and the diameter it is cut from, and a bore is
+an internal thread (Type can also be set by hand).
+
+* **Thread standard / Size:** ISO metric coarse and fine, UNC, UNF, or
+  Custom (enter pitch and depth). Depths are the 60 degree basic profile's:
+  0.61343 P external, 0.54127 P internal from the minor diameter.
+* **Thread length** (0: the whole face), **Passes** (0: the recommended
+  number for the pitch), **First / Min pass depth**, **Infeed** (modified
+  flank 29.5 degrees by default, flank 30, or radial), **Spring passes**,
+  **Lead-in** (0: three pitches, so Z is at speed).
+* Output: explicit passes using **G33** (spindle-synchronized motion; works
+  on a mill with a spindle encoder, such as PathPilot in mill mode), or one
+  **G76** cycle with **Use G76 cycle** on controls that have it.
+* The insert is kept clear of the part: nothing in front of the thread may
+  stand above the root, and a shoulder behind its end must clear the
+  insert's flank; the op says where the thread must end, or to cut a relief
+  groove.
 
 ## Operation settings
 * **Step over**: Rough, the depth of cut per pass (per side); Profile, the
@@ -120,8 +142,8 @@ Diameter the whole nose stays inside.
 ## Turning tools
 The turning operations need a turning tool bit. FreeCAD's tool library has no
 turning shape, so the addon provides an ISO turning insert shape and an
-example bit, plus the Grooving and Full Radius shapes with an example insert
-each. To add them to your CAM tool assets, switch to the CAM workbench and
+example bit, plus the Grooving, Full Radius and Threading shapes with an
+example insert each. To add them to your CAM tool assets, switch to the CAM workbench and
 run **Install Turning Tools** from the CAM menu. Running it again after an
 update brings the shapes up to date; tool bits you have are never changed. Existing files
 are never overwritten. Then add the example bit to a tool library, or create
@@ -134,8 +156,8 @@ directory, and import `Assets/Bit/CCMT060204R.fctb` from the tool library.
 Set TipRadius to your insert's nose radius. Rotation must be greater than 0
 and TipAngle less than 90 degrees.
 
-## Feedback  
-If you have feedback or need to report bugs please participate on the related [Path Forum](https://forum.freecadweb.org/viewtopic.php?f=15&t=30563&start=0). 
+## Feedback
+If you have feedback or need to report bugs please participate on the related [Path Forum](https://forum.freecadweb.org/viewtopic.php?f=15&t=30563&start=0).
 
 ## Disclaimer
 This is an experimental tool for development purposes and must be used at your own risk. Machine tools are dangerous and the author of this tool will not be responsible for any damage or personal injury caused by using incorrect tool paths or machining parameters.

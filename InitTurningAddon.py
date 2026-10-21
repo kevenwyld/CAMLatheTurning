@@ -32,6 +32,7 @@ from PathTurnScripts import TurnToolShapes  # noqa: F401
 # import all turning operations
 from PathTurnScripts import PathTurnFaceGui  # noqa: F401
 from PathTurnScripts import PathTurnGrooveGui  # noqa: F401
+from PathTurnScripts import PathTurnThreadGui  # noqa: F401
 from PathTurnScripts import PathTurnPartoffGui  # noqa: F401
 from PathTurnScripts import PathTurnProfileGui  # noqa: F401
 from PathTurnScripts import PathTurnRoughGui  # noqa: F401
@@ -46,7 +47,7 @@ iconPath = os.path.join(__dir__, 'Gui/Resources/Icons')
 FreeCADGui.addIconPath(iconPath)
 
 # Turning commands, in menu order
-COMMANDS = ['CAM_TurnFace', 'CAM_TurnRough', 'CAM_TurnProfile', 'CAM_TurnGroove', 'CAM_TurnPartoff',
+COMMANDS = ['CAM_TurnFace', 'CAM_TurnRough', 'CAM_TurnProfile', 'CAM_TurnGroove', 'CAM_TurnThread', 'CAM_TurnPartoff',
             'CAM_TurnToolHelper',
             'CAM_TurnInstallTools']
 

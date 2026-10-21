@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>305</width>
+    <height>421</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_3">
+   <item row="1" column="0">
+    <widget class="QWidget" name="widget" native="true">
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_threadStandard">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Thread standard</string></property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="threadStandard">
+        <property name="toolTip"><string>Thread standard, or Custom to enter the pitch and depth</string></property>
+
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_threadSize">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Size</string></property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="threadSize">
+        <property name="toolTip"><string>Thread size in the standard</string></property>
+
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_threadType">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Type</string></property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="threadType">
+        <property name="toolTip"><string>External or internal; from the selection, a bore is internal</string></property>
+
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_pitch">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Pitch</string></property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="Gui::QuantitySpinBox" name="pitch">
+        <property name="toolTip"><string>Thread pitch (from the standard unless Custom)</string></property>
+        <property name="minimum"><double>0.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_threadDepth">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Thread depth</string></property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="Gui::QuantitySpinBox" name="threadDepth">
+        <property name="toolTip"><string>Radial depth to the insert's theoretical sharp point (from the standard unless Custom)</string></property>
+        <property name="minimum"><double>0.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label_threadLength">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Thread length</string></property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="Gui::QuantitySpinBox" name="threadLength">
+        <property name="toolTip"><string>Length from the front of the selected face; 0 threads the whole face</string></property>
+        <property name="minimum"><double>0.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="label_passes">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Passes</string></property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="Gui::IntSpinBox" name="passes">
+        <property name="toolTip"><string>Infeed passes to full depth; 0 uses the recommended number for the pitch</string></property>
+        <property name="minimum"><number>0</number></property><property name="maximum"><number>999</number></property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="label_firstPassDepth">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>First pass depth</string></property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="Gui::QuantitySpinBox" name="firstPassDepth">
+        <property name="toolTip"><string>Depth of the first pass; 0 sets it from the number of passes</string></property>
+        <property name="minimum"><double>0.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="8" column="0">
+       <widget class="QLabel" name="label_minPassDepth">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Min pass depth</string></property>
+       </widget>
+      </item>
+      <item row="8" column="1">
+       <widget class="Gui::QuantitySpinBox" name="minPassDepth">
+        <property name="toolTip"><string>Smallest depth increase per pass</string></property>
+        <property name="minimum"><double>0.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="9" column="0">
+       <widget class="QLabel" name="label_infeed">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Infeed</string></property>
+       </widget>
+      </item>
+      <item row="9" column="1">
+       <widget class="QComboBox" name="infeed">
+        <property name="toolTip"><string>How the insert feeds in: along the flank (29.5 or 30 degrees) or straight in</string></property>
+
+       </widget>
+      </item>
+      <item row="10" column="0">
+       <widget class="QLabel" name="label_springPasses">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Spring passes</string></property>
+       </widget>
+      </item>
+      <item row="10" column="1">
+       <widget class="Gui::IntSpinBox" name="springPasses">
+        <property name="toolTip"><string>Passes repeated at full depth</string></property>
+        <property name="minimum"><number>0</number></property><property name="maximum"><number>999</number></property>
+       </widget>
+      </item>
+      <item row="11" column="0">
+       <widget class="QLabel" name="label_leadIn">
+        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+        <property name="text"><string>Lead-in</string></property>
+       </widget>
+      </item>
+      <item row="11" column="1">
+       <widget class="Gui::QuantitySpinBox" name="leadIn">
+        <property name="toolTip"><string>Distance in front of the thread each pass starts at, for Z to reach speed; 0 is three pitches</string></property>
+        <property name="minimum"><double>0.000000000000000</double></property>
+       </widget>
+      </item>
+      <item row="12" column="0" colspan="2">
+       <widget class="QCheckBox" name="useG76">
+        <property name="toolTip"><string>Output one G76 threading cycle (controls that have it) instead of explicit G33 passes</string></property>
+        <property name="text"><string>Use G76 cycle</string></property>
+       </widget>
+      </item>
+      <item row="13" column="0" colspan="2">
+       <widget class="QLabel" name="threadInfo">
+        <property name="wordWrap"><bool>true</bool></property>
+        <property name="text"><string/></property>
+       </widget>
+      </item>
+      <item row="14" column="0">
+       <spacer name="verticalSpacer">
+        <property name="orientation"><enum>Qt::Vertical</enum></property>
+        <property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="0" column="0">
+    <widget class="QFrame" name="frame">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="1" column="1">
+       <widget class="QComboBox" name="coolantController">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The tool and its settings to be used for this operation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>Tool Controller</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="toolController">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The tool and its settings to be used for this operation.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_9">
+        <property name="text">
+         <string>Coolant</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Gui::QuantitySpinBox</class>
+   <extends>QWidget</extends>
+   <header>Gui/QuantitySpinBox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Gui::IntSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>Gui/SpinBox.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

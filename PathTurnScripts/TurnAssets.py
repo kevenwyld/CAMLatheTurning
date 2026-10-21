@@ -15,6 +15,8 @@ it. It adds:
     Assets/Bit/CCMT060204R.fctb   example turning insert
     Assets/Shape/grooving.fcstd   grooving / parting insert shape (+ .svg drawing)
     Assets/Shape/fullradius.fcstd full radius insert shape (+ .svg drawing)
+    Assets/Shape/threading.fcstd  threading insert shape (+ .svg drawing)
+    Assets/Bit/Threading_60_partial.fctb  example 60 degree threading insert
     Assets/Bit/Groove_4mm_full_radius.fctb, ZTFD0303.fctb
                                   example full radius and parting inserts
 
@@ -42,6 +44,9 @@ ASSETS = [
     ("toolbitshapesvg", "Shape/grooving.svg", "grooving.svg"),
     ("toolbitshape", "Shape/fullradius.fcstd", "fullradius"),
     ("toolbitshapesvg", "Shape/fullradius.svg", "fullradius.svg"),
+    ("toolbitshape", "Shape/threading.fcstd", "threading"),
+    ("toolbitshapesvg", "Shape/threading.svg", "threading.svg"),
+    ("toolbit", "Bit/Threading_60_partial.fctb", "Threading_60_partial"),
     ("toolbit", "Bit/Groove_4mm_full_radius.fctb", "Groove_4mm_full_radius"),
     ("toolbit", "Bit/ZTFD0303.fctb", "ZTFD0303"),
 ]

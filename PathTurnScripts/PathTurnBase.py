@@ -59,6 +59,11 @@ else:
     PathLog.setLevel(PathLog.Level.INFO, PathLog.thisModule())
 
 
+def is_threading_tool(tool):
+    '''True for a threading insert (Threading shape).'''
+    return hasattr(tool, "ProfileAngle")
+
+
 def is_grooving_tool(tool):
     '''True for a grooving, parting or full radius insert (Grooving / Full Radius shapes).'''
     return (hasattr(tool, "Width") and not hasattr(tool, "TipAngle")
@@ -69,6 +74,8 @@ class ObjectOp(PathOp.ObjectOp):
 
     # operations that work with a grooving insert instead of a turning insert
     uses_grooving_tool = False
+    # operations that work with a threading insert
+    uses_threading_tool = False
 
     '''Base class for proxy objects of all turning operations.'''
 
@@ -289,6 +296,13 @@ class ObjectOp(PathOp.ObjectOp):
         opTool = obj.ToolController.Tool
 
         # the operation and the tool must agree on the kind of insert
+        if self.uses_threading_tool:
+            if not is_threading_tool(opTool):
+                raise RuntimeError(translate('PathTurn', "This operation needs a threading insert (Threading shape)"))
+            self.op_generate_gcode(obj, opTool)
+            return
+        if is_threading_tool(opTool):
+            raise RuntimeError(translate('PathTurn', "A threading insert is only for Turn Thread"))
         if self.uses_grooving_tool:
             if not is_grooving_tool(opTool):
                 raise RuntimeError(translate('PathTurn',

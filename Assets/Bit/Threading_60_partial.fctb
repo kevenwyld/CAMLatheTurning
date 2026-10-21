@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "Threading 60 partial profile",
+  "shape": "threading.fcstd",
+  "shape-type": "Threading",
+  "parameter": {
+    "ProfileAngle": "60.00 °",
+    "TipRadius": "0.05 mm",
+    "Width": "6.00 mm"
+  },
+  "attribute": {}
+}

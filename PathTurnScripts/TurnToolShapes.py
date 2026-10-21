@@ -198,3 +198,52 @@ class ToolBitFullRadius(ToolBit):
     def summary(self) -> str:
         width = self.get_property_str("Width", "?")
         return FreeCAD.Qt.translate("CAM", f"Full radius insert {width} wide")
+
+
+class ToolBitShapeThreading(ToolBitShape):
+    """
+    Threading insert: a profile of ProfileAngle with TipRadius at its tip.
+    The shape file draws it from its reference point at the origin: the
+    theoretical sharp point of the profile, which thread depths are measured
+    to and Turn Thread programs. The insert extends toward +X.
+    """
+    name = "Threading"
+    aliases = ("threading", "thread")
+
+    @classmethod
+    def schema(cls) -> Mapping[str, Tuple[str, str]]:
+        return {
+            "ProfileAngle": (
+                FreeCAD.Qt.translate("ToolBitShape", "Included angle of the thread profile (60 metric and Unified)"),
+                "App::PropertyAngle",
+            ),
+            "TipRadius": (FreeCAD.Qt.translate("ToolBitShape", "Radius at the tip of the profile"), "App::PropertyLength"),
+            "Width": (FreeCAD.Qt.translate("ToolBitShape", "Width of the insert (for display)"), "App::PropertyLength"),
+            "Diameter": (
+                FreeCAD.Qt.translate("ToolBitShape", "Required by CAM, not used for turning; follows the width"),
+                "App::PropertyLength",
+            ),
+        }
+
+    @classmethod
+    def derived_parameters(cls) -> Mapping[str, Any]:
+        """CAM needs a tool Diameter; derive it from the width (kept out of the editor)."""
+        return {"Diameter": lambda p: _mm(p["Width"])}
+
+    @property
+    def label(self) -> str:
+        return FreeCAD.Qt.translate("ToolBitShape", "Threading")
+
+
+class ToolBitThreading(ToolBit):
+    SHAPE_CLASS = ToolBitShapeThreading
+
+    def __init__(
+        self, shape: ToolBitShapeThreading, id: Optional[str] = None, attrs: Optional[Mapping] = None
+    ):
+        super().__init__(shape, id=id, attrs=attrs)
+
+    @property
+    def summary(self) -> str:
+        angle = self.get_property_str("ProfileAngle", "?")
+        return FreeCAD.Qt.translate("CAM", f"Threading insert {angle}")
