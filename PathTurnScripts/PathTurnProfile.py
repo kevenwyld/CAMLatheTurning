@@ -44,6 +44,8 @@ def translate(context, text, disambig=None):
 class ObjectTurnProfile(PathTurnBase.ObjectOp):
     '''Proxy class for turning profile operations.'''
 
+    turns_to_min_diameter = True
+
     def initOperation(self, obj):
         super().initOperation(obj)
         add_spring_pass_property(obj)

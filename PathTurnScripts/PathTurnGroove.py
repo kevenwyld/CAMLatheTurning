@@ -23,6 +23,8 @@ def translate(context, text, disambig=None):
 class ObjectTurnGroove(PathTurnBase.ObjectOp):
     '''Proxy class for turning groove operations.'''
 
+    turns_to_min_diameter = True
+
     uses_grooving_tool = True
 
     def opFeatures(self, obj):

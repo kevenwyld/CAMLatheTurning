@@ -70,6 +70,15 @@ def is_grooving_tool(tool):
             and any(hasattr(tool, p) for p in ("GroovingDepth", "CuttingDepth", "CornerRadius")))
 
 
+# Min / Max Diameter are worked out unless set by hand: (switch, value, tooltip)
+DIAMETER_SWITCHES = (
+    ("SetMinDiameter", "MinDiameter",
+     "Set Min Diameter by hand: Rough, Profile and Turn Groove then turn to it across the Z range (into the model "
+     "where it is bigger), Face and Partoff stop at it (e.g. a bore). Otherwise no inner limit: the op follows the part"),
+    ("SetMaxDiameter", "MaxDiameter",
+     "Set Max Diameter by hand: where the material starts (e.g. a surface already turned smaller). Otherwise the stock"),
+)
+
 STOCK_X_TIP = ("Material to leave radially, per side (on diameters). Negative cuts under the model's size, e.g. "
                "-0.075 to turn a 12 mm model to 11.85, a thread's major diameter turned to its tolerance")
 STOCK_Z_TIP = ("Material to leave axially (on faces and shoulders). Negative cuts under the model's size, "
@@ -82,6 +91,10 @@ class ObjectOp(PathOp.ObjectOp):
     uses_grooving_tool = False
     # operations that work with a threading insert
     uses_threading_tool = False
+    # operations for which a Min Diameter set by hand is a diameter to turn
+    # to across the Z range (into the model where it is bigger); for the
+    # others (Face, Partoff, Thread) it stays their inner limit (e.g. a bore)
+    turns_to_min_diameter = False
 
     '''Base class for proxy objects of all turning operations.'''
 
@@ -95,12 +108,39 @@ class ObjectOp(PathOp.ObjectOp):
         obj.addProperty("App::PropertyLength", "StepOver", "Turn Path", translate("TurnPath", "Operation Stepover"))
         obj.addProperty("App::PropertyInteger", "FinishPasses", "Turn Path", translate("TurnPath", "Number of Finish Passes"))
         self.add_stock_properties(obj)
+        self.add_diameter_switches(obj)
         obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
                         translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
                                               "cutting angle allows"))
 
         obj.StepOver = FreeCAD.Units.Quantity(1.0, FreeCAD.Units.Length)
         obj.FinishPasses = 2
+
+    def add_diameter_switches(self, obj, migrate=False):
+        '''The Set switches for Min / Max Diameter. On an older document a
+        Min Diameter above 0, or a Max Diameter other than the stock's, was
+        set by hand.'''
+        for switch, prop, tip in DIAMETER_SWITCHES:
+            if hasattr(obj, switch):
+                continue
+            obj.addProperty("App::PropertyBool", switch, "Diameters", translate("TurnPath", tip))
+            value = getattr(getattr(obj, prop, None), "Value", 0.0) or 0.0
+            hand = False
+            if migrate and prop == "MinDiameter":
+                hand = value > 1e-6
+            elif migrate and prop == "MaxDiameter":
+                stock = self.stock_diameter(obj)
+                # (within 0.01: bounding boxes of curved stock are not tight)
+                hand = stock is not None and abs(value - stock) > 0.01
+            setattr(obj, switch, hand)
+
+    @staticmethod
+    def stock_diameter(obj):
+        try:
+            job = PathUtils.findParentJob(obj)
+            return job.Stock.Shape.BoundBox.XLength
+        except Exception:
+            return None
 
     def add_stock_properties(self, obj, value=0.0):
         '''Stock to leave, per side: X (radially, on diameters) and Z (axially, on faces).'''
@@ -120,6 +160,7 @@ class ObjectOp(PathOp.ObjectOp):
             self.add_stock_properties(obj, old)
             if hasattr(obj, "StockToLeave"):
                 obj.removeProperty("StockToLeave")
+        self.add_diameter_switches(obj, migrate=True)
         for prop, tip in (("StockToLeaveX", STOCK_X_TIP), ("StockToLeaveZ", STOCK_Z_TIP)):
             if obj.getTypeIdOfProperty(prop) == "App::PropertyLength":
                 value = getattr(obj, prop).Value
@@ -168,6 +209,14 @@ class ObjectOp(PathOp.ObjectOp):
         '''
         PathLog.track()
         self.tool = None
+        # worked out unless set by hand: Max Diameter the stock's, Min
+        # Diameter none (0: the op follows the part); shown in the fields
+        if not getattr(obj, "SetMaxDiameter", True):
+            stock = self.stock_diameter(obj)
+            if stock is not None and abs(obj.MaxDiameter.Value - stock) > 1e-9:
+                obj.MaxDiameter = FreeCAD.Units.Quantity(stock, FreeCAD.Units.Length)
+        if not getattr(obj, "SetMinDiameter", True) and obj.MinDiameter.Value != 0:
+            obj.MinDiameter = FreeCAD.Units.Quantity(0.0, FreeCAD.Units.Length)
         self.minDia = obj.MinDiameter.Value
         self.maxDia = obj.MaxDiameter.Value
 
@@ -196,7 +245,7 @@ class ObjectOp(PathOp.ObjectOp):
 
         print("Process Geometry")
         self.stock_silhoutte = self.get_stock_silhoutte(obj)
-        self.part_outline = self.get_part_outline()
+        self.part_outline = self.get_part_outline(self.turned_model(obj))
         self.generate_gcode(obj)
         self.warn_if_nothing_cut(obj)
 
@@ -244,12 +293,45 @@ class ObjectOp(PathOp.ObjectOp):
                                      FreeCAD.Vector(-stock_plane_width, 0, stock_z_pos), FreeCAD.Vector(0, -1, 0))
         return stock_plane
 
-    def get_part_outline(self):
+    def turned_model(self, obj):
+        '''
+        The model as the operation is to leave it. With Min Diameter set by
+        hand, Rough, Profile and Turn Groove turn to it across the Z range:
+        one diameter there, cut into the model where it is bigger, left at
+        Min Diameter where the model is smaller (as a milling op leaves a
+        floor at its final depth). The outline they follow, and check their
+        paths against, is then the target, arcs and all outside the range.
+        '''
+        model = self.model[0].Shape
+        if not (self.turns_to_min_diameter and getattr(obj, "SetMinDiameter", False) and self.minDia > 0):
+            return model
+        z_lo, z_hi = obj.FinalDepth.Value, obj.StartDepth.Value
+        if z_hi - z_lo <= 1e-6:
+            return model
+        r_in = self.minDia / 2
+        r_out = max(model.BoundBox.XLength, model.BoundBox.YLength, self.maxDia) + 10.0
+        if r_in >= r_out:
+            return model
+        base = FreeCAD.Vector(0, 0, z_lo)
+        tube = Part.makeCylinder(r_out, z_hi - z_lo, base).cut(Part.makeCylinder(r_in, z_hi - z_lo, base))
+        turned = model.cut(tube)
+        # where the model is smaller than Min Diameter the op leaves it at Min
+        # Diameter (as a milling op leaves a floor at its final depth): one
+        # diameter across the range, within the model's own length (nothing
+        # is built in front of or behind it)
+        f_lo, f_hi = max(z_lo, model.BoundBox.ZMin), min(z_hi, model.BoundBox.ZMax)
+        if f_hi - f_lo > 1e-6:
+            turned = turned.fuse(Part.makeCylinder(r_in, f_hi - f_lo, FreeCAD.Vector(0, 0, f_lo))).removeSplitter()
+        if turned.isNull() or not turned.Solids:
+            return model
+        return turned
+
+    def get_part_outline(self, model=None):
         '''
         Get Part Outline
         '''
         # TODO: Revisit the edge extraction and find a more elegant method
-        model = self.model[0].Shape
+        model = self.model[0].Shape if model is None else model
         # get a section through the part origin on the XZ Plane
         sections = Path.Area().add(model).makeSections(mode=0, heights=[0.0], project=True, plane=self.stock_silhoutte)
         part_silhoutte = sections[0].setParams(Offset=0.0).getShape()
@@ -319,8 +401,8 @@ class ObjectOp(PathOp.ObjectOp):
         if max_dia is not None and max_dia.Value > 0 and part_dia > max_dia.Value + 1e-6:
             message += translate('PathTurn',
                 ". Max Diameter ({:.3f}) is below the part ({:.3f}): it is where the material starts (a surface already "
-                "turned smaller), not the diameter to turn to; to cut under the model's size, use a negative Stock to "
-                "leave X (e.g. -0.075 turns 12 mm to 11.85)").format(max_dia.Value, part_dia)
+                "turned smaller). To turn to a diameter, tick Min Diameter and set it; to take a fixed amount off, use "
+                "a negative Stock to leave X").format(max_dia.Value, part_dia)
         FreeCAD.Console.PrintWarning(message + "\n")
 
     def generate_gcode(self, obj):

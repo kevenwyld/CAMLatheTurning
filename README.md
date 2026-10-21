@@ -80,13 +80,27 @@ Not yet, because CAM's metric internal (6H) table has few fine pitches
 misname the large sizes ("11/2-12" for 1-1/2-12), and a few of its metric
 pitches are not ISO ones (e.g. M10 x 1.12).
 
-## Diameter limits
-The **Diameters** page limits every operation: **Min Diameter** (e.g. the
-bore of a tube: Face finishes the face to its edge, Partoff goes just past
-it) and **Max Diameter** (the outside the material already has). The arrow buttons beside
-them take the diameter of the selected circular edge, cylindrical face or
-vertex; a flat ring-shaped face, such as the end of a tube, gives its inner
-diameter for Min and its outer for Max.
+## Diameters
+As with milling's depths, Min and Max Diameter are worked out to start with
+and used as given when set. Each has a checkbox: unticked, the field is
+greyed out and shows what the op uses (Min: none, the op follows the part;
+Max: the stock's diameter); ticked, the op uses the value, however it
+compares with the part.
+
+* **Min Diameter**, set: Rough, Profile and Turn Groove turn to it across
+  the Z range, cutting into the model where it is bigger and leaving it at
+  Min Diameter where it is smaller (as a milling op leaves a floor at its
+  final depth). For example, select a 12 mm diameter on the Z Range page
+  and set 11.85 to turn it to the major diameter of an M12x1.75 6g thread.
+  Face and Partoff stop at it (e.g. the bore of a tube: Face finishes the
+  face to its edge, Partoff goes just past it).
+* **Max Diameter**, set: where the material starts (e.g. a surface already
+  turned smaller).
+
+The arrow buttons take the diameter of the selected circular edge,
+cylindrical face or vertex (a flat ring-shaped face, such as the end of a
+tube, gives its inner diameter for Min and its outer for Max), and tick the
+box.
 
 ## Operation settings
 * **Step over**: Rough, the depth of cut per pass (per side); Profile, the
@@ -100,11 +114,10 @@ diameter for Min and its outer for Max.
   with different values corners stay sharp instead of being rounded by the
   stock. Documents with the older single Stock to leave are converted when
   opened.
-  A negative value cuts under the model's size: for example Stock to leave X
-  -0.075 turns a bar modelled at 12 mm to 11.85, the major diameter of an
-  M12x1.75 6g thread before Turn Thread (its report gives the range). Max
-  Diameter does not do this: it is where the material starts (a surface
-  already turned smaller), and an op with nothing to cut says so.
+  A negative value takes that much off every diameter (and face) of the
+  model, like a negative offset in CAM's milling ops: for example -0.075
+  turns a bar modelled at 12 mm to 11.85. To turn to a given diameter, set
+  Min Diameter instead (see Diameters).
 * **Finish passes**, **Finish step over** (their spacing) and **Spring
   pass** (repeat the last one once more, with no step over): Profile and
   Turn Groove.
@@ -177,10 +190,9 @@ Rough and Profile only cut inside the operation's limits:
   Z Range page sets Start and Final Depth to the Z range they span.
   Everything in that range is turned. A selection with no length along Z,
   such as a single shoulder face or circular edge, is rejected.
-* **Min Diameter.** No cutting below this diameter. Rough skips passes below
-  it and Profile stops at it, re-entering at feed where the profile comes
-  back above it.
-* **Max Diameter.** The outer diameter roughing starts from (default: the
+* **Min Diameter**, when set (see Diameters): Rough, Profile and Turn
+  Groove turn to it across the Z range; no op cuts below it.
+* **Max Diameter.** The outer diameter cutting starts from (default: the
   stock diameter).
 
 The limits apply to the tool tip. At Start Depth the round nose of the insert

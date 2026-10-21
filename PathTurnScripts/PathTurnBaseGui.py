@@ -229,7 +229,80 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
             "Transfer the diameter of the selected feature (a circular edge, cylindrical face, vertex, or the "
             "outer circle of a flat face) as the maximum diameter"))
         self.add_diagram(form)
+        self.add_switches(form)
         return form
+
+    # (checkbox, switch property, value property, the field, CAM's label)
+    SWITCHES = (("setMinDiameter", "SetMinDiameter", "MinDiameter", "minDiameter", "startDepthLabel"),
+                ("setMaxDiameter", "SetMaxDiameter", "MaxDiameter", "maxDiameter", "finalDepthLabel"))
+
+    def add_switches(self, form):
+        '''Each diameter's label becomes a checkbox: unticked, the op works the
+        value out (greyed, showing what it uses); ticked, it uses the value.'''
+        layout = form.layout()
+        tips = {"setMinDiameter": QtCore.QCoreApplication.translate("PathTurn",
+                    "Set Min Diameter by hand: Rough, Profile and Turn Groove turn to it across the Z range "
+                    "(into the model where it is bigger, left at it where smaller); Face and Partoff stop at it "
+                    "(e.g. a bore). Unticked: no inner limit, the op follows the part"),
+                "setMaxDiameter": QtCore.QCoreApplication.translate("PathTurn",
+                    "Set Max Diameter by hand: where the material starts (e.g. a surface already turned "
+                    "smaller). Unticked: the stock's diameter")}
+        for box, _, _, _, label in self.SWITCHES:
+            old = getattr(form, label, None)
+            if old is None or layout is None or not hasattr(layout, "getItemPosition"):
+                continue
+            check = QtGui.QCheckBox(old.text())
+            check.setObjectName(box)
+            check.setToolTip(tips[box])
+            index = layout.indexOf(old)
+            row, col, rows, cols = layout.getItemPosition(index)
+            old.hide()
+            layout.addWidget(check, row, col, rows, cols)
+            setattr(form, box, check)
+
+    def _switched(self, obj):
+        return [(getattr(self.form, box, None), switch, prop, getattr(self.form, field))
+                for box, switch, prop, field, _ in self.SWITCHES if hasattr(obj, switch)]
+
+    def getFields(self, obj):
+        for check, switch, prop, field in self._switched(obj):
+            if check is not None and getattr(obj, switch) != check.isChecked():
+                setattr(obj, switch, check.isChecked())
+        # only values set by hand are written; the rest the op works out
+        if getattr(obj, "SetMinDiameter", True):
+            self.minDiameter.updateProperty()
+        if getattr(obj, "SetMaxDiameter", True):
+            self.maxDiameter.updateProperty()
+
+    def setFields(self, obj):
+        super().setFields(obj)
+        for check, switch, prop, field in self._switched(obj):
+            if check is None:
+                continue
+            check.blockSignals(True)
+            check.setChecked(bool(getattr(obj, switch)))
+            check.blockSignals(False)
+            field.setEnabled(bool(getattr(obj, switch)))
+
+    def getSignalsForUpdate(self, obj):
+        signals = super().getSignalsForUpdate(obj)
+        for check, _, _, _ in self._switched(obj):
+            if check is not None:
+                signals.append(check.stateChanged)
+        return signals
+
+    def pageUpdateData(self, obj, prop):
+        # what the op works out (greyed fields) follows the op; a value set by
+        # hand is being edited here, so it is left alone
+        if prop in ("MinDiameter", "MaxDiameter", "SetMinDiameter", "SetMaxDiameter"):
+            for check, switch, value, field in self._switched(obj):
+                if not getattr(obj, switch):
+                    (self.minDiameter if value == "MinDiameter" else self.maxDiameter).updateWidget()
+                if check is not None:
+                    check.blockSignals(True)
+                    check.setChecked(bool(getattr(obj, switch)))
+                    check.blockSignals(False)
+                    field.setEnabled(bool(getattr(obj, switch)))
 
     def add_diagram(self, form):
         import os
@@ -262,11 +335,25 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
     def registerSignalHandlers(self, obj):
         self.form.startDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.minDiameter, "MinDiameter", "min"))
         self.form.finalDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.maxDiameter, "MaxDiameter", "max"))
+        for check, _, _, field in self._switched(obj):
+            if check is not None:
+                check.toggled.connect(field.setEnabled)
 
     def diameterSet(self, obj, spinbox, prop, which):
         d = selection_diameter(FreeCADGui.Selection.getSelectionEx(), which)
         if d is None:
             return
+        # a diameter taken from the model is set by hand: tick it
+        switch = "SetMinDiameter" if prop == "MinDiameter" else "SetMaxDiameter"
+        check = getattr(self.form, "setMinDiameter" if prop == "MinDiameter" else "setMaxDiameter", None)
+        if hasattr(obj, switch) and not getattr(obj, switch):
+            setattr(obj, switch, True)
+            self.setDirty()
+        if check is not None:
+            check.blockSignals(True)
+            check.setChecked(True)
+            check.blockSignals(False)
+            spinbox.widget.setEnabled(True)
         if spinbox.expression():
             obj.setExpression(prop, None)
             self.setDirty()

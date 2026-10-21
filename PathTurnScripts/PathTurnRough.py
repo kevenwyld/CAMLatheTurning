@@ -44,6 +44,8 @@ def translate(context, text, disambig=None):
 class ObjectTurnRough(PathTurnBase.ObjectOp):
     '''Proxy class for turning roughing operations.'''
 
+    turns_to_min_diameter = True
+
     def initOperation(self, obj):
         super().initOperation(obj)
         self.add_cleanup_property(obj)
