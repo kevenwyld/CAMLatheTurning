@@ -17,6 +17,10 @@ COMBOS = (("threadStandard", "ThreadStandard"), ("threadSize", "ThreadSize"), ("
 QUANTITIES = (("pitch", "Pitch"), ("threadDepth", "ThreadDepth"), ("threadLength", "ThreadLength"),
               ("firstPassDepth", "FirstPassDepth"), ("minPassDepth", "MinPassDepth"), ("leadIn", "LeadIn"))
 INTEGERS = (("passes", "Passes"), ("springPasses", "SpringPasses"))
+# a checkbox that sets a value by hand: (checkbox, switch property, value widget)
+SWITCHES = (("setThreadLength", "SetThreadLength", "threadLength"), ("setPasses", "SetPasses", "passes"),
+            ("setFirstPassDepth", "SetFirstPassDepth", "firstPassDepth"), ("setLeadIn", "SetLeadIn", "leadIn"))
+VALUE_OF = {"threadLength": "ThreadLength", "passes": "Passes", "firstPassDepth": "FirstPassDepth", "leadIn": "LeadIn"}
 
 
 class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
@@ -39,19 +43,36 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         combo.setCurrentText(getattr(obj, prop))
         combo.blockSignals(False)
 
+    @staticmethod
+    def _auto(obj, prop):
+        '''True when the op works prop out (its Set switch is off).'''
+        for _, switch, widget in SWITCHES:
+            if VALUE_OF.get(widget) == prop:
+                return not getattr(obj, switch)
+        return False
+
     def getFields(self, obj):
         # the standard first: changing it changes the sizes on offer
         for widget, prop in COMBOS:
             text = getattr(self.form, widget).currentText()
             if text and getattr(obj, prop) != text and text in obj.getEnumerationsOfProperty(prop):
                 setattr(obj, prop, text)
+        # the Set switches before the values
+        # (unchecked first, so Passes and First pass depth never both end up set)
+        for box, switch, _ in sorted(SWITCHES, key=lambda s: getattr(self.form, s[0]).isChecked()):
+            checked = getattr(self.form, box).isChecked()
+            if getattr(obj, switch) != checked:
+                setattr(obj, switch, checked)
         custom = obj.ThreadStandard == "Custom"
         for box in self._spinboxes(obj):
-            # the pitch and depth come from the standard unless Custom
-            if box.prop in ("Pitch", "ThreadDepth") and not custom:
+            # the pitch and depth come from the standard unless Custom; values
+            # the op works out are shown, not written
+            if (box.prop in ("Pitch", "ThreadDepth") and not custom) or self._auto(obj, box.prop):
                 continue
             box.updateProperty()
         for widget, prop in INTEGERS:
+            if self._auto(obj, prop):
+                continue
             value = getattr(self.form, widget).value()
             if getattr(obj, prop) != value:
                 setattr(obj, prop, value)
@@ -80,10 +101,17 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         self.form.degression.blockSignals(True)
         self.form.degression.setValue(obj.Degression)
         self.form.degression.blockSignals(False)
+        for box, switch, widget in SWITCHES:
+            checkbox = getattr(self.form, box)
+            checkbox.blockSignals(True)
+            checkbox.setChecked(bool(getattr(obj, switch)))
+            checkbox.blockSignals(False)
+            getattr(self.form, widget).setEnabled(bool(getattr(obj, switch)))
         self.refresh_results(obj)
 
     # properties the op works out when it recomputes, shown on the page
-    RESULTS = ("Pitch", "ThreadDepth", "ThreadDiameter", "PassSchedule", "SizeWarning")
+    RESULTS = ("Pitch", "ThreadDepth", "ThreadDiameter", "PassSchedule", "SizeWarning",
+               "ThreadLength", "Passes", "FirstPassDepth", "LeadIn")
 
     def updateData(self, obj, prop):
         '''CAM calls this when a property is assigned: show what the op worked
@@ -93,9 +121,18 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
             self.refresh_results(obj)
 
     def refresh_results(self, obj):
+        # what the op works out: the standard's pitch and depth, and the
+        # values not set by hand (shown greyed out); values being typed in
+        # (set by hand) are left alone
         for box in self._spinboxes(obj):
-            if box.prop in ("Pitch", "ThreadDepth"):
+            if box.prop in ("Pitch", "ThreadDepth") or self._auto(obj, box.prop):
                 box.updateWidget()
+        for widget, prop in INTEGERS:
+            if self._auto(obj, prop):
+                spin = getattr(self.form, widget)
+                spin.blockSignals(True)
+                spin.setValue(getattr(obj, prop))
+                spin.blockSignals(False)
         if obj.ThreadDiameter.Value > 0:
             lines = ["Cut from the selected diameter: {}".format(obj.ThreadDiameter.UserString)]
             if getattr(obj, "PassSchedule", ""):
@@ -106,8 +143,18 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         self.form.threadWarning.setText(getattr(obj, "SizeWarning", ""))
         self.form.threadWarning.setVisible(bool(getattr(obj, "SizeWarning", "")))
 
+    def registerSignalHandlers(self, obj):
+        # Passes and First pass depth are alternatives (a first pass and the
+        # degression decide the number of passes): ticking one unticks the other
+        set_passes, set_first = self.form.setPasses, self.form.setFirstPassDepth
+        set_passes.toggled.connect(lambda on: on and set_first.setChecked(False))
+        set_first.toggled.connect(lambda on: on and set_passes.setChecked(False))
+        for box, _, widget in SWITCHES:
+            getattr(self.form, box).toggled.connect(getattr(self.form, widget).setEnabled)
+
     def getSignalsForUpdate(self, obj):
         signals = [self.form.useG76.stateChanged, self.form.degression.valueChanged]
+        signals += [getattr(self.form, box).stateChanged for box, _, _ in SWITCHES]
         signals += [getattr(self.form, w).currentIndexChanged for w, _ in COMBOS]
         signals += [getattr(self.form, w).editingFinished for w, _ in QUANTITIES]
         signals += [getattr(self.form, w).valueChanged for w, _ in INTEGERS]

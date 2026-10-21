@@ -182,64 +182,6 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         self.updateRangeLabel()
 
 
-class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
-    """
-    CAM's Diameters page with its arrow buttons working, as on the Depths
-    page: they transfer the diameter of the selected feature to Min or Max
-    Diameter. CAM's page file has the buttons but does not use them.
-    """
-
-    def initPage(self, obj):
-        super().initPage(obj)
-        self.form.startDepthSet.setToolTip(FreeCAD.Qt.translate(
-            "PathTurn", "Set Min Diameter from the selected circular edge, cylindrical face or vertex "
-                        "(a flat ring-shaped face gives its inner diameter, e.g. a bore)"))
-        self.form.finalDepthSet.setToolTip(FreeCAD.Qt.translate(
-            "PathTurn", "Set Max Diameter from the selected circular edge, cylindrical face or vertex "
-                        "(a flat ring-shaped face gives its outer diameter)"))
-        self.updateSelection(obj, FreeCADGui.Selection.getSelectionEx())
-
-    def registerSignalHandlers(self, obj):
-        self.form.startDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.minDiameter, "MinDiameter", min))
-        self.form.finalDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.maxDiameter, "MaxDiameter", max))
-
-    def updateSelection(self, obj, sel):
-        enabled = self.selectionDiameters(sel) is not None
-        self.form.startDepthSet.setEnabled(enabled)
-        self.form.finalDepthSet.setEnabled(enabled)
-
-    @staticmethod
-    def selectionDiameters(sel):
-        """Diameters named by the selection (one feature), or None."""
-        import math
-        import Part
-        if len(sel) != 1 or len(sel[0].SubObjects) != 1:
-            return None
-        sub = sel[0].SubObjects[0]
-        if sub.ShapeType == "Vertex":
-            return [2 * math.hypot(sub.Point.x, sub.Point.y)]
-        if sub.ShapeType == "Edge" and isinstance(sub.Curve, Part.Circle):
-            return [2 * sub.Curve.Radius]
-        if sub.ShapeType == "Face":
-            if isinstance(sub.Surface, Part.Cylinder):
-                return [2 * sub.Surface.Radius]
-            circles = [2 * e.Curve.Radius for e in sub.Edges if isinstance(e.Curve, Part.Circle)]
-            if circles:
-                return circles
-        return None
-
-    def diameterSet(self, obj, spinbox, prop, pick):
-        values = self.selectionDiameters(FreeCADGui.Selection.getSelectionEx())
-        if not values:
-            return
-        if spinbox.expression():
-            obj.setExpression(prop, None)
-            self.setDirty()
-        spinbox.updateWidget(FreeCAD.Units.Quantity(pick(values), FreeCAD.Units.Length))
-        if spinbox.updateProperty():
-            self.setDirty()
-
-
 def selection_diameter(selection, which):
     """
     The diameter named by a selection (one sub-element), measured about the

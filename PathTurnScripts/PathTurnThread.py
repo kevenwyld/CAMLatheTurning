@@ -29,6 +29,18 @@ def translate(context, text, disambig=None):
     return QtCore.QCoreApplication.translate(context, text, disambig)
 
 
+# Values the op works out unless they are set by hand: (switch, value, tooltip).
+# Not set, the value shows what the op uses (read only); set, the op uses it.
+# Passes and First pass depth are alternatives: a first pass and the
+# degression decide the number of passes, so setting one clears the other.
+AUTO_VALUES = (
+    ("SetThreadLength", "ThreadLength", "Set the thread length by hand; otherwise the whole selected diameter"),
+    ("SetPasses", "Passes", "Set the number of infeed passes by hand; otherwise the recommended number for the pitch"),
+    ("SetFirstPassDepth", "FirstPassDepth", "Set the first pass depth by hand; otherwise from the passes and the degression"),
+    ("SetLeadIn", "LeadIn", "Set the lead-in by hand; otherwise three pitches"),
+)
+EXCLUSIVE = {"SetPasses": "SetFirstPassDepth", "SetFirstPassDepth": "SetPasses"}
+
 # spindle-synchronized commands, which posts do not list by default
 SYNCHRONIZED = ("G33", "G76")
 ALLOW_UNSUPPORTED = "allow_unsupported"   # CAM's Constants.ANNOT_ALLOW_UNSUPPORTED
@@ -56,11 +68,21 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         super().opOnDocumentRestored(obj)
         if not hasattr(obj, "ThreadStandard"):
             self.add_thread_properties(obj)
+        self.add_auto_switches(obj, migrate=True)
         for prop, tip in (("PassSchedule", "The passes the thread is cut in (read only)"),
                           ("SizeWarning", "How the selected diameter does not fit the thread size, if it does not (read only)")):
             if not hasattr(obj, prop):
                 obj.addProperty("App::PropertyString", prop, "Thread", translate("TurnPath", tip))
                 obj.setEditorMode(prop, 1)
+
+    def add_auto_switches(self, obj, migrate=False):
+        '''The Set* switches; on an older document a non-zero value was set by hand.'''
+        for switch, prop, tip in AUTO_VALUES:
+            if not hasattr(obj, switch):
+                obj.addProperty("App::PropertyBool", switch, "Thread", translate("TurnPath", tip))
+                value = getattr(obj, prop)
+                setattr(obj, switch, bool(migrate and (value.Value if hasattr(value, "Value") else value) > 0))
+            obj.setEditorMode(prop, 0 if getattr(obj, switch) else 1)
 
     def add_thread_properties(self, obj):
         group = "Thread"
@@ -76,9 +98,9 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         add("App::PropertyLength", "ThreadDiameter", group,
             translate("TurnPath", "Diameter the thread is cut from: the selected diameter (read only)"))
         add("App::PropertyInteger", "Passes", group,
-            translate("TurnPath", "Infeed passes to full depth; 0 uses the recommended number for the pitch"))
+            translate("TurnPath", "Infeed passes to full depth (the recommended number for the pitch unless Set Passes)"))
         add("App::PropertyLength", "FirstPassDepth", group,
-            translate("TurnPath", "Depth of the first pass; 0 sets it from the number of passes"))
+            translate("TurnPath", "Depth of the first pass (from the passes and the degression unless Set First Pass Depth)"))
         add("App::PropertyLength", "MinPassDepth", group, translate("TurnPath", "Smallest depth increase per pass"))
         add("App::PropertyFloat", "Degression", group,
             translate("TurnPath", "How pass depths decrease: 1.5 (default) is gentle, with a light first pass; 2 removes the same area each pass, the first deepest; 1 the same depth each pass"))
@@ -86,9 +108,9 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             translate("TurnPath", "How the insert feeds in: along the flank (29.5 or 30 degrees) or straight in"))
         add("App::PropertyInteger", "SpringPasses", group, translate("TurnPath", "Passes repeated at full depth"))
         add("App::PropertyLength", "LeadIn", group,
-            translate("TurnPath", "Distance in front of the thread each pass starts at, for Z to reach speed; 0 is three pitches"))
+            translate("TurnPath", "Distance in front of the thread each pass starts at, for Z to reach speed (three pitches unless Set Lead In)"))
         add("App::PropertyLength", "ThreadLength", group,
-            translate("TurnPath", "Length of the thread from the front of the selected diameter; 0 threads its whole length"))
+            translate("TurnPath", "Length of the thread from the front of the selected diameter (its whole length unless Set Thread Length)"))
         add("App::PropertyString", "PassSchedule", group,
             translate("TurnPath", "The passes the thread is cut in (read only)"))
         add("App::PropertyString", "SizeWarning", group,
@@ -118,6 +140,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         obj.SpringPasses = 1
         obj.setEditorMode("Pitch", 1)
         obj.setEditorMode("ThreadDepth", 1)
+        self.add_auto_switches(obj)
 
     def update_sizes(self, obj):
         names = ThreadData.sizes(obj.ThreadStandard) or ["-"]
@@ -153,6 +176,12 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         if restoring or not needed:
             super().onChanged(obj, prop)
             return
+        switches = {switch: value for switch, value, _ in AUTO_VALUES}
+        if prop in switches and hasattr(obj, prop):
+            obj.setEditorMode(switches[prop], 0 if getattr(obj, prop) else 1)
+            other = EXCLUSIVE.get(prop)
+            if getattr(obj, prop) and other and getattr(obj, other, False):
+                setattr(obj, other, False)
         if prop == "ThreadStandard":
             self.update_sizes(obj)
             self.apply_standard(obj)
@@ -214,15 +243,15 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             'thread_depth': obj.ThreadDepth.Value,
             'thread_radius': radius,
             'internal': internal,
-            'passes': obj.Passes,
-            'first_depth': obj.FirstPassDepth.Value,
+            'passes': obj.Passes if obj.SetPasses else 0,
+            'first_depth': obj.FirstPassDepth.Value if obj.SetFirstPassDepth else 0.0,
             'min_depth': obj.MinPassDepth.Value,
             'degression': obj.Degression,
             'infeed_angle': dict(INFEEDS).get(obj.Infeed, 29.5),
             'spring_passes': obj.SpringPasses,
-            'lead_in': obj.LeadIn.Value,
+            'lead_in': obj.LeadIn.Value if obj.SetLeadIn else 0.0,
             'canned': obj.UseG76,
-            'thread_length': obj.ThreadLength.Value,
+            'thread_length': obj.ThreadLength.Value if obj.SetThreadLength else 0.0,
             'tool_angle': tool.ProfileAngle.Value,
             'tool_width': tool.Width.Value if hasattr(tool, "Width") else 0.0,
         })
@@ -250,6 +279,17 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                 2 * (radius + depths[-1]) if internal else 2 * (radius - depths[-1]))
             if obj.PassSchedule != schedule:
                 obj.PassSchedule = schedule
+            used = {"Passes": n, "FirstPassDepth": cuts[0], "LeadIn": abs(op.z_drive - op.z_front),
+                    "ThreadLength": abs(op.z_front - op.z_back)}
+            for switch, prop, _ in AUTO_VALUES:
+                if getattr(obj, switch):
+                    continue
+                current = getattr(obj, prop)
+                if prop == "Passes":
+                    if current != used[prop]:
+                        setattr(obj, prop, used[prop])
+                elif abs(current.Value - used[prop]) > 1e-7:
+                    setattr(obj, prop, FreeCAD.Units.Quantity(used[prop], FreeCAD.Units.Length))
         if obj.UseG76 and dict(INFEEDS).get(obj.Infeed, 29.5) > 0:
             FreeCAD.Console.PrintWarning(
                 "{}: CAM's posts currently drop G76's Q word (the infeed angle): the control then feeds in "

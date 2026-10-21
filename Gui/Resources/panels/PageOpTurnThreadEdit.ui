@@ -78,38 +78,38 @@
        </widget>
       </item>
       <item row="5" column="0">
-       <widget class="QLabel" name="label_threadLength">
-        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+       <widget class="QCheckBox" name="setThreadLength">
+        <property name="toolTip"><string>Set the thread length by hand; otherwise the whole selected diameter, shown greyed out</string></property>
         <property name="text"><string>Thread length</string></property>
        </widget>
       </item>
       <item row="5" column="1">
        <widget class="Gui::QuantitySpinBox" name="threadLength">
-        <property name="toolTip"><string>Length from the front of the selected diameter; 0 threads its whole length</string></property>
+        <property name="toolTip"><string>Length from the front of the selected diameter</string></property>
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>
       <item row="6" column="0">
-       <widget class="QLabel" name="label_passes">
-        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+       <widget class="QCheckBox" name="setPasses">
+        <property name="toolTip"><string>Set the number of infeed passes by hand; otherwise the recommended number for the pitch, shown greyed out</string></property>
         <property name="text"><string>Passes</string></property>
        </widget>
       </item>
       <item row="6" column="1">
        <widget class="Gui::IntSpinBox" name="passes">
-        <property name="toolTip"><string>Infeed passes to full depth; 0 uses the recommended number for the pitch</string></property>
+        <property name="toolTip"><string>Infeed passes to full depth</string></property>
         <property name="minimum"><number>0</number></property><property name="maximum"><number>999</number></property>
        </widget>
       </item>
       <item row="7" column="0">
-       <widget class="QLabel" name="label_firstPassDepth">
-        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+       <widget class="QCheckBox" name="setFirstPassDepth">
+        <property name="toolTip"><string>Set the first pass depth by hand; otherwise from the passes and the degression, shown greyed out</string></property>
         <property name="text"><string>First pass depth</string></property>
        </widget>
       </item>
       <item row="7" column="1">
        <widget class="Gui::QuantitySpinBox" name="firstPassDepth">
-        <property name="toolTip"><string>Depth of the first pass; 0 sets it from the number of passes</string></property>
+        <property name="toolTip"><string>Depth of the first pass</string></property>
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>
@@ -165,14 +165,14 @@
        </widget>
       </item>
       <item row="12" column="0">
-       <widget class="QLabel" name="label_leadIn">
-        <property name="minimumSize"><size><width>100</width><height>0</height></size></property>
+       <widget class="QCheckBox" name="setLeadIn">
+        <property name="toolTip"><string>Set the lead-in by hand; otherwise three pitches, shown greyed out</string></property>
         <property name="text"><string>Lead-in</string></property>
        </widget>
       </item>
       <item row="12" column="1">
        <widget class="Gui::QuantitySpinBox" name="leadIn">
-        <property name="toolTip"><string>Distance in front of the thread each pass starts at, for Z to reach speed; 0 is three pitches</string></property>
+        <property name="toolTip"><string>Distance in front of the thread each pass starts at, for Z to reach speed</string></property>
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>

@@ -38,11 +38,16 @@ an internal thread (Type can also be set by hand).
   tolerance first (e.g. 11.701-11.966 for M12x1.75 6g). The page shows the
   pass schedule, and warns in red when the selected diameter does not fit
   the size (over the major diameter, or well under it).
-* **Thread length** (0: the whole selected diameter), **Passes** (0: the recommended
-  number for the pitch), **First / Min pass depth**, **Degression** (1.5 by default: a gentle schedule
-  with a light first pass; 2 removes the same area each pass, the first deepest), **Infeed** (modified
-  flank 29.5 degrees by default, flank 30, or radial), **Spring passes**,
-  **Lead-in** (0: three pitches, so Z is at speed).
+* **Thread length** (the whole selected diameter), **Passes** (the
+  recommended number for the pitch), **First pass depth** (from the passes
+  and the degression) and **Lead-in** (three pitches, so Z is at speed) are
+  worked out by the op and shown greyed out; tick one to set it by hand,
+  starting from the value shown. Passes and First pass depth are
+  alternatives: a first pass and the degression decide the number of
+  passes. **Min pass depth**, **Degression** (1.5 by default: a gentle
+  schedule with a light first pass; 2 removes the same area each pass, the
+  first deepest), **Infeed** (modified flank 29.5 degrees by default, flank
+  30, or radial), **Spring passes**.
 * Output: explicit passes using **G33** (spindle-synchronized motion; works
   on a mill with a spindle encoder, such as PathPilot in mill mode), or one
   **G76** cycle with **Use G76 cycle** on controls that have it. Both are
