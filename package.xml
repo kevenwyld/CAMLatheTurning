@@ -6,13 +6,18 @@
   <maintainer email="11936535+kevenwyld@users.noreply.github.com">Keven Wyld</maintainer>
   <license file="LICENSE">LGPL-2.1</license>
   <url type="repository" branch="main">https://github.com/kevenwyld/TurningAddon</url>
-  <url type="readme">https://github.com/kevenwyld/TurningAddon/blob/master/README.md</url>
+  <url type="readme">https://github.com/kevenwyld/TurningAddon/blob/main/README.md</url>
 
   <content>
     <workbench>
       <icon>Gui/Resources/Icons/CAM-TurningAddon.svg</icon>
       <freecadmin>1.1.0</freecadmin>
     </workbench>
+    <Postprocessor>
+      <name>linuxcnc_lathe</name>
+      <description>LinuxCNC lathe: G18 G8, G33 and G76 threading, no up-and-back between operations</description>
+      <subdirectory>Posts</subdirectory>
+    </Postprocessor>
   </content>
 
 </package>

@@ -60,9 +60,9 @@ an internal thread (Type can also be set by hand).
 * Output: explicit passes using **G33** (spindle-synchronized motion; works
   on a mill with a spindle encoder, such as PathPilot in mill mode), or one
   **G76** cycle with **Use G76 cycle** on controls that have it. Both are
-  marked for CAM's posts to pass through. CAM's posts currently drop G76's
-  Q word (the infeed angle), so check a posted G76 line or use the explicit
-  passes.
+  marked for CAM's posts to pass through. CAM's own posts drop G76's Q word
+  (the infeed angle); the addon's linuxcnc_lathe post keeps it (see Post
+  processor).
 * The insert is kept clear of the part: nothing in front of the thread may
   stand above its root (every pass starts in front at depth, so the part
   there needs a chamfer or a relief groove), and a shoulder behind it must
@@ -219,6 +219,27 @@ in `Assets/Bit` from the tool library.
 
 Set TipRadius to your insert's nose radius. Rotation must be greater than 0
 and TipAngle less than 90 degrees.
+
+## Post processor
+The addon brings a **linuxcnc_lathe** post (in `Posts/`, found by CAM
+through the addon's package.xml): CAM's LinuxCNC post, with what a lathe
+program needs. Choose it in the Job or the machine setup.
+
+* **G18 G8** at the start: the XZ plane and radius mode. The turning
+  operations program X as a radius, and many LinuxCNC lathe
+  configurations start in diameter mode (G7), so the program says so. A
+  G17 in the machine's preamble becomes G18.
+* **G33 and G76** accepted, and G76's **Q** (infeed angle) kept; CAM's
+  LinuxCNC post drops Q from G76, which makes it infeed radially.
+* **No up-and-back between operations**: each operation ends at the safe
+  position and the next starts from it; consecutive rapids along Z at the
+  same safe X are reduced to the first and the last (the cutting moves are
+  unchanged). A tool change, spindle or coolant command between them stops
+  this.
+
+On a mill used as a lathe (e.g. PathPilot in mill mode), CAM's LinuxCNC post
+is the one to use: the program is already in the XZ plane (G18) and needs no
+lathe modes. Diameter-mode output (G7, X words doubled) is not offered yet.
 
 ## CAM integration
 The turning operations are CAM operations, but CAM recognises operations by

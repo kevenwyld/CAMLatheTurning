@@ -345,8 +345,9 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                     setattr(obj, prop, FreeCAD.Units.Quantity(used[prop], FreeCAD.Units.Length))
         if obj.UseG76 and dict(INFEEDS).get(obj.Infeed, 29.5) > 0:
             FreeCAD.Console.PrintWarning(
-                "{}: CAM's posts currently drop G76's Q word (the infeed angle): the control then feeds in "
-                "radially. Check the posted G76 line, or use the explicit passes (Use G76 cycle off)\n".format(obj.Label))
+                "{}: CAM's own posts drop G76's Q word (the infeed angle): the control then feeds in "
+                "radially. Post with the addon's linuxcnc_lathe post, which keeps it, or use the explicit passes "
+                "(Use G76 cycle off)\n".format(obj.Label))
 
     def report(self, obj, internal, radius, major, pitch, tol, depth, n, cuts, lead, z_front, z_back):
         '''What the thread needs and how it is cut, for the page: one item a
