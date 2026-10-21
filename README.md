@@ -39,7 +39,7 @@ A proof of concept simulator to help visualize these new operations is available
   macro folder)
 * CAM tool bits (legacy tools are not supported)
 * Python3
-* Qt5
+* Qt6
 
 ## Installation
 1. Use `git clone --recurse` or download the `.zip` file of this repo directly in to your [FreeCAD `Mod/` directory](https://wiki.freecad.org/Installing_more_workbenches).
