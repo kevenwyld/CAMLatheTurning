@@ -38,7 +38,11 @@ AUTO_VALUES = (
     ("SetPasses", "Passes", "Set the number of infeed passes by hand; otherwise the recommended number for the pitch"),
     ("SetFirstPassDepth", "FirstPassDepth", "Set the first pass depth by hand; otherwise from the passes and the degression"),
     ("SetLeadIn", "LeadIn", "Set the lead-in by hand; otherwise three pitches"),
+    ("SetRunOut", "RunOut", "Set the run-out by hand (0: stop dead, into a relief groove); otherwise one pitch"),
 )
+RUN_OUT_TIP = ("Run-out: over this last length of the thread (along Z) each pass tapers out to the crest, still "
+               "synchronised with the spindle, instead of stopping dead at full depth (G76's E, with L2). 0 stops "
+               "dead, for a thread ending in a relief groove. One pitch unless Set Run Out")
 EXCLUSIVE = {"SetPasses": "SetFirstPassDepth", "SetFirstPassDepth": "SetPasses"}
 
 # spindle-synchronized commands, which posts do not list by default
@@ -107,6 +111,13 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         '''The Set* switches; on an older document a non-zero value was set by hand.'''
         # (also run on the Job dialog's operation prototypes, whose properties
         # cannot all be read back: hence the defaults)
+        if not hasattr(obj, "RunOut"):
+            obj.addProperty("App::PropertyLength", "RunOut", "Thread", translate("TurnPath", RUN_OUT_TIP))
+            if migrate:
+                # an op from before the run-out stopped dead: it still does
+                # (set, at 0), so its program does not change
+                obj.addProperty("App::PropertyBool", "SetRunOut", "Thread", translate("TurnPath", AUTO_VALUES[-1][2]))
+                obj.SetRunOut = True
         for switch, prop, tip in AUTO_VALUES:
             if not hasattr(obj, switch):
                 obj.addProperty("App::PropertyBool", switch, "Thread", translate("TurnPath", tip))
@@ -299,6 +310,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             'infeed_angle': dict(INFEEDS).get(obj.Infeed, 29.5),
             'spring_passes': obj.SpringPasses,
             'lead_in': obj.LeadIn.Value if obj.SetLeadIn else 0.0,
+            'run_out': obj.RunOut.Value if getattr(obj, "SetRunOut", False) else pitch,
             'canned': obj.UseG76,
             'thread_length': obj.ThreadLength.Value if obj.SetThreadLength else 0.0,
             'tool_angle': tool.ProfileAngle.Value,
@@ -329,11 +341,11 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             if obj.PassSchedule != schedule:
                 obj.PassSchedule = schedule
             report = self.report(obj, internal, radius, major, pitch, tol, depths[-1], n, cuts,
-                                 abs(op.z_drive - op.z_front), op.z_front, op.z_back)
+                                 abs(op.z_drive - op.z_front), op.z_front, op.z_back, op.run_out)
             if getattr(obj, "ThreadReport", None) is not None and obj.ThreadReport != report:
                 obj.ThreadReport = report
             used = {"Passes": n, "FirstPassDepth": cuts[0], "LeadIn": abs(op.z_drive - op.z_front),
-                    "ThreadLength": abs(op.z_front - op.z_back)}
+                    "ThreadLength": abs(op.z_front - op.z_back), "RunOut": op.run_out}
             for switch, prop, _ in AUTO_VALUES:
                 if getattr(obj, switch):
                     continue
@@ -349,7 +361,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                 "radially. Post with the addon's linuxcnc_lathe post, which keeps it, or use the explicit passes "
                 "(Use G76 cycle off)\n".format(obj.Label))
 
-    def report(self, obj, internal, radius, major, pitch, tol, depth, n, cuts, lead, z_front, z_back):
+    def report(self, obj, internal, radius, major, pitch, tol, depth, n, cuts, lead, z_front, z_back, run_out=0.0):
         '''What the thread needs and how it is cut, for the page: one item a
         line. A Unified thread's dimensions are in inches, as it is specified;
         positions along Z are in the document's units (machine coordinates).'''
@@ -399,6 +411,11 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             n, " + {} spring".format(obj.SpringPasses) if obj.SpringPasses else "", dim(cuts[0]), dim(cuts[-1])))
         lines.append("Z {} to {} ({} long); each pass starts {} in front".format(
             pos(z_front), pos(z_back), pos(abs(z_front - z_back)), pos(lead)))
+        if run_out > 0:
+            lines.append("Full depth to Z {}, then a run-out ({} long) out to the crest at Z {}".format(
+                pos(z_back + run_out), pos(run_out), pos(z_back)))
+        else:
+            lines.append("No run-out: the passes stop dead at Z {} (a relief groove there)".format(pos(z_back)))
         return "\n".join(lines)
 
     def outline_radius(self, face):
@@ -441,7 +458,7 @@ def _is_bore(face):
 
 
 def SetupProperties():
-    return ["Passes", "MinPassDepth", "Degression", "Infeed", "SpringPasses", "LeadIn", "UseG76"]
+    return ["Passes", "MinPassDepth", "Degression", "Infeed", "SpringPasses", "LeadIn", "RunOut", "UseG76"]
 
 
 def Create(name, obj=None, parentJob=None):

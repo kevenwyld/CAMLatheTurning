@@ -70,6 +70,13 @@ an internal thread (Type can also be set by hand).
   wires (external); the root or major diameter and the depth; the passes;
   the Z range and lead-in. It warns in red when the selected diameter does
   not fit the size at all (e.g. M10 chosen for a 12 mm bar).
+* **Run-out**: over this last length of the thread each pass tapers out to
+  the crest, still synchronised with the spindle, instead of stopping dead
+  at full depth: a tapered G33, or G76's E with L2. One pitch by default
+  (shown greyed); tick it and set 0 to stop dead, for a thread that ends in
+  a relief groove. The report says where full depth ends. Thread operations
+  made before the run-out keep stopping dead (Run-out ticked, at 0), so
+  their programs do not change.
 * **Thread length** (the whole selected diameter), **Passes** (the
   recommended number for the pitch), **First pass depth** (from the passes
   and the degression) and **Lead-in** (three pitches, so Z is at speed) are

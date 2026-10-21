@@ -15,12 +15,14 @@ from PySide import QtCore
 COMBOS = (("threadStandard", "ThreadStandard"), ("threadSize", "ThreadSize"), ("threadType", "ThreadType"),
           ("toleranceClass", "ToleranceClass"), ("infeed", "Infeed"))
 QUANTITIES = (("pitch", "Pitch"), ("threadDepth", "ThreadDepth"), ("threadLength", "ThreadLength"),
-              ("firstPassDepth", "FirstPassDepth"), ("minPassDepth", "MinPassDepth"), ("leadIn", "LeadIn"))
+              ("firstPassDepth", "FirstPassDepth"), ("minPassDepth", "MinPassDepth"), ("leadIn", "LeadIn"),
+              ("runOut", "RunOut"))
 INTEGERS = (("passes", "Passes"), ("springPasses", "SpringPasses"))
 # a checkbox that sets a value by hand: (checkbox, switch property, value widget)
 SWITCHES = (("setThreadLength", "SetThreadLength", "threadLength"), ("setPasses", "SetPasses", "passes"),
-            ("setFirstPassDepth", "SetFirstPassDepth", "firstPassDepth"), ("setLeadIn", "SetLeadIn", "leadIn"))
-VALUE_OF = {"threadLength": "ThreadLength", "passes": "Passes", "firstPassDepth": "FirstPassDepth", "leadIn": "LeadIn"}
+            ("setFirstPassDepth", "SetFirstPassDepth", "firstPassDepth"), ("setLeadIn", "SetLeadIn", "leadIn"),
+            ("setRunOut", "SetRunOut", "runOut"))
+VALUE_OF = {"threadLength": "ThreadLength", "passes": "Passes", "firstPassDepth": "FirstPassDepth", "leadIn": "LeadIn", "runOut": "RunOut"}
 
 
 class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
@@ -111,7 +113,7 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
 
     # properties the op works out when it recomputes, shown on the page
     RESULTS = ("Pitch", "ThreadDepth", "ThreadDiameter", "PassSchedule", "SizeWarning",
-               "ThreadLength", "Passes", "FirstPassDepth", "LeadIn", "ToleranceClass", "ThreadReport")
+               "ThreadLength", "Passes", "FirstPassDepth", "LeadIn", "RunOut", "ToleranceClass", "ThreadReport")
 
     def updateData(self, obj, prop):
         '''CAM calls this when a property is assigned: show what the op worked
