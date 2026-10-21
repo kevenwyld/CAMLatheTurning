@@ -44,11 +44,12 @@ an internal thread (Type can also be set by hand).
   marked for CAM's posts to pass through. CAM's posts currently drop G76's
   Q word (the infeed angle), so check a posted G76 line or use the explicit
   passes.
-* The insert is kept clear of the part and the chuck: nothing in front of
-  the thread may stand above its root (every pass starts in front at depth,
-  so the part there needs a chamfer or a relief groove), and a shoulder or
-  the end of the stock behind it must clear the insert's flank; the op says
-  where the thread must end.
+* The insert is kept clear of the part: nothing in front of the thread may
+  stand above its root (every pass starts in front at depth, so the part
+  there needs a chamfer or a relief groove), and a shoulder behind it must
+  clear the insert's flank; the op says where the thread must end. Where the
+  part is held (chuck, collet, fixture) is not assumed from the stock: keep
+  the insert clear of it.
 
 ## Diameter limits
 The **Diameters** page limits every operation: **Min Diameter** (e.g. the
@@ -113,8 +114,8 @@ with the blade's part-side flank on the part's back face (the model's, or
 the back of a selection on the Z Range page), Overtravel (default 0.2 mm)
 past the centreline so no pip is left, or past Min Diameter if one is set
 (the bore of a tube). It warns when the insert's grooving depth cannot
-reach, and refuses to part off when there is not a blade's width of stock
-behind the back face.
+reach. Where the part is held is not assumed from the stock: the blade may
+reach past the stock's end, so keep it clear of the fixture.
 
 Rough, Profile and Face need a turning insert, and Turn Groove and Turn
 Partoff a grooving
