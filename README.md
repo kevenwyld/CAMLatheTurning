@@ -16,6 +16,8 @@ interface; see Features below. It uses its own fork of LibLathe
 It uses the same Python module names as the original, so the two cannot be
 installed side by side. This repository was previously named TurningAddon.
 
+<img width="1954" height="1048" alt="Screenshot_2026-10-21_17-16-55" src="https://github.com/user-attachments/assets/551bcb13-87cb-45fe-8ed0-61427d220ebd" />
+
 ## Description
 Once installed, the addon adds its operations to the CAM workbench, in a
 Turning toolbar and menu, for creating turning paths for a CNC lathe (or a
