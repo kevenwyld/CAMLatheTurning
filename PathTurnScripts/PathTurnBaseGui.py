@@ -203,12 +203,15 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         elif not on and self._is_set(prop):
             self.obj.setExpression(prop, "Op" + prop)
             self.obj.recompute()
+        # the change is the op's now: the panel's Apply (and OK) recompute it
+        self.setDirty()
         self.refresh_limits()
 
     def limit_edited(self, prop):
         check, spin, bound = self._limits[prop]
         if check.isChecked():
-            bound.updateProperty()
+            if bound.updateProperty():
+                self.setDirty()
             self.updateRangeLabel()
 
     def refresh_limits(self):
