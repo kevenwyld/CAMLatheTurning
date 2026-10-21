@@ -349,7 +349,19 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                 "radially. Check the posted G76 line, or use the explicit passes (Use G76 cycle off)\n".format(obj.Label))
 
     def report(self, obj, internal, radius, major, pitch, tol, depth, n, cuts, lead, z_front, z_back):
-        '''What the thread needs and how it is cut, for the page: one item a line.'''
+        '''What the thread needs and how it is cut, for the page: one item a
+        line. A Unified thread's dimensions are in inches, as it is specified;
+        positions along Z are in the document's units (machine coordinates).'''
+        inch = obj.ThreadStandard in ("UNC", "UNF")
+
+        def dim(mm, places=None):
+            if inch:
+                return "{:.{p}f}\"".format(mm / 25.4, p=4 if places is None else places)
+            return "{:.{p}f}".format(mm, p=3 if places is None else places)
+
+        def pos(mm):
+            return FreeCAD.Units.Quantity(mm, FreeCAD.Units.Length).UserString
+
         d = 2 * radius
         name = "{} {}".format(obj.ThreadStandard, obj.ThreadSize) if major else "Custom thread, pitch {:.3f}".format(pitch)
         cls = getattr(obj, "ToleranceClass", ThreadData.BASIC)
@@ -358,34 +370,34 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
 
         def against(lo, hi):
             if d > hi + 1e-4:
-                return "the selected {:.3f} is {:.3f} over".format(d, d - hi)
+                return "the selected {} is {} over".format(dim(d), dim(d - hi))
             if d < lo - 1e-4:
-                return "the selected {:.3f} is {:.3f} under".format(d, lo - d)
-            return "the selected {:.3f} is within".format(d)
+                return "the selected {} is {} under".format(dim(d), dim(lo - d))
+            return "the selected {} is within".format(dim(d))
 
         if tol:
             if internal:
-                lines.append("Bore the minor diameter to {:.3f}-{:.3f} first: {}".format(
-                    tol["minor_min"], tol["minor_max"], against(tol["minor_min"], tol["minor_max"])))
+                lines.append("Bore the minor diameter to {}-{} first: {}".format(
+                    dim(tol["minor_min"]), dim(tol["minor_max"]), against(tol["minor_min"], tol["minor_max"])))
             else:
-                lines.append("Turn the major diameter to {:.3f}-{:.3f} first: {}".format(
-                    tol["major_min"], tol["major_max"], against(tol["major_min"], tol["major_max"])))
+                lines.append("Turn the major diameter to {}-{} first: {}".format(
+                    dim(tol["major_min"]), dim(tol["major_max"]), against(tol["major_min"], tol["major_max"])))
             mid = (tol["pitch_min"] + tol["pitch_max"]) / 2
-            lines.append("Pitch diameter {:.3f}-{:.3f}, cut to {:.3f}".format(tol["pitch_min"], tol["pitch_max"], mid))
+            lines.append("Pitch diameter {}-{}, cut to {}".format(dim(tol["pitch_min"]), dim(tol["pitch_max"]), dim(mid)))
             if not internal:
                 w, add = ThreadData.best_wire(pitch)
-                lines.append("Over three best-size wires (dia {:.4f}): {:.3f}-{:.3f}".format(
-                    w, tol["pitch_min"] + add, tol["pitch_max"] + add))
+                lines.append("Over three best-size wires (dia {}): {}-{}".format(
+                    dim(w, 5 if inch else 4), dim(tol["pitch_min"] + add), dim(tol["pitch_max"] + add)))
         elif major:
             reason = "Basic profile chosen" if cls == ThreadData.BASIC else "No {} data for this size".format(cls)
-            lines.append("{}: cut to the basic profile (pitch diameter {:.3f})".format(
-                reason, ThreadData.basic_pitch_diameter(major, pitch)))
-        lines.append("{} {:.3f}, {:.3f} deep from the selected diameter".format(
-            "Major diameter" if internal else "Root diameter", d + 2 * depth if internal else d - 2 * depth, depth))
-        lines.append("{} passes{}: first {:.3f}, last {:.3f}".format(
-            n, " + {} spring".format(obj.SpringPasses) if obj.SpringPasses else "", cuts[0], cuts[-1]))
-        lines.append("Z {:.3f} to {:.3f} ({:.3f} long); each pass starts {:.3f} in front".format(
-            z_front, z_back, abs(z_front - z_back), lead))
+            lines.append("{}: cut to the basic profile (pitch diameter {})".format(
+                reason, dim(ThreadData.basic_pitch_diameter(major, pitch))))
+        lines.append("{} {}, {} deep from the selected diameter".format(
+            "Major diameter" if internal else "Root diameter", dim(d + 2 * depth if internal else d - 2 * depth), dim(depth)))
+        lines.append("{} passes{}: first {}, last {}".format(
+            n, " + {} spring".format(obj.SpringPasses) if obj.SpringPasses else "", dim(cuts[0]), dim(cuts[-1])))
+        lines.append("Z {} to {} ({} long); each pass starts {} in front".format(
+            pos(z_front), pos(z_back), pos(abs(z_front - z_back)), pos(lead)))
         return "\n".join(lines)
 
     def outline_radius(self, face):
