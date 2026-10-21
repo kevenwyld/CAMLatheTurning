@@ -182,6 +182,55 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         self.updateRangeLabel()
 
 
+class SvgDiagram(QtGui.QLabel):
+    """
+    An SVG drawn at the label's width (the height follows the drawing's
+    proportions), redrawn when the panel is resized, at the screen's pixel
+    ratio: it fills the task panel at any width, sharply.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._svg = None
+        self._aspect = 0.5
+        self.setMinimumWidth(160)
+        self.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
+
+    def set_svg(self, svg_text):
+        from PySide import QtSvg
+        self._svg = QtCore.QByteArray(svg_text.encode("utf-8"))
+        size = QtSvg.QSvgRenderer(self._svg).defaultSize()
+        if size.width() > 0:
+            self._aspect = size.height() / size.width()
+        self._redraw(self.width())
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, width):
+        return int(width * self._aspect)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._redraw(event.size().width())
+
+    def _redraw(self, width):
+        from PySide import QtGui as _QtGui, QtSvg
+        if self._svg is None or width <= 0:
+            return
+        height = int(width * self._aspect)
+        self.setFixedHeight(height)
+        app = QtGui.QApplication.instance()
+        ratio = app.devicePixelRatio() if app is not None and hasattr(app, "devicePixelRatio") else 1.0
+        pixmap = _QtGui.QPixmap(int(width * ratio), int(height * ratio))
+        pixmap.fill(QtCore.Qt.transparent)
+        painter = _QtGui.QPainter(pixmap)
+        QtSvg.QSvgRenderer(self._svg).render(painter, QtCore.QRectF(0, 0, width * ratio, height * ratio))
+        painter.end()
+        pixmap.setDevicePixelRatio(ratio)
+        self.setPixmap(pixmap)
+
+
 def selection_diameter(selection, which):
     """
     The diameter named by a selection (one sub-element), measured about the
@@ -393,40 +442,48 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
                     check.blockSignals(False)
                     field.setEnabled(bool(getattr(obj, switch)))
 
-    def _diagram_pixmap(self, side):
+    # the diagrams' placeholder colours, swapped for the theme: dark labels and
+    # lines on a light theme, near-white ones and a stronger band on a dark one
+    THEMES = {
+        False: {"#8a8a8a": "#2e2e2e", "#999999": "#5c5c5c", "#c6ae4f": "#9c7d14",
+                "fill-opacity:0.35": "fill-opacity:0.40"},
+        True: {"#8a8a8a": "#f0f0f0", "#999999": "#cfcfcf", "#c6ae4f": "#f0d060",
+               "fill-opacity:0.35": "fill-opacity:0.55"},
+    }
+
+    def _diagram_svg(self, side):
+        '''The side's diagram as SVG text, coloured for the theme.'''
         import os
-        from PySide import QtGui as _QtGui, QtSvg
         path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                             "Gui", "Resources", "Icons", self.DIAGRAMS.get(side, self.DIAGRAMS["External"]))
         if not os.path.exists(path):
             return None
-        renderer = QtSvg.QSvgRenderer(path)
-        size = renderer.defaultSize()
-        pixmap = _QtGui.QPixmap(size)
-        pixmap.fill(QtCore.Qt.transparent)
-        painter = _QtGui.QPainter(pixmap)
-        renderer.render(painter, QtCore.QRectF(0, 0, size.width(), size.height()))
-        painter.end()
-        return pixmap
+        with open(path, encoding="utf-8") as fp:
+            text = fp.read()
+        app = QtGui.QApplication.instance()
+        dark = app is not None and app.palette().color(QtGui.QPalette.Window).lightness() < 128
+        for a, b in self.THEMES[dark].items():
+            text = text.replace(a, b)
+        return text
 
     def show_diagram(self, obj):
         '''The diagram for the operation's side (boring has its own).'''
         label = getattr(self, "_diagram", None)
         side = getattr(obj, "Side", "External")
         if label is not None and getattr(self, "_diagram_side", None) != side:
-            pixmap = self._diagram_pixmap(side)
-            if pixmap is not None:
-                label.setPixmap(pixmap)
+            text = self._diagram_svg(side)
+            if text is not None:
+                label.set_svg(text)
                 self._diagram_side = side
 
     def add_diagram(self, form):
         layout = form.layout()
         side = getattr(getattr(self, "obj", None), "Side", "External")
-        pixmap = self._diagram_pixmap(side)
-        if pixmap is None or layout is None or not hasattr(layout, "getItemPosition"):
+        text = self._diagram_svg(side)
+        if text is None or layout is None or not hasattr(layout, "getItemPosition"):
             return
-        label = QtGui.QLabel()
-        label.setPixmap(pixmap)
+        label = SvgDiagram()
+        label.set_svg(text)
         label.setObjectName("diametersDiagram")
         self._diagram, self._diagram_side = label, side
         # put the diagram on top: move the existing widgets down a row.
@@ -443,7 +500,7 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
             layout.removeWidget(widget)
         for widget, (row, col, rows, cols) in moves:
             layout.addWidget(widget, row + 1, col, rows, cols)
-        layout.addWidget(label, 0, 0, 1, max(1, layout.columnCount()), QtCore.Qt.AlignHCenter)
+        layout.addWidget(label, 0, 0, 1, max(1, layout.columnCount()))
 
     def registerSignalHandlers(self, obj):
         self.form.startDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.minDiameter, "MinDiameter", "min"))
