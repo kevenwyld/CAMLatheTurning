@@ -24,6 +24,7 @@
 
 import os
 
+import FreeCAD
 import FreeCADGui
 
 # register the ISO turning-insert toolbit shape
@@ -54,6 +55,7 @@ COMMANDS = ['CAM_TurnFace', 'CAM_TurnRough', 'CAM_TurnProfile', 'CAM_TurnGroove'
 # Existing CAM command to insert after. It only exists in the CAM workbench's
 # menu, so the manipulator is a no-op in every other workbench.
 ANCHOR = 'CAM_Pocket3D'
+TOOLBAR = 'Turning'
 
 
 class TurningMenuManipulator:
@@ -159,3 +161,32 @@ def offer_turning_dressups():
 
 
 offer_turning_dressups()
+
+
+def add_turning_toolbar():
+    """
+    A Turning toolbar in the CAM workbench, with the same commands as the
+    menu. A workbench declares its toolbars in Initialize(), which FreeCAD
+    runs once, the first time it is activated: CAM's is extended to add this
+    one too, so the toolbar belongs to the CAM workbench and only shows there.
+    """
+    try:
+        workbench = FreeCADGui.getWorkbench("CAMWorkbench")
+    except Exception:
+        return
+    cam_initialize = getattr(type(workbench), "Initialize", None)
+    if cam_initialize is None or getattr(cam_initialize, "adds_turning_toolbar", False):
+        return
+
+    def Initialize(self):
+        cam_initialize(self)
+        try:
+            self.appendToolbar(TOOLBAR, COMMANDS)
+        except Exception as e:
+            FreeCAD.Console.PrintWarning("Turning: could not add the Turning toolbar: {}\n".format(e))
+
+    Initialize.adds_turning_toolbar = True
+    type(workbench).Initialize = Initialize
+
+
+add_turning_toolbar()

@@ -7,14 +7,20 @@ A FreeCAD Path Addon to encourage the development of CNC turning functionality f
 This addon when installed will appear in the Path Workbench toolbar menu and will allow the creation of turning paths for use with a CNC lathe. This addon includes [LibLathe](https://github.com/dubstar-04/LibLathe) as a submodule.
 
 ## Features
-* Turning Roughing operation
-* Turning Facing operation
-* Turning Profiling operation
-* Turning Parting operation
+* Turning operations: Face, Rough, Profile, Groove, Thread (G33 passes or a
+  G76 cycle) and Partoff
+* Turning tool shapes: ISO turning insert, grooving / parting insert, full
+  radius insert, threading insert, with example bits
+* A LinuxCNC lathe post processor
+* The commands in the CAM menu and on a **Turning** toolbar in the CAM
+  workbench
 
 ## Requirements
-* FreeCAD v0.21
-* Path Toolbits (Legacy tools are not supported)
+* FreeCAD 1.1 or later; developed and tested on FreeCAD 27 development builds
+  (the post processor is found automatically only on builds whose CAM scans
+  addons for posts; on others, copy `Posts/linuxcnc_lathe_post.py` into your
+  macro folder)
+* CAM tool bits (legacy tools are not supported)
 * Python3
 * Qt5
 
@@ -207,7 +213,7 @@ The turning operations need a turning tool bit. FreeCAD's tool library has no
 turning shape, so the addon provides an ISO turning insert shape and an
 example bit, plus the Grooving, Full Radius and Threading shapes with an
 example insert each. To add them to your CAM tool assets, switch to the CAM workbench and
-run **Install Turning Tools** from the CAM menu. Running it again after an
+run **Install Turning Tools** from the CAM menu or the Turning toolbar. Running it again after an
 update brings the shapes up to date; tool bits you have are never changed. Existing files
 are never overwritten. Then add the example bit to a tool library, or create
 your own bits from the **ISO Turning Insert** shape.
