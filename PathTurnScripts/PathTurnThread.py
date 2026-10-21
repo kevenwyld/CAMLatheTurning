@@ -161,7 +161,12 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         if face is None:
             raise RuntimeError(translate('PathTurn', "Select the diameter to thread (its cylindrical face) on the Z Range page"))
         internal = self.internal(obj)
-        radius = face.Surface.Radius
+        # an external thread is cut from the surface as the turning
+        # operations see it: the part's outline (a section on +X), which also
+        # places the thread's radius exactly where the clearance checks look,
+        # even for a model a hair off the axis. The outline has no bores, so an
+        # internal thread keeps the bore face's radius.
+        radius = face.Surface.Radius if internal else self.outline_radius(face) or face.Surface.Radius
         obj.ThreadDiameter = FreeCAD.Units.Quantity(2 * radius, FreeCAD.Units.Length)
         self.apply_standard(obj)
         self.check_size(obj, 2 * radius, internal)
@@ -203,6 +208,19 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             FreeCAD.Console.PrintWarning(
                 "{}: CAM's posts currently drop G76's Q word (the infeed angle): the control then feeds in "
                 "radially. Check the posted G76 line, or use the explicit passes (Use G76 cycle off)\n".format(obj.Label))
+
+    def outline_radius(self, face):
+        '''The part outline's radius at the middle of a face's Z range, or None.'''
+        z = (face.BoundBox.ZMin + face.BoundBox.ZMax) / 2
+        best = None
+        for seg in getattr(self, "part_outline", None) or []:
+            z1, z2 = seg.start.Z, seg.end.Z
+            if abs(z2 - z1) < 1e-9 or not (min(z1, z2) - 1e-9 <= z <= max(z1, z2) + 1e-9):
+                continue
+            t = (z - z1) / (z2 - z1)
+            r = -(seg.start.X + t * (seg.end.X - seg.start.X)) if seg.bulge == 0 else max(-seg.start.X, -seg.end.X)
+            best = r if best is None else max(best, r)
+        return best
 
     def check_size(self, obj, diameter, internal):
         '''Warn when the selected face does not look like the size chosen.'''
