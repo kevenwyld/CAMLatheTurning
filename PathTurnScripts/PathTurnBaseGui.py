@@ -218,7 +218,18 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
     diagram.
     """
 
-    DIAGRAM = "CAM-TurnDiametersDiagram.svg"
+    DIAGRAMS = {"External": "CAM-TurnDiameters-External.svg", "Internal": "CAM-TurnDiameters-Internal.svg"}
+    # radial distances that belong with the diameters: (checkbox, switch,
+    # property, field, label, tooltip)
+    CLEARANCES = (
+        ("setRetract", "SetRetract", "Retract", "retract", "Retract",
+         "Radial lift-off at the end of each pass, beyond the furthest the tool reached. Unticked: step over x "
+         "finish passes outside, 0.5 mm (or a quarter of the hole's radius) when boring, shown greyed out"),
+        ("setRadialClearance", "SetRadialClearance", "RadialClearance", "radialClearance", "Radial clearance",
+         "Radial distance of the safe position (and radial approaches) from the stock, or from the hole when "
+         "boring. Unticked: the Setup Sheet's safe height offset outside, 0.5 mm (or a quarter of the hole's "
+         "radius) when boring, shown greyed out"),
+    )
 
     def getForm(self):
         form = super().getForm()
@@ -230,7 +241,57 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
             "outer circle of a flat face) as the maximum diameter"))
         self.add_diagram(form)
         self.add_switches(form)
+        self.add_clearance_rows(form)
         return form
+
+    def _shows(self, obj, prop):
+        '''Retract only for operations made of passes; neither for Turn Thread
+        (it has its own clearances).'''
+        proxy = getattr(obj, "Proxy", None)
+        if not hasattr(obj, prop) or getattr(proxy, "uses_threading_tool", False):
+            return False
+        return prop != "Retract" or getattr(proxy, "uses_pass_retract", False)
+
+    def add_clearance_rows(self, form):
+        layout = form.layout()
+        if layout is None or not hasattr(layout, "rowCount"):
+            return
+        # CAM's page ends with an expanding spacer: collapse it where it is
+        # (moving it would take the layout item out, see add_diagram) and
+        # stretch an empty row after these instead, so they follow the diameters
+        for index in range(layout.count()):
+            spacer = layout.itemAt(index).spacerItem()
+            if spacer is not None:
+                spacer.changeSize(0, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+        loader = FreeCADGui.UiLoader()
+        for box, _, prop, field, text, tip in self.CLEARANCES:
+            check = QtGui.QCheckBox(QtCore.QCoreApplication.translate("PathTurn", text))
+            check.setObjectName(box)
+            check.setToolTip(QtCore.QCoreApplication.translate("PathTurn", tip))
+            spin = loader.createWidget("Gui::QuantitySpinBox")
+            spin.setObjectName(field)
+            spin.setToolTip(check.toolTip())
+            spin.setProperty("minimum", 0.0)
+            row = layout.rowCount()
+            layout.addWidget(check, row, 0)
+            layout.addWidget(spin, row, 1)
+            setattr(form, box, check)
+            setattr(form, field, spin)
+            shown = self._shows(self.obj, prop)
+            check.setVisible(shown)
+            spin.setVisible(shown)
+        layout.setRowStretch(layout.rowCount(), 1)
+        layout.invalidate()
+
+    def _clearance_boxes(self, obj):
+        if getattr(self, "_cl_boxes", None) is None:
+            self._cl_boxes = {prop: PathGuiUtil.QuantitySpinBox(getattr(self.form, field), obj, prop)
+                              for _, _, prop, field, _, _ in self.CLEARANCES if hasattr(obj, prop)}
+        return self._cl_boxes
+
+    def _clearances(self, obj):
+        return [(getattr(self.form, box), switch, prop, getattr(self.form, field))
+                for box, switch, prop, field, _, _ in self.CLEARANCES if hasattr(obj, switch)]
 
     # (checkbox, switch property, value property, the field, CAM's label)
     SWITCHES = (("setMinDiameter", "SetMinDiameter", "MinDiameter", "minDiameter", "startDepthLabel"),
@@ -273,9 +334,23 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
             self.minDiameter.updateProperty()
         if getattr(obj, "SetMaxDiameter", True):
             self.maxDiameter.updateProperty()
+        boxes = self._clearance_boxes(obj)
+        for check, switch, prop, _ in self._clearances(obj):
+            if getattr(obj, switch) != check.isChecked():
+                setattr(obj, switch, check.isChecked())
+            if getattr(obj, switch) and prop in boxes:
+                boxes[prop].updateProperty()
 
     def setFields(self, obj):
         super().setFields(obj)
+        self.show_diagram(obj)
+        for box in self._clearance_boxes(obj).values():
+            box.updateWidget()
+        for check, switch, prop, field in self._clearances(obj):
+            check.blockSignals(True)
+            check.setChecked(bool(getattr(obj, switch)))
+            check.blockSignals(False)
+            field.setEnabled(bool(getattr(obj, switch)))
         for check, switch, prop, field in self._switched(obj):
             if check is None:
                 continue
@@ -289,11 +364,25 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
         for check, _, _, _ in self._switched(obj):
             if check is not None:
                 signals.append(check.stateChanged)
+        for check, _, _, field in self._clearances(obj):
+            signals.append(check.stateChanged)
+            signals.append(field.editingFinished)
         return signals
 
     def pageUpdateData(self, obj, prop):
         # what the op works out (greyed fields) follows the op; a value set by
         # hand is being edited here, so it is left alone
+        if prop == "Side":
+            self.show_diagram(obj)
+        if prop in ("Retract", "RadialClearance", "SetRetract", "SetRadialClearance"):
+            boxes = self._clearance_boxes(obj)
+            for check, switch, value, field in self._clearances(obj):
+                if not getattr(obj, switch) and value in boxes:
+                    boxes[value].updateWidget()
+                check.blockSignals(True)
+                check.setChecked(bool(getattr(obj, switch)))
+                check.blockSignals(False)
+                field.setEnabled(bool(getattr(obj, switch)))
         if prop in ("MinDiameter", "MaxDiameter", "SetMinDiameter", "SetMaxDiameter"):
             for check, switch, value, field in self._switched(obj):
                 if not getattr(obj, switch):
@@ -304,14 +393,13 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
                     check.blockSignals(False)
                     field.setEnabled(bool(getattr(obj, switch)))
 
-    def add_diagram(self, form):
+    def _diagram_pixmap(self, side):
         import os
         from PySide import QtGui as _QtGui, QtSvg
         path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "Gui", "Resources", "Icons", self.DIAGRAM)
-        layout = form.layout()
-        if not os.path.exists(path) or layout is None or not hasattr(layout, "getItemPosition"):
-            return
+                            "Gui", "Resources", "Icons", self.DIAGRAMS.get(side, self.DIAGRAMS["External"]))
+        if not os.path.exists(path):
+            return None
         renderer = QtSvg.QSvgRenderer(path)
         size = renderer.defaultSize()
         pixmap = _QtGui.QPixmap(size)
@@ -319,9 +407,28 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
         painter = _QtGui.QPainter(pixmap)
         renderer.render(painter, QtCore.QRectF(0, 0, size.width(), size.height()))
         painter.end()
+        return pixmap
+
+    def show_diagram(self, obj):
+        '''The diagram for the operation's side (boring has its own).'''
+        label = getattr(self, "_diagram", None)
+        side = getattr(obj, "Side", "External")
+        if label is not None and getattr(self, "_diagram_side", None) != side:
+            pixmap = self._diagram_pixmap(side)
+            if pixmap is not None:
+                label.setPixmap(pixmap)
+                self._diagram_side = side
+
+    def add_diagram(self, form):
+        layout = form.layout()
+        side = getattr(getattr(self, "obj", None), "Side", "External")
+        pixmap = self._diagram_pixmap(side)
+        if pixmap is None or layout is None or not hasattr(layout, "getItemPosition"):
+            return
         label = QtGui.QLabel()
         label.setPixmap(pixmap)
         label.setObjectName("diametersDiagram")
+        self._diagram, self._diagram_side = label, side
         # put the diagram on top: move the existing widgets down a row.
         # removeWidget / addWidget, not takeAt / addItem: a layout item taken
         # out belongs to Python, and once its wrapper is collected the layout
@@ -344,6 +451,8 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
         for check, _, _, field in self._switched(obj):
             if check is not None:
                 check.toggled.connect(field.setEnabled)
+        for check, _, _, field in self._clearances(obj):
+            check.toggled.connect(field.setEnabled)
 
     def diameterSet(self, obj, spinbox, prop, which):
         d = selection_diameter(FreeCADGui.Selection.getSelectionEx(), which)
@@ -402,29 +511,7 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
     # length fields, as CAM's own op pages do them: Gui::QuantitySpinBox bound
     # to the property (units, styling, and the fx button for expressions)
     QUANTITY_FIELDS = (("stepOver", "StepOver"), ("stockToLeaveX", "StockToLeaveX"), ("stockToLeaveZ", "StockToLeaveZ"),
-                       ("finishStepOver", "FinishStepOver"), ("retract", "Retract"), ("radialClearance", "RadialClearance"))
-    # a checkbox that sets a value by hand: (checkbox, switch, value property, field)
-    SWITCHED = (("setRetract", "SetRetract", "Retract", "retract"),
-                ("setRadialClearance", "SetRadialClearance", "RadialClearance", "radialClearance"))
-
-    def _auto(self, obj, prop):
-        '''True when the op works prop out (its Set switch is off).'''
-        for _, switch, value, _ in self.SWITCHED:
-            if value == prop:
-                return not getattr(obj, switch, True)
-        return False
-
-    def updateData(self, obj, prop):
-        '''The worked-out (greyed) values follow the op as it recomputes.'''
-        if prop in ("Retract", "RadialClearance") and hasattr(self, "form") and self._auto(obj, prop):
-            for box in self._spinboxes(obj):
-                if box.prop == prop:
-                    box.updateWidget()
-
-    def registerSignalHandlers(self, obj):
-        for box, _, _, field in self.SWITCHED:
-            getattr(self.form, box).toggled.connect(getattr(self.form, field).setEnabled)
-
+                       ("finishStepOver", "FinishStepOver"))
     def _spinboxes(self, obj):
         if getattr(self, "_quantity_boxes", None) is None:
             self._quantity_boxes = [PathGuiUtil.QuantitySpinBox(getattr(self.form, widget), obj, prop)
@@ -448,22 +535,13 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             widget.setVisible(hasattr(obj, "FinishDirection"))
         for widget in (self.form.side, self.form.label_side):
             widget.setVisible(hasattr(obj, "Side"))
-        uses_retract = getattr(getattr(obj, "Proxy", None), "uses_pass_retract", False)
-        for widget in (self.form.setRetract, self.form.retract):
-            widget.setVisible(uses_retract and hasattr(obj, "Retract"))
-        for widget in (self.form.setRadialClearance, self.form.radialClearance):
-            widget.setVisible(hasattr(obj, "RadialClearance"))
 
     def getFields(self, obj):
         '''getFields(obj) ... transfers values from UI to obj's proprties'''
         PathLog.track()
 
-        for box, switch, _, _ in self.SWITCHED:
-            if hasattr(obj, switch) and getattr(obj, switch) != getattr(self.form, box).isChecked():
-                setattr(obj, switch, getattr(self.form, box).isChecked())
         for box in self._spinboxes(obj):
-            if not self._auto(obj, box.prop):      # values the op works out are shown, not written
-                box.updateProperty()
+            box.updateProperty()
 
         if obj.FinishPasses != self.form.finishPasses.value():
             obj.FinishPasses = self.form.finishPasses.value()
@@ -493,13 +571,6 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         self.form.finishPasses.setValue(obj.FinishPasses)
 
         self._show_fields(obj)
-        for box, switch, _, field in self.SWITCHED:
-            if hasattr(obj, switch):
-                check = getattr(self.form, box)
-                check.blockSignals(True)
-                check.setChecked(bool(getattr(obj, switch)))
-                check.blockSignals(False)
-                getattr(self.form, field).setEnabled(bool(getattr(obj, switch)))
         if hasattr(obj, "SpringPass"):
             self.form.springPass.setChecked(obj.SpringPass)
         if hasattr(obj, "FinishFrontFace"):
@@ -533,10 +604,6 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.stockToLeaveZ.editingFinished)
         signals.append(self.form.finishPasses.valueChanged)
         signals.append(self.form.side.currentIndexChanged)
-        signals.append(self.form.setRetract.stateChanged)
-        signals.append(self.form.setRadialClearance.stateChanged)
-        signals.append(self.form.retract.editingFinished)
-        signals.append(self.form.radialClearance.editingFinished)
         signals.append(self.form.springPass.stateChanged)
         signals.append(self.form.finishStepOver.editingFinished)
         signals.append(self.form.finishFrontFace.stateChanged)
