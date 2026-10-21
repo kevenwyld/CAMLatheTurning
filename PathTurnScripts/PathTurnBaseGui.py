@@ -322,14 +322,20 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
         label = QtGui.QLabel()
         label.setPixmap(pixmap)
         label.setObjectName("diametersDiagram")
-        # put the diagram on top: move the existing rows down by one
-        items = []
-        while layout.count():
-            index = layout.count() - 1
-            position = layout.getItemPosition(index)
-            items.append((layout.takeAt(index), position))
-        for item, (row, col, rows, cols) in items:
-            layout.addItem(item, row + 1, col, rows, cols)
+        # put the diagram on top: move the existing widgets down a row.
+        # removeWidget / addWidget, not takeAt / addItem: a layout item taken
+        # out belongs to Python, and once its wrapper is collected the layout
+        # holds freed memory (intermittent crashes, widgets of the wrong
+        # type); the widgets themselves stay owned by the form throughout
+        moves = []
+        for index in range(layout.count()):
+            widget = layout.itemAt(index).widget()
+            if widget is not None:
+                moves.append((widget, layout.getItemPosition(index)))
+        for widget, _ in moves:
+            layout.removeWidget(widget)
+        for widget, (row, col, rows, cols) in moves:
+            layout.addWidget(widget, row + 1, col, rows, cols)
         layout.addWidget(label, 0, 0, 1, max(1, layout.columnCount()), QtCore.Qt.AlignHCenter)
 
     def registerSignalHandlers(self, obj):
