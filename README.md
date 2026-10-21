@@ -1,10 +1,25 @@
-# FreeCAD Turning Addon ![Python package](https://github.com/dubstar-04/FreeCAD_Turning_Addon/workflows/Python%20package/badge.svg?branch=master)
-A FreeCAD Path Addon to encourage the development of CNC turning functionality for the PATH workbench.
+# FreeCAD Turning Addon (fork)
 
-| :warning: WARNING: Turning Addon is currently experimental / proof of concept and only suitable for testing. |
+| :warning: WARNING: Turning Addon is experimental. Check every program in a simulator, and with care on the machine, before cutting. |
+
+A FreeCAD CAM addon for CNC turning: facing, drilling, roughing, profiling
+and boring, grooving and groove turning, threading and parting, with a
+LinuxCNC lathe post processor.
+
+This is a fork of [FreeCAD_Turning_Addon](https://github.com/dubstar-04/FreeCAD_Turning_Addon)
+by **Daniel Wood** ([dubstar-04](https://github.com/dubstar-04)), who created
+the addon and its geometry library, [LibLathe](https://github.com/dubstar-04/LibLathe).
+This fork builds on that work with new operations, boring, threading to
+standard tolerance classes, collision checking and a reworked user
+interface; see Features below. It uses its own fork of LibLathe
+([kevenwyld/LibLathe](https://github.com/kevenwyld/LibLathe)) as a submodule.
+It uses the same Python module names as the original, so the two cannot be
+installed side by side.
 
 ## Description
-This addon when installed will appear in the Path Workbench toolbar menu and will allow the creation of turning paths for use with a CNC lathe. This addon includes [LibLathe](https://github.com/dubstar-04/LibLathe) as a submodule.
+Once installed, the addon adds its operations to the CAM workbench, in a
+Turning toolbar and menu, for creating turning paths for a CNC lathe (or a
+mill used as one).
 
 A proof of concept simulator to help visualize these new operations is available [here](https://github.com/kevenwyld/CAMRotarySim)
 
@@ -376,8 +391,19 @@ turning operations the menu offers only the dressups that make sense on a
 lathe path: Axis Map (which can help on a mill used as a lathe) and Path
 Boundary.
 
-## Feedback
-If you have feedback or need to report bugs please participate on the related [Path Forum](https://forum.freecadweb.org/viewtopic.php?f=15&t=30563&start=0).
+## Credits
+* **Daniel Wood** ([dubstar-04](https://github.com/dubstar-04)): original
+  author of the Turning Addon and LibLathe.
+* **Brett Parker**: contributions to LibLathe.
+* **Keven Wyld** ([kevenwyld](https://github.com/kevenwyld)): maintainer of
+  this fork.
+
+Turning in FreeCAD CAM has a discussion thread on the
+[FreeCAD forum](https://forum.freecad.org/viewtopic.php?f=15&t=30563).
+
+## Licence
+LGPL-2.1, as the original (see LICENSE). LibLathe is GPL-2. The original
+authors' copyright notices are kept in the files they wrote.
 
 ## Disclaimer
-This is an experimental tool for development purposes and must be used at your own risk. Machine tools are dangerous and the author of this tool will not be responsible for any damage or personal injury caused by using incorrect tool paths or machining parameters.
+This is an experimental tool for development purposes and must be used at your own risk. Machine tools are dangerous and the authors of this tool will not be responsible for any damage or personal injury caused by using incorrect tool paths or machining parameters.
