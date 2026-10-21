@@ -57,6 +57,8 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
                 setattr(obj, prop, value)
         if obj.UseG76 != self.form.useG76.isChecked():
             obj.UseG76 = self.form.useG76.isChecked()
+        if abs(obj.Degression - self.form.degression.value()) > 1e-9:
+            obj.Degression = self.form.degression.value()
         # the sizes, pitch and depth follow the standard
         self.refresh_thread_fields(obj)
 
@@ -75,14 +77,21 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         self.form.pitch.setEnabled(custom)
         self.form.threadDepth.setEnabled(custom)
         self.form.threadSize.setEnabled(not custom)
+        self.form.degression.blockSignals(True)
+        self.form.degression.setValue(obj.Degression)
+        self.form.degression.blockSignals(False)
         if obj.ThreadDiameter.Value > 0:
-            self.form.threadInfo.setText(
-                "Cut from the selected diameter: {}".format(obj.ThreadDiameter.UserString))
+            lines = ["Cut from the selected diameter: {}".format(obj.ThreadDiameter.UserString)]
+            if getattr(obj, "PassSchedule", ""):
+                lines.append(obj.PassSchedule)
+            self.form.threadInfo.setText("\n".join(lines))
         else:
             self.form.threadInfo.setText("Select the diameter to thread (its cylindrical face) on the Z Range page.")
+        self.form.threadWarning.setText(getattr(obj, "SizeWarning", ""))
+        self.form.threadWarning.setVisible(bool(getattr(obj, "SizeWarning", "")))
 
     def getSignalsForUpdate(self, obj):
-        signals = [self.form.useG76.stateChanged]
+        signals = [self.form.useG76.stateChanged, self.form.degression.valueChanged]
         signals += [getattr(self.form, w).currentIndexChanged for w, _ in COMBOS]
         signals += [getattr(self.form, w).editingFinished for w, _ in QUANTITIES]
         signals += [getattr(self.form, w).valueChanged for w, _ in INTEGERS]

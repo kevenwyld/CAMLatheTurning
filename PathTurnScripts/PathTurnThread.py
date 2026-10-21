@@ -56,6 +56,11 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         super().opOnDocumentRestored(obj)
         if not hasattr(obj, "ThreadStandard"):
             self.add_thread_properties(obj)
+        for prop, tip in (("PassSchedule", "The passes the thread is cut in (read only)"),
+                          ("SizeWarning", "How the selected diameter does not fit the thread size, if it does not (read only)")):
+            if not hasattr(obj, prop):
+                obj.addProperty("App::PropertyString", prop, "Thread", translate("TurnPath", tip))
+                obj.setEditorMode(prop, 1)
 
     def add_thread_properties(self, obj):
         group = "Thread"
@@ -66,7 +71,8 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             translate("TurnPath", "External or internal; from the selection: a bore is internal"))
         add("App::PropertyLength", "Pitch", group, translate("TurnPath", "Thread pitch (from the standard unless Custom)"))
         add("App::PropertyLength", "ThreadDepth", group,
-            translate("TurnPath", "Radial depth to the insert's theoretical sharp point (from the standard unless Custom)"))
+            translate("TurnPath", "Radial depth to the insert's theoretical sharp point: for a standard thread from the "
+                                  "selected diameter to the standard's root (or major, internal); entered for Custom"))
         add("App::PropertyLength", "ThreadDiameter", group,
             translate("TurnPath", "Diameter the thread is cut from: the selected diameter (read only)"))
         add("App::PropertyInteger", "Passes", group,
@@ -83,9 +89,15 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             translate("TurnPath", "Distance in front of the thread each pass starts at, for Z to reach speed; 0 is three pitches"))
         add("App::PropertyLength", "ThreadLength", group,
             translate("TurnPath", "Length of the thread from the front of the selected diameter; 0 threads its whole length"))
+        add("App::PropertyString", "PassSchedule", group,
+            translate("TurnPath", "The passes the thread is cut in (read only)"))
+        add("App::PropertyString", "SizeWarning", group,
+            translate("TurnPath", "How the selected diameter does not fit the thread size, if it does not (read only)"))
         add("App::PropertyBool", "UseG76", group,
             translate("TurnPath", "Output one G76 threading cycle (controls that have it) instead of explicit G33 passes"))
         obj.setEditorMode("ThreadDiameter", 1)
+        obj.setEditorMode("PassSchedule", 1)
+        obj.setEditorMode("SizeWarning", 1)
 
         # only write here: the Job dialog shows op defaults from a prototype
         # that does not read properties back
@@ -169,7 +181,29 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         radius = face.Surface.Radius if internal else self.outline_radius(face) or face.Surface.Radius
         obj.ThreadDiameter = FreeCAD.Units.Quantity(2 * radius, FreeCAD.Units.Length)
         self.apply_standard(obj)
-        self.check_size(obj, 2 * radius, internal)
+        found = ThreadData.lookup(obj.ThreadStandard, obj.ThreadSize)
+        if found is not None:
+            # a standard thread is cut to the standard's root (external) or
+            # major (internal) diameter, whatever the surface was turned or
+            # bored to: the depth is from the surface to there
+            major, pitch = found
+            target = ThreadData.target_diameter(major, pitch, internal) / 2
+            depth = (target - radius) if internal else (radius - target)
+            if depth <= 1e-6:
+                raise RuntimeError(translate('PathTurn',
+                    "The selected diameter ({:.3f}) is already at or past the thread's {} diameter ({:.3f})").format(
+                        2 * radius, "major" if internal else "root", 2 * target))
+            obj.ThreadDepth = FreeCAD.Units.Quantity(depth, FreeCAD.Units.Length)
+            problem = ThreadData.size_problem(major, pitch, internal, 2 * radius)
+        else:
+            problem = None
+        warning = ""
+        if problem:
+            warning = "The selected diameter ({:.3f}) is {} of {} {}".format(
+                2 * radius, problem, obj.ThreadStandard, obj.ThreadSize)
+            FreeCAD.Console.PrintWarning("{}: {}\n".format(obj.Label, warning))
+        if obj.SizeWarning != warning:
+            obj.SizeWarning = warning
 
         op = LLT.ThreadOP()
         op.set_params(self.getProps(obj))
@@ -204,6 +238,16 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                 self.commandlist.append(Path.Command(name, command.get_params()))
         for warning in getattr(op, "warnings", []):
             FreeCAD.Console.PrintWarning("{}: {}\n".format(obj.Label, warning))
+        depths = getattr(op, "depths", [])
+        if depths:
+            n = len(depths) - max(0, int(obj.SpringPasses))
+            cuts = [b - a for a, b in zip([0.0] + depths[:n - 1], depths[:n])]
+            schedule = "{} passes{}: first {:.3f}, last {:.3f} deep; to {} {:.3f}".format(
+                n, " + {} spring".format(obj.SpringPasses) if obj.SpringPasses else "", cuts[0], cuts[-1],
+                "diameter" if internal else "root diameter",
+                2 * (radius + depths[-1]) if internal else 2 * (radius - depths[-1]))
+            if obj.PassSchedule != schedule:
+                obj.PassSchedule = schedule
         if obj.UseG76 and dict(INFEEDS).get(obj.Infeed, 29.5) > 0:
             FreeCAD.Console.PrintWarning(
                 "{}: CAM's posts currently drop G76's Q word (the infeed angle): the control then feeds in "
@@ -221,19 +265,6 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             r = -(seg.start.X + t * (seg.end.X - seg.start.X)) if seg.bulge == 0 else max(-seg.start.X, -seg.end.X)
             best = r if best is None else max(best, r)
         return best
-
-    def check_size(self, obj, diameter, internal):
-        '''Warn when the selected face does not look like the size chosen.'''
-        found = ThreadData.lookup(obj.ThreadStandard, obj.ThreadSize)
-        if found is None:
-            return
-        major, pitch = found
-        expected = ThreadData.start_diameter(major, pitch, internal)
-        if abs(diameter - expected) > max(0.25, 0.1 * pitch):
-            FreeCAD.Console.PrintWarning(
-                "{}: the selected diameter is {:.3f} mm; a {} {} {} thread is cut from {:.3f} mm\n".format(
-                    obj.Label, diameter, obj.ThreadSize, "internal" if internal else "external",
-                    obj.ThreadStandard, expected))
 
     def opSetDefaultValues(self, obj, job):
         obj.OpStartDepth = job.Stock.Shape.BoundBox.ZMax

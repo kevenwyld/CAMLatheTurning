@@ -32,10 +32,15 @@ gives the thread's Z range and the diameter it is cut from, and a bore is
 an internal thread (Type can also be set by hand).
 
 * **Thread standard / Size:** ISO metric coarse and fine, UNC, UNF, or
-  Custom (enter pitch and depth). Depths are the 60 degree basic profile's:
-  0.61343 P external, 0.54127 P internal from the minor diameter.
+  Custom (enter pitch and depth). A standard thread is cut to the standard's
+  root diameter (external, d - 1.22687 P) or major diameter (internal),
+  whatever the surface was turned or bored to, so turn the crests to their
+  tolerance first (e.g. 11.701-11.966 for M12x1.75 6g). The page shows the
+  pass schedule, and warns in red when the selected diameter does not fit
+  the size (over the major diameter, or well under it).
 * **Thread length** (0: the whole selected diameter), **Passes** (0: the recommended
-  number for the pitch), **First / Min pass depth**, **Infeed** (modified
+  number for the pitch), **First / Min pass depth**, **Degression** (2: the same area each pass, the
+  first deepest; 1.5 is closer to insert makers' tables), **Infeed** (modified
   flank 29.5 degrees by default, flank 30, or radial), **Spring passes**,
   **Lead-in** (0: three pitches, so Z is at speed).
 * Output: explicit passes using **G33** (spindle-synchronized motion; works

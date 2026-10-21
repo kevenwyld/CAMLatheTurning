@@ -102,3 +102,34 @@ def depth(pitch, internal):
 def start_diameter(major, pitch, internal):
     """The diameter the thread is cut from: the major (external) or the minor (internal)."""
     return major - MINOR_OFFSET * pitch if internal else major
+
+
+def target_diameter(major, pitch, internal):
+    """
+    The diameter the thread is cut to, fixed by the standard whatever the
+    crests were turned to: the minor diameter d3 = d - 2 * h3 of an
+    external thread, the major diameter D of an internal one.
+    """
+    return major if internal else major - 2 * EXTERNAL_DEPTH * pitch
+
+
+def size_problem(major, pitch, internal, diameter):
+    """
+    A short description of how a selected diameter does not fit the size,
+    or None. External threads are turned to the major diameter or a little
+    under it (e.g. 11.701-11.966 for M12x1.75 6g); internal ones bored to
+    the minor diameter or a little over it.
+    """
+    allowance = max(0.25, 0.2 * pitch)
+    if internal:
+        d1 = start_diameter(major, pitch, True)
+        if diameter < d1 - 0.01:
+            return "smaller than the {:.3f} minor diameter".format(d1)
+        if diameter > d1 + allowance:
+            return "well over the {:.3f} minor diameter".format(d1)
+        return None
+    if diameter > major + 0.01:
+        return "larger than the {:.3f} major diameter".format(major)
+    if diameter < major - allowance:
+        return "well under the {:.3f} major diameter".format(major)
+    return None
