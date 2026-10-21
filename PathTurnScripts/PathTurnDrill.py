@@ -41,18 +41,26 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
 
     uses_drill_tool = True
 
+    # Only what drilling uses: the tool, coolant, depths (CAM's machinery) and
+    # base geometry (the hole). Not the turning operations' diameters, stock to
+    # leave, side, lead-in or clearances, nor their outline work.
     def opFeatures(self, obj):
-        '''Turning features plus base geometry: the selected hole sets the depth.'''
         PathOp = PathTurnBase.PathOp
-        return super().opFeatures(obj) | PathOp.FeatureBaseFaces | PathOp.FeatureBaseEdges
+        return (PathOp.FeatureTool | PathOp.FeatureDepths | PathOp.FeatureCoolant
+                | PathOp.FeatureBaseFaces | PathOp.FeatureBaseEdges)
 
     def initOperation(self, obj):
-        super().initOperation(obj)
         self.add_drill_properties(obj)
 
     def opOnDocumentRestored(self, obj):
-        super().opOnDocumentRestored(obj)
+        PathTurnBase.PathOp.ObjectOp.opOnDocumentRestored(self, obj)
         self.add_drill_properties(obj)
+
+    def opExecute(self, obj):
+        tool = obj.ToolController.Tool if obj.ToolController else None
+        if tool is None or not PathTurnBase.is_drill_tool(tool):
+            raise RuntimeError(translate('PathTurn', "This operation needs a drill (CAM's Drill shape)"))
+        self.op_generate_gcode(obj, tool)
 
     def add_drill_properties(self, obj):
         group = "Drill"
@@ -81,6 +89,17 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
                "Write the cycle as a canned cycle (G81/G82/G83/G73, in G17, then back to G18); off: the same "
                "moves written out"):
             obj.UseCannedCycle = True
+        # where the hole starts and how deep: from the selected hole, or set
+        for switch, prop, kind, tip in (
+                ("SetHoleStart", "HoleStart", "App::PropertyDistance",
+                 "Z where the hole starts. Unticked: the selected hole's front, or with nothing selected the "
+                 "part's front"),
+                ("SetHoleDepth", "HoleDepth", "App::PropertyLength",
+                 "Depth of the hole from its start (to the full diameter, or to the tip with Depth to the drill's "
+                 "tip). Unticked: the selected hole's; with nothing selected, tick it and set it")):
+            add(kind, prop, tip)
+            add("App::PropertyBool", switch, tip)
+            obj.setEditorMode(prop, 0 if getattr(obj, switch, False) else 1)
         if add("App::PropertyString", "DrillReport", "What is drilled and how (read only)"):
             obj.setEditorMode("DrillReport", 1)
 
@@ -105,17 +124,38 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
         else:
             obj.OpStartDepth = obj.OpFinalDepth = obj.OpStockZMax
 
+    def part_front(self, obj):
+        job = PathUtils.findParentJob(obj)
+        models = [m for m in (job.Model.Group if job is not None else []) if hasattr(m, "Shape")]
+        return max(m.Shape.BoundBox.ZMax for m in models) if models else self.stock.Shape.BoundBox.ZMax
+
     def op_generate_gcode(self, obj, tool):
         hole = self.selected_hole(obj)
-        if hole is None:
-            raise RuntimeError(translate('PathTurn', "Select the hole to drill (its cylindrical face) on the Z Range page"))
-        axis_offset = math.hypot(hole.Surface.Center.x, hole.Surface.Center.y)
-        if axis_offset > 0.01 or abs(abs(hole.Surface.Axis.z) - 1) > 1e-6:
-            raise RuntimeError(translate('PathTurn', "The selected hole is not on the spindle axis: Turn Drill drills on the axis"))
+        if hole is not None:
+            axis_offset = math.hypot(hole.Surface.Center.x, hole.Surface.Center.y)
+            if axis_offset > 0.01 or abs(abs(hole.Surface.Axis.z) - 1) > 1e-6:
+                raise RuntimeError(translate('PathTurn', "The selected hole is not on the spindle axis: Turn Drill drills on the axis"))
+            auto_start, auto_depth = hole.BoundBox.ZMax, hole.BoundBox.ZMax - hole.BoundBox.ZMin
+        else:
+            auto_start, auto_depth = self.part_front(obj), None
+        front = obj.HoleStart.Value if obj.SetHoleStart else auto_start
+        if obj.SetHoleDepth:
+            depth = obj.HoleDepth.Value
+        elif auto_depth is not None:
+            depth = auto_depth
+        else:
+            raise RuntimeError(translate('PathTurn',
+                "Select the hole to drill (its cylindrical face) on the Z Range page, or tick Hole depth and set it"))
+        # the worked-out values in the (greyed) fields
+        for switch, prop, value in (("SetHoleStart", "HoleStart", front), ("SetHoleDepth", "HoleDepth", depth)):
+            if not getattr(obj, switch) and abs(getattr(obj, prop).Value - value) > 1e-9:
+                setattr(obj, prop, FreeCAD.Units.Quantity(value, FreeCAD.Units.Length))
+        if depth <= 0:
+            raise RuntimeError(translate('PathTurn', "The hole's depth must be greater than zero"))
+        back = front - depth
         d = tool.Diameter.Value
         tip_angle = tool.TipAngle.Value
         tip = (d / 2) / math.tan(math.radians(tip_angle) / 2) if 0 < tip_angle < 180 else 0.0
-        front, back = obj.StartDepth.Value, obj.FinalDepth.Value
         bottom = back if obj.DepthToTip else back - tip
         r_plane = front + obj.RetractHeight.Value
         job = PathUtils.findParentJob(obj)
@@ -127,7 +167,7 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
         code = CODE[obj.Cycle]
         peck = max(obj.PeckDepth.Value, 0.01)
 
-        hole_d = 2 * hole.Surface.Radius
+        hole_d = 2 * hole.Surface.Radius if hole is not None else d
         notes = []
         if abs(hole_d - d) > 0.05:
             notes.append("the drill ({:.3f}) is not the hole's size ({:.3f})".format(d, hole_d))
@@ -153,7 +193,9 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
         report = ["Drill \u00d8{:.3f}, point {:.0f}\u00b0 ({:.3f} long)".format(d, tip_angle, tip),
                   "{}{}: from Z {:.3f} (R plane) to Z {:.3f}".format(
                       obj.Cycle, ", pecks {:.3f}".format(peck) if code in ("G83", "G73") else "", r_plane, bottom),
-                  "{} reaches the hole's bottom (Z {:.3f})".format("The tip" if obj.DepthToTip else "The full diameter", back)]
+                  "{} reaches the hole's bottom: Z {:.3f}, {:.3f} deep from Z {:.3f}{}".format(
+                      "The tip" if obj.DepthToTip else "The full diameter", back, depth, front,
+                      "" if hole is not None or obj.SetHoleStart else " (the part's front)")]
         report += ["Note: " + n for n in notes]
         text = "\n".join(report)
         if obj.DrillReport != text:
@@ -190,7 +232,8 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
 
 
 def SetupProperties():
-    return ["Cycle", "PeckDepth", "DwellTime", "RetractHeight", "DepthToTip", "UseCannedCycle"]
+    return ["Cycle", "PeckDepth", "DwellTime", "RetractHeight", "DepthToTip", "UseCannedCycle",
+            "SetHoleStart", "HoleStart", "SetHoleDepth", "HoleDepth"]
 
 
 def Create(name, obj=None, parentJob=None):

@@ -88,8 +88,13 @@ pitches are not ISO ones (e.g. M10 x 1.12).
 
 ## Drilling
 **Turn Drill** drills on the spindle axis with a CAM drill bit (the Drill
-shape: Diameter and TipAngle). Select the hole (its cylindrical face) on
-the Z Range page: its front and back give the depth.
+shape: Diameter and TipAngle). It has only the settings drilling uses.
+
+* **Hole start** and **Hole depth**: where the hole starts (Z) and how deep
+  it is from there. Select the hole (its cylindrical face) on the Z Range
+  page and both come from it, shown greyed; tick either to set it. With
+  nothing selected the hole starts at the part's front, and you set the
+  depth.
 
 * **Cycle:** Peck (G83, backing out of the hole after each peck), Chip
   break (G73, backing off a little), Drill (G81, straight to depth) or
