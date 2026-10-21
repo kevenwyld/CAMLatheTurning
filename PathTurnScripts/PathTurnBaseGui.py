@@ -419,6 +419,8 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         self.form.finishFrontFace.setVisible(is_profile)
         for widget in (self.form.finishDirection, self.form.label_9b):
             widget.setVisible(hasattr(obj, "FinishDirection"))
+        for widget in (self.form.side, self.form.label_side):
+            widget.setVisible(hasattr(obj, "Side"))
 
     def getFields(self, obj):
         '''getFields(obj) ... transfers values from UI to obj's proprties'''
@@ -438,6 +440,9 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
 
         if hasattr(obj, "FinishDirection") and obj.FinishDirection != self.form.finishDirection.currentText():
             obj.FinishDirection = self.form.finishDirection.currentText()
+
+        if hasattr(obj, "Side") and self.form.side.currentText() and obj.Side != self.form.side.currentText():
+            obj.Side = self.form.side.currentText()
 
         if obj.AllowGrooving != self.form.allowGrooving.isChecked():
             obj.AllowGrooving = self.form.allowGrooving.isChecked()
@@ -462,6 +467,12 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             self.form.finishDirection.addItems(obj.getEnumerationsOfProperty("FinishDirection"))
             self.form.finishDirection.setCurrentText(obj.FinishDirection)
             self.form.finishDirection.blockSignals(False)
+        if hasattr(obj, "Side"):
+            self.form.side.blockSignals(True)
+            self.form.side.clear()
+            self.form.side.addItems(obj.getEnumerationsOfProperty("Side"))
+            self.form.side.setCurrentText(obj.Side)
+            self.form.side.blockSignals(False)
 
         if obj.AllowGrooving:
             self.form.allowGrooving.setCheckState(QtCore.Qt.Checked)
@@ -478,6 +489,7 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.stockToLeaveX.editingFinished)
         signals.append(self.form.stockToLeaveZ.editingFinished)
         signals.append(self.form.finishPasses.valueChanged)
+        signals.append(self.form.side.currentIndexChanged)
         signals.append(self.form.springPass.stateChanged)
         signals.append(self.form.finishStepOver.editingFinished)
         signals.append(self.form.finishFrontFace.stateChanged)

@@ -18,6 +18,16 @@
     <widget class="QWidget" name="widget" native="true">
      <layout class="QGridLayout" name="gridLayout_2">
       <item row="0" column="0">
+       <widget class="QLabel" name="label_side">
+        <property name="text"><string>Side</string></property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="side">
+        <property name="toolTip"><string>External turns the outside; Internal bores: it cuts the bore from the hole set as Min Diameter (e.g. the drill size) out to the model, with a boring tool</string></property>
+       </widget>
+      </item>
+      <item row="1" column="0">
        <widget class="QLabel" name="label_4">
         <property name="minimumSize">
          <size>
@@ -30,7 +40,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
+      <item row="1" column="1">
        <widget class="Gui::QuantitySpinBox" name="stepOver">
         <property name="toolTip">
          <string>Rough: depth of cut per pass (per side). Profile: spacing of the finish passes. Face: step along Z. Turn Groove: spacing of the plunges.</string>
@@ -40,7 +50,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
+      <item row="2" column="0">
        <widget class="QLabel" name="label_6">
         <property name="minimumSize">
          <size>
@@ -53,7 +63,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="2" column="1">
        <widget class="Gui::QuantitySpinBox" name="stockToLeaveX">
         <property name="toolTip">
          <string>Material to leave radially, per side (on diameters). Negative cuts under the model's size, e.g. -0.075 to turn a 12 mm model to 11.85</string>
@@ -63,7 +73,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="label_7">
         <property name="minimumSize">
          <size>
@@ -76,7 +86,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="1">
        <widget class="Gui::QuantitySpinBox" name="stockToLeaveZ">
         <property name="toolTip">
          <string>Material to leave axially (on faces and shoulders). Negative cuts under the model's size, moving faces into the part</string>
@@ -86,7 +96,7 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
+      <item row="4" column="0">
        <widget class="QLabel" name="label_5">
         <property name="minimumSize">
          <size>
@@ -99,7 +109,7 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="4" column="1">
        <widget class="Gui::IntSpinBox" name="finishPasses">
         <property name="minimum">
          <number>0</number>
@@ -109,7 +119,7 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
+      <item row="5" column="0">
        <widget class="QLabel" name="label_8">
         <property name="minimumSize">
          <size>
@@ -122,7 +132,7 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="5" column="1">
        <widget class="Gui::QuantitySpinBox" name="finishStepOver">
         <property name="toolTip">
          <string>Spacing of the finish passes</string>
@@ -132,21 +142,21 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="0">
+      <item row="6" column="0">
        <widget class="QLabel" name="label_9b">
         <property name="text">
          <string>Finish direction</string>
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="6" column="1">
        <widget class="QComboBox" name="finishDirection">
         <property name="toolTip">
          <string>In, across and out: down one wall, along the bottom and up the other (best finish). From each wall to the middle: down each wall and along the bottom toward the middle.</string>
         </property>
        </widget>
       </item>
-      <item row="6" column="0" colspan="2">
+      <item row="7" column="0" colspan="2">
        <widget class="QCheckBox" name="springPass">
         <property name="toolTip">
          <string>Repeat the last finish pass once more, with no step over</string>
@@ -156,7 +166,7 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="0" colspan="2">
+      <item row="8" column="0" colspan="2">
        <widget class="QCheckBox" name="finishFrontFace">
         <property name="toolTip">
          <string>Also finish the front face (normally left to Turn Face)</string>
@@ -166,7 +176,7 @@
         </property>
        </widget>
       </item>
-      <item row="8" column="0" colspan="2">
+      <item row="9" column="0" colspan="2">
        <widget class="QCheckBox" name="allowGrooving">
         <property name="toolTip">
          <string>Let the tool follow the part into grooves and undercuts as far as its cutting angle allows</string>
@@ -176,7 +186,7 @@
         </property>
        </widget>
       </item>
-      <item row="9" column="0">
+      <item row="10" column="0">
        <spacer name="verticalSpacer">
         <property name="orientation">
          <enum>Qt::Vertical</enum>

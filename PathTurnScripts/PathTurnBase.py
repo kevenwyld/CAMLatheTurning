@@ -37,6 +37,8 @@ if FreeCAD.GuiUp:
 
 from liblathe.base.point import Point
 from liblathe.base.segment import Segment
+from liblathe.base.boundbox import BoundBox
+import PathTurnScripts.PathTurnAddonHelpers as PathTurnAddonHelpers
 from liblathe.base.tool import Tool
 
 __title__ = "Path Turn Base Operation"
@@ -70,6 +72,8 @@ def is_grooving_tool(tool):
             and any(hasattr(tool, p) for p in ("GroovingDepth", "CuttingDepth", "CornerRadius")))
 
 
+SIDES = ["External", "Internal"]
+
 # Min / Max Diameter are worked out unless set by hand: (switch, value, tooltip)
 DIAMETER_SWITCHES = (
     ("SetMinDiameter", "MinDiameter",
@@ -95,6 +99,8 @@ class ObjectOp(PathOp.ObjectOp):
     # to across the Z range (into the model where it is bigger); for the
     # others (Face, Partoff, Thread) it stays their inner limit (e.g. a bore)
     turns_to_min_diameter = False
+    # operations that can also cut inside (boring): Side = Internal
+    supports_internal = False
 
     '''Base class for proxy objects of all turning operations.'''
 
@@ -109,12 +115,24 @@ class ObjectOp(PathOp.ObjectOp):
         obj.addProperty("App::PropertyInteger", "FinishPasses", "Turn Path", translate("TurnPath", "Number of Finish Passes"))
         self.add_stock_properties(obj)
         self.add_diameter_switches(obj)
+        self.add_side_property(obj)
         obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
                         translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
                                               "cutting angle allows"))
 
         obj.StepOver = FreeCAD.Units.Quantity(1.0, FreeCAD.Units.Length)
         obj.FinishPasses = 2
+
+    def add_side_property(self, obj):
+        '''Side (External / Internal) for the operations that can bore.'''
+        if self.supports_internal and not hasattr(obj, "Side"):
+            obj.addProperty("App::PropertyEnumeration", "Side", "Turn Path", translate(
+                "TurnPath", "External turns the outside; Internal bores: it cuts the bore from the hole set as "
+                            "Min Diameter (e.g. the drill size) out to the model, with a boring tool"))
+            obj.Side = SIDES
+
+    def is_internal(self, obj):
+        return self.supports_internal and getattr(obj, "Side", SIDES[0]) == SIDES[1]
 
     def add_diameter_switches(self, obj, migrate=False):
         '''The Set switches for Min / Max Diameter. On an older document a
@@ -161,6 +179,7 @@ class ObjectOp(PathOp.ObjectOp):
             if hasattr(obj, "StockToLeave"):
                 obj.removeProperty("StockToLeave")
         self.add_diameter_switches(obj, migrate=True)
+        self.add_side_property(obj)
         for prop, tip in (("StockToLeaveX", STOCK_X_TIP), ("StockToLeaveZ", STOCK_Z_TIP)):
             if obj.getTypeIdOfProperty(prop) == "App::PropertyLength":
                 value = getattr(obj, prop).Value
@@ -245,7 +264,11 @@ class ObjectOp(PathOp.ObjectOp):
 
         print("Process Geometry")
         self.stock_silhoutte = self.get_stock_silhoutte(obj)
-        self.part_outline = self.get_part_outline(self.turned_model(obj))
+        if self.is_internal(obj):
+            self.setup_internal(obj)
+        else:
+            self.mirror_r = None
+            self.part_outline = self.get_part_outline(self.turned_model(obj))
         self.generate_gcode(obj)
         self.warn_if_nothing_cut(obj)
 
@@ -269,6 +292,15 @@ class ObjectOp(PathOp.ObjectOp):
         # an unset (zero) vertical feed falls back to the horizontal feed
         props['vfeed'] = obj.ToolController.VertFeed.Value or obj.ToolController.HorizFeed.Value
         props['clearance'] = parentJob.SetupSheet.SafeHeightOffset.Value
+        if getattr(self, "mirror_r", None) is not None:
+            # boring, in the mirrored space (see setup_internal): the stock's
+            # top is the hole, the inner limit the max diameter (the bore's
+            # largest unless set), and the safe position stays inside the
+            # hole, not past the axis
+            R = self.mirror_r
+            props['extra_dia'] = 0.0
+            props['min_dia'] = 2 * max(0.0, R - self.maxDia / 2)
+            props['clearance'] = min(props['clearance'], 0.5 * self.hole_r)
         return props
 
     def get_stock_silhoutte(self, obj):
@@ -292,6 +324,76 @@ class ObjectOp(PathOp.ObjectOp):
         stock_plane = Part.makePlane(stock_plane_length, stock_plane_width,
                                      FreeCAD.Vector(-stock_plane_width, 0, stock_z_pos), FreeCAD.Vector(0, -1, 0))
         return stock_plane
+
+    def setup_internal(self, obj):
+        '''
+        Boring is external turning seen in a mirror: the radius r maps to
+        R - r (R the stock's radius), so the bore's surface becomes an outer
+        profile, the hole bored from becomes the stock's top, and the tool
+        comes from outside. liblathe's operations then run unchanged, and
+        lathe_commands() maps their output back.
+
+        The mirrored part is built exactly in the XZ section: a rectangle
+        over the stock's radius and the model's length, minus the model,
+        gives the voids; the one touching the axis is the bore. Reflected
+        about r = R / 2 and taken from the rectangle, it is the mirrored
+        part, revolved into a solid for the outline.
+        '''
+        if not getattr(obj, "SetMinDiameter", False) or obj.MinDiameter.Value <= 0:
+            raise RuntimeError(translate('PathTurn',
+                "Internal: tick Min Diameter and set it to the hole you are boring from (e.g. the drill size)"))
+        model = self.job_model_shape(obj)
+        mb = model.BoundBox
+        R = max(self.stock.Shape.BoundBox.XLength / 2, mb.XMax, -mb.XMin, mb.YMax, -mb.YMin)
+        self.hole_r = obj.MinDiameter.Value / 2
+        if self.hole_r >= R:
+            raise RuntimeError(translate('PathTurn', "Internal: the hole (Min Diameter) is not inside the stock"))
+        V = FreeCAD.Vector
+        z0, z1 = mb.ZMin, mb.ZMax
+        rect = Part.Face(Part.makePolygon([V(0, 0, z0), V(R, 0, z0), V(R, 0, z1), V(0, 0, z1), V(0, 0, z0)]))
+        voids = [f for f in rect.cut(model).Faces if f.BoundBox.XMin < 1e-6]
+        if not voids:
+            raise RuntimeError(translate('PathTurn', "Internal: the model has no bore (nothing open to the axis)"))
+        void = voids[0] if len(voids) == 1 else voids[0].fuse(voids[1:])
+        # the op works from the hole out to the bore's surface: unless Max
+        # Diameter is set, it is the bore's largest diameter (shown in the
+        # field), so nothing beyond the bore (e.g. the part's front face) is cut
+        self.bore_r = void.BoundBox.XMax
+        if not getattr(obj, "SetMaxDiameter", False):
+            if abs(obj.MaxDiameter.Value - 2 * self.bore_r) > 1e-9:
+                obj.MaxDiameter = FreeCAD.Units.Quantity(2 * self.bore_r, FreeCAD.Units.Length)
+            self.maxDia = 2 * self.bore_r
+        mirrored = void.mirror(V(R / 2, 0, 0), V(1, 0, 0))
+        part2d = rect.cut(mirrored)
+        solids = [f.revolve(V(0, 0, 0), V(0, 0, 1), 360) for f in part2d.Faces]
+        solid = solids[0] if len(solids) == 1 else solids[0].fuse(solids[1:])
+        self.mirror_r = R
+        self.part_outline = self.get_part_outline(solid)
+
+    def lathe_stock_box(self):
+        '''The stock for liblathe: the stock's silhouette, or for boring (in
+        the mirrored space) the material from the hole outward.'''
+        if getattr(self, "mirror_r", None) is not None:
+            bb = self.stock.Shape.BoundBox
+            return BoundBox(Point(-(self.mirror_r - self.hole_r), 0, bb.ZMin), Point(0, 0, bb.ZMax))
+        return PathTurnAddonHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox)
+
+    def lathe_commands(self, commands):
+        '''liblathe's commands as path commands; for boring mapped back out of
+        the mirror: X to R - X, the arc's radial offset I reversed, G2 / G3
+        swapped (a mirror reverses the direction of arcs).'''
+        R = getattr(self, "mirror_r", None)
+        out = []
+        for command in commands:
+            name, params = command.get_movement(), dict(command.get_params())
+            if R is not None:
+                if "X" in params:
+                    params["X"] = R - params["X"]
+                if "I" in params:
+                    params["I"] = -params["I"]
+                name = {"G2": "G3", "G3": "G2"}.get(name, name)
+            out.append(Path.Command(name, params))
+        return out
 
     def job_model_shape(self, obj):
         '''
@@ -458,6 +560,14 @@ class ObjectOp(PathOp.ObjectOp):
             raise RuntimeError(translate('PathTurn',
                 "This operation needs a turning insert (ISO Turning Insert shape); "
                 "use Turn Groove for grooving and parting inserts"))
+
+        # a turning insert has these; anything else (e.g. CAM's default end
+        # mill on a new Job) cannot turn, and would fail obscurely later
+        missing = [p for p in ("TipAngle", "EdgeLength", "TipRadius", "Rotation") if not hasattr(opTool, p)]
+        if missing:
+            raise RuntimeError(translate('PathTurn',
+                "This operation needs a turning insert (ISO Turning Insert shape); the tool controller's tool "
+                "({}) is not one (it has no {})").format(getattr(opTool, "Label", "?"), ", ".join(missing)))
 
         # create a liblathe tool and assign the toolbit parameters
         turnTool = Tool()

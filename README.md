@@ -86,6 +86,29 @@ Not yet, because CAM's metric internal (6H) table has few fine pitches
 misname the large sizes ("11/2-12" for 1-1/2-12), and a few of its metric
 pitches are not ISO ones (e.g. M10 x 1.12).
 
+## Boring (internal)
+Turn Rough and Turn Profile can bore: set **Side** to **Internal** on the
+operation page.
+
+* **Min Diameter** is the hole you are boring from (e.g. the drill size):
+  tick it and set it; boring from solid is not possible. **Max Diameter**
+  defaults to the bore's largest diameter, so nothing beyond the bore (such
+  as the part's front face) is cut; tick it to set a limit of your own.
+* The bore is the model's: the part of it open to the spindle axis
+  (through or blind, stepped, with tapers and radii).
+* The tool is an ISO turning insert used as a boring tool, so its
+  reference is the mirror of the turning one: the imaginary tip at the
+  cutting edge's outermost point (largest radius) and its chuck-side
+  flank. Set the tool offsets to that point.
+* The safe position between moves is inside the hole, a clearance (or half
+  the hole's radius, if less) from its wall.
+* Not checked yet: the boring bar itself (its diameter and reach).
+
+Internally the operation is the external one in a mirror: radius r maps to
+R - r (R the stock's radius), which turns the bore into an outer profile
+and the hole into the stock's top; the paths are mapped back, arcs
+reversed.
+
 ## Diameters
 As with milling's depths, Min and Max Diameter are worked out to start with
 and used as given when set. Each has a checkbox: unticked, the field is

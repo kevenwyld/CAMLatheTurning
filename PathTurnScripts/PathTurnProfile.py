@@ -45,6 +45,7 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
     '''Proxy class for turning profile operations.'''
 
     turns_to_min_diameter = True
+    supports_internal = True
 
     def initOperation(self, obj):
         super().initOperation(obj)
@@ -74,17 +75,14 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
         profileOP.set_params(self.getProps(obj))
         profileOP.set_params({'spring_pass': obj.SpringPass})
 
-        stockBoundbox = PathTurnHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox)
+        stockBoundbox = self.lathe_stock_box()
         profileOP.add_stock(stockBoundbox)
 
         profileOP.add_part_edges(self.part_outline)
         profileOP.add_tool(turnTool)
 
         PathCode = profileOP.get_gcode()
-
-        for command in PathCode:
-            pathCommand = Path.Command(command.get_movement(), command.get_params())
-            self.commandlist.append(pathCommand)
+        self.commandlist.extend(self.lathe_commands(PathCode))
 
     def opSetDefaultValues(self, obj, job):
         obj.OpStartDepth = job.Stock.Shape.BoundBox.ZMax

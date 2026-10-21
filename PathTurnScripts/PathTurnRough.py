@@ -45,6 +45,7 @@ class ObjectTurnRough(PathTurnBase.ObjectOp):
     '''Proxy class for turning roughing operations.'''
 
     turns_to_min_diameter = True
+    supports_internal = True
 
     def initOperation(self, obj):
         super().initOperation(obj)
@@ -75,17 +76,14 @@ class ObjectTurnRough(PathTurnBase.ObjectOp):
         RoughOP.set_params(self.getProps(obj))
         RoughOP.set_params({'cleanup_pass': obj.CleanupPass})
 
-        stockBoundbox = PathTurnHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox)
+        stockBoundbox = self.lathe_stock_box()
         RoughOP.add_stock(stockBoundbox)
 
         RoughOP.add_part_edges(self.part_outline)
         RoughOP.add_tool(turnTool)
 
         PathCode = RoughOP.get_gcode()
-
-        for command in PathCode:
-            pathCommand = Path.Command(command.get_movement(), command.get_params())
-            self.commandlist.append(pathCommand)
+        self.commandlist.extend(self.lathe_commands(PathCode))
 
     def opSetDefaultValues(self, obj, job):
         obj.OpStartDepth = job.Stock.Shape.BoundBox.ZMax
