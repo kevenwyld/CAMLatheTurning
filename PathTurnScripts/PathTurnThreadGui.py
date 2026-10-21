@@ -80,6 +80,22 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         self.form.degression.blockSignals(True)
         self.form.degression.setValue(obj.Degression)
         self.form.degression.blockSignals(False)
+        self.refresh_results(obj)
+
+    # properties the op works out when it recomputes, shown on the page
+    RESULTS = ("Pitch", "ThreadDepth", "ThreadDiameter", "PassSchedule", "SizeWarning")
+
+    def updateData(self, obj, prop):
+        '''CAM calls this when a property is assigned: show what the op worked
+        out (a new op has no diameter until it first recomputes, after the
+        page opened). Only those fields, so values being edited are kept.'''
+        if prop in self.RESULTS and hasattr(self, "form"):
+            self.refresh_results(obj)
+
+    def refresh_results(self, obj):
+        for box in self._spinboxes(obj):
+            if box.prop in ("Pitch", "ThreadDepth"):
+                box.updateWidget()
         if obj.ThreadDiameter.Value > 0:
             lines = ["Cut from the selected diameter: {}".format(obj.ThreadDiameter.UserString)]
             if getattr(obj, "PassSchedule", ""):
