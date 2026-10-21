@@ -70,6 +70,16 @@ an internal thread (Type can also be set by hand).
   part is held (chuck, collet, fixture) is not assumed from the stock: keep
   the insert clear of it.
 
+### Thread data, and a TODO
+The sizes and pitches come from the addon's own tables (ISO 261/262 metric
+coarse and fine, ASME B1.1 UNC and UNF); the tolerance ranges from the
+tables CAM ships for Thread Milling. **TODO:** take the sizes from CAM's
+tables too, so the data is shared with Thread Milling and grows with CAM.
+Not yet, because CAM's metric internal (6H) table has few fine pitches
+(most fine internal threads would need Custom), its internal Unified files
+misname the large sizes ("11/2-12" for 1-1/2-12), and a few of its metric
+pitches are not ISO ones (e.g. M10 x 1.12).
+
 ## Diameter limits
 The **Diameters** page limits every operation: **Min Diameter** (e.g. the
 bore of a tube: Face finishes the face to its edge, Partoff goes just past

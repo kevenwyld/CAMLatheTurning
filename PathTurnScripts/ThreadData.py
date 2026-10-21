@@ -136,6 +136,19 @@ def size_problem(major, pitch, internal, diameter):
 
 
 # ---------------------------------------------------------------------------
+# TODO: take the thread sizes from CAM's tables as well, so there is one set
+# of thread data shared with Thread Milling and new sizes arrive with CAM.
+# Not yet, because CAM's tables (as of FreeCAD 1.x / 27 dev) fall short:
+# - metric internal (6H) has 81 sizes, mostly coarse: few fine pitches, so
+#   most fine internal threads would need Custom (external 6g/4g6g has 175,
+#   fine pitches included, but only to M55);
+# - the internal Unified files name the large sizes "11/2-12", "13/4-5" for
+#   1-1/2-12, 1-3/4-5 (the external files have the latter), so names do not
+#   match between them;
+# - some metric pitches are not ISO 261 ones (e.g. M10 x 1.12, x 1.6).
+# Until then the sizes and pitches are this module's tables, and CAM's are
+# used for the tolerance ranges only. Worth reporting the last two upstream.
+#
 # Tolerance classes, from the tables CAM ships for Thread Milling
 # (Mod/CAM/Data/Threads): crest, pitch and minor diameter ranges per size.
 
