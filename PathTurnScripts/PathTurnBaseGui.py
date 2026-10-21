@@ -338,6 +338,9 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
 
 
 class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
+    # The tool controller and coolant are on CAM's own Tool Controller page;
+    # these pages used to carry them too, and setting them up twice made CAM
+    # delete widgets out from under this page.
     '''Page controller class for turning operations '''
 
     def taskPanelDiametersPage(self, obj, features):
@@ -410,8 +413,6 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         if obj.AllowGrooving != self.form.allowGrooving.isChecked():
             obj.AllowGrooving = self.form.allowGrooving.isChecked()
 
-        self.updateToolController(obj, self.form.toolController)
-        self.updateCoolant(obj, self.form.coolantController)
 
     def setFields(self, obj):
         '''setFields(obj) ... transfers obj's property values to UI'''
@@ -420,8 +421,6 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         for box in self._spinboxes(obj):
             box.updateWidget()
         self.form.finishPasses.setValue(obj.FinishPasses)
-        self.setupToolController(obj, self.form.toolController)
-        self.setupCoolant(obj, self.form.coolantController)
 
         self._show_fields(obj)
         if hasattr(obj, "SpringPass"):
@@ -456,8 +455,6 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.finishDirection.currentIndexChanged)
         signals.append(self.form.allowGrooving.stateChanged)
 
-        signals.append(self.form.toolController.currentIndexChanged)
-        signals.append(self.form.coolantController.currentIndexChanged)
 
         return signals
 

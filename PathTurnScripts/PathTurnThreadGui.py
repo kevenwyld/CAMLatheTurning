@@ -57,17 +57,11 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
                 setattr(obj, prop, value)
         if obj.UseG76 != self.form.useG76.isChecked():
             obj.UseG76 = self.form.useG76.isChecked()
-        self.updateToolController(obj, self.form.toolController)
-        self.updateCoolant(obj, self.form.coolantController)
-        # the sizes, pitch and depth follow the standard; refresh just those
-        # (setFields also rebuilds the tool controller editor, which CAM
-        # expects once, when the page opens)
+        # the sizes, pitch and depth follow the standard
         self.refresh_thread_fields(obj)
 
     def setFields(self, obj):
         self.refresh_thread_fields(obj)
-        self.setupToolController(obj, self.form.toolController)
-        self.setupCoolant(obj, self.form.coolantController)
 
     def refresh_thread_fields(self, obj):
         for widget, prop in COMBOS:
@@ -83,13 +77,12 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         self.form.threadSize.setEnabled(not custom)
         if obj.ThreadDiameter.Value > 0:
             self.form.threadInfo.setText(
-                "Cut from the selected face: {} diameter".format(obj.ThreadDiameter.UserString))
+                "Cut from the selected diameter: {}".format(obj.ThreadDiameter.UserString))
         else:
-            self.form.threadInfo.setText("Select the cylindrical face to thread on the Z Range page.")
+            self.form.threadInfo.setText("Select the diameter to thread (its cylindrical face) on the Z Range page.")
 
     def getSignalsForUpdate(self, obj):
-        signals = [self.form.toolController.currentIndexChanged, self.form.coolantController.currentIndexChanged,
-                   self.form.useG76.stateChanged]
+        signals = [self.form.useG76.stateChanged]
         signals += [getattr(self.form, w).currentIndexChanged for w, _ in COMBOS]
         signals += [getattr(self.form, w).editingFinished for w, _ in QUANTITIES]
         signals += [getattr(self.form, w).valueChanged for w, _ in INTEGERS]

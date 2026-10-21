@@ -68,7 +68,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         add("App::PropertyLength", "ThreadDepth", group,
             translate("TurnPath", "Radial depth to the insert's theoretical sharp point (from the standard unless Custom)"))
         add("App::PropertyLength", "ThreadDiameter", group,
-            translate("TurnPath", "Diameter the thread is cut from: the selected face (read only)"))
+            translate("TurnPath", "Diameter the thread is cut from: the selected diameter (read only)"))
         add("App::PropertyInteger", "Passes", group,
             translate("TurnPath", "Infeed passes to full depth; 0 uses the recommended number for the pitch"))
         add("App::PropertyLength", "FirstPassDepth", group,
@@ -82,7 +82,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         add("App::PropertyLength", "LeadIn", group,
             translate("TurnPath", "Distance in front of the thread each pass starts at, for Z to reach speed; 0 is three pitches"))
         add("App::PropertyLength", "ThreadLength", group,
-            translate("TurnPath", "Length of the thread from the front of the selection; 0 threads the whole face"))
+            translate("TurnPath", "Length of the thread from the front of the selected diameter; 0 threads its whole length"))
         add("App::PropertyBool", "UseG76", group,
             translate("TurnPath", "Output one G76 threading cycle (controls that have it) instead of explicit G33 passes"))
         obj.setEditorMode("ThreadDiameter", 1)
@@ -159,7 +159,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         '''Thread the selected cylindrical face with liblathe's ThreadOP.'''
         face = self.selected_face(obj)
         if face is None:
-            raise RuntimeError(translate('PathTurn', "Select the cylindrical face to thread on the Z Range page"))
+            raise RuntimeError(translate('PathTurn', "Select the diameter to thread (its cylindrical face) on the Z Range page"))
         internal = self.internal(obj)
         radius = face.Surface.Radius
         obj.ThreadDiameter = FreeCAD.Units.Quantity(2 * radius, FreeCAD.Units.Length)
@@ -213,7 +213,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         expected = ThreadData.start_diameter(major, pitch, internal)
         if abs(diameter - expected) > max(0.25, 0.1 * pitch):
             FreeCAD.Console.PrintWarning(
-                "{}: the selected face is {:.3f} mm in diameter; a {} {} {} thread is cut from {:.3f} mm\n".format(
+                "{}: the selected diameter is {:.3f} mm; a {} {} {} thread is cut from {:.3f} mm\n".format(
                     obj.Label, diameter, obj.ThreadSize, "internal" if internal else "external",
                     obj.ThreadStandard, expected))
 

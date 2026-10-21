@@ -34,7 +34,7 @@ an internal thread (Type can also be set by hand).
 * **Thread standard / Size:** ISO metric coarse and fine, UNC, UNF, or
   Custom (enter pitch and depth). Depths are the 60 degree basic profile's:
   0.61343 P external, 0.54127 P internal from the minor diameter.
-* **Thread length** (0: the whole face), **Passes** (0: the recommended
+* **Thread length** (0: the whole selected diameter), **Passes** (0: the recommended
   number for the pitch), **First / Min pass depth**, **Infeed** (modified
   flank 29.5 degrees by default, flank 30, or radial), **Spring passes**,
   **Lead-in** (0: three pitches, so Z is at speed).
