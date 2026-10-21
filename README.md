@@ -1,6 +1,6 @@
-# FreeCAD Turning Addon (fork)
+# CAM Lathe Turning (fork)
 
-| :warning: WARNING: Turning Addon is experimental. Check every program in a simulator, and with care on the machine, before cutting. |
+| :warning: WARNING: CAM Lathe Turning is experimental. Check every program in a simulator, and with care on the machine, before cutting. |
 
 A FreeCAD CAM addon for CNC turning: facing, drilling, roughing, profiling
 and boring, grooving and groove turning, threading and parting, with a
@@ -14,7 +14,7 @@ standard tolerance classes, collision checking and a reworked user
 interface; see Features below. It uses its own fork of LibLathe
 ([kevenwyld/LibLathe](https://github.com/kevenwyld/LibLathe)) as a submodule.
 It uses the same Python module names as the original, so the two cannot be
-installed side by side.
+installed side by side. This repository was previously named TurningAddon.
 
 ## Description
 Once installed, the addon adds its operations to the CAM workbench, in a
