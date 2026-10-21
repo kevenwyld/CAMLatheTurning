@@ -46,6 +46,7 @@ class ObjectTurnPart(PathTurnBase.ObjectOp):
 
     # parting is done with a parting or grooving insert (its real width)
     uses_grooving_tool = True
+    uses_pecking = True
 
     def opFeatures(self, obj):
         '''Turning features plus base geometry: a selection sets where to part off.'''
@@ -82,6 +83,7 @@ class ObjectTurnPart(PathTurnBase.ObjectOp):
             'cutting_depth': length("GroovingDepth", length("CuttingDepth")),
             'overtravel': obj.Overtravel.Value,
         })
+        PartOP.set_params(self.peck_params(obj))
 
         stockBoundbox = PathTurnHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox)
         PartOP.add_stock(stockBoundbox)

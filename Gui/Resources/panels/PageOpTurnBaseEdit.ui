@@ -186,7 +186,7 @@
         </property>
        </widget>
       </item>
-      <item row="10" column="0">
+      <item row="17" column="0">
        <spacer name="verticalSpacer">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -211,6 +211,15 @@
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>
+      <item row="12" column="0"><widget class="QLabel" name="label_strategy"><property name="text"><string>Strategy</string></property></widget></item>
+      <item row="12" column="1"><widget class="QComboBox" name="strategy"><property name="toolTip"><string>Plunge: full-depth plunges side by side. Side-turn: a plunge of one step down, then a pass along Z at that depth, alternating direction, level by level: less tool pressure in wide grooves</string></property></widget></item>
+      <item row="13" column="0"><widget class="QCheckBox" name="setStepDown"><property name="toolTip"><string>Side-turn: depth of each level. Unticked: 90% of the insert's turning depth (half its width without one), shown greyed out</string></property><property name="text"><string>Step down</string></property></widget></item>
+      <item row="13" column="1"><widget class="Gui::QuantitySpinBox" name="stepDown"><property name="toolTip"><string>Side-turn: depth of each level</string></property><property name="minimum"><double>0.000000000000000</double></property></widget></item>
+      <item row="14" column="0"><widget class="QCheckBox" name="peck"><property name="toolTip"><string>Plunge in pecks, backing off between them to break the chip</string></property><property name="text"><string>Peck</string></property></widget></item>
+      <item row="14" column="1"><widget class="Gui::QuantitySpinBox" name="peckDepth"><property name="toolTip"><string>How far each peck feeds in</string></property><property name="minimum"><double>0.000000000000000</double></property></widget></item>
+      <item row="15" column="0"><widget class="QLabel" name="label_peckRetract"><property name="text"><string>Back-off</string></property></widget></item>
+      <item row="15" column="1"><widget class="Gui::QuantitySpinBox" name="peckRetract"><property name="toolTip"><string>How far the tool backs off between pecks</string></property><property name="minimum"><double>0.000000000000000</double></property></widget></item>
+      <item row="16" column="0" colspan="2"><widget class="QCheckBox" name="peckFullRetract"><property name="toolTip"><string>Retract out of the cut between pecks (clearing the chips), not just back off</string></property><property name="text"><string>Retract fully between pecks</string></property></widget></item>
 </layout>
     </widget>
    </item>

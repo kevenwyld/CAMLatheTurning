@@ -60,7 +60,7 @@ else:
 # faces, edges and whole objects, so give them a gate that allows exactly
 # that.
 
-TURNING_OPS = ("TurnDrill", "TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove", "TurnThread")
+TURNING_OPS = ("TurnDrill", "TurnGrooveTurn", "TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove", "TurnThread")
 
 
 class TurningGate:
@@ -672,14 +672,35 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         return getattr(self, "_lead_box", None)
 
     def updateData(self, obj, prop):
-        '''The worked-out (greyed) lead-in follows the op as it recomputes.'''
+        '''The worked-out (greyed) lead-in and step down follow the op as it recomputes.'''
         if prop == "LeadIn" and hasattr(self, "form") and not getattr(obj, "SetLeadIn", True):
             box = self._lead_in_box(obj)
             if box is not None:
                 box.updateWidget()
+        if prop == "StepDown" and hasattr(self, "form") and not getattr(obj, "SetStepDown", True):
+            box = self._groove_boxes(obj).get("StepDown")
+            if box is not None:
+                box.updateWidget()
+
+    def _groove_boxes(self, obj):
+        '''Step down and the pecking lengths, bound to the op.'''
+        if getattr(self, "_gboxes", None) is None:
+            self._gboxes = {prop: PathGuiUtil.QuantitySpinBox(getattr(self.form, field), obj, prop)
+                            for field, prop in (("stepDown", "StepDown"), ("peckDepth", "PeckDepth"),
+                                                ("peckRetract", "PeckRetract")) if hasattr(obj, prop)}
+        return self._gboxes
 
     def registerSignalHandlers(self, obj):
         self.form.setLeadIn.toggled.connect(self.form.leadIn.setEnabled)
+        self.form.setStepDown.toggled.connect(self.form.stepDown.setEnabled)
+        for w in (self.form.peckDepth, self.form.peckRetract, self.form.peckFullRetract, self.form.label_peckRetract):
+            self.form.peck.toggled.connect(w.setEnabled)
+        self.form.strategy.currentIndexChanged.connect(lambda _: self._side_turn_fields())
+
+    def _side_turn_fields(self):
+        on = self.form.strategy.currentText() == "Side-turn"
+        self.form.setStepDown.setEnabled(on)
+        self.form.stepDown.setEnabled(on and self.form.setStepDown.isChecked())
 
     def _spinboxes(self, obj):
         if getattr(self, "_quantity_boxes", None) is None:
@@ -706,6 +727,11 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             widget.setVisible(hasattr(obj, "Side"))
         for widget in (self.form.setLeadIn, self.form.leadIn):
             widget.setVisible(hasattr(obj, "LeadIn") and getattr(getattr(obj, "Proxy", None), "uses_pass_lead_in", False))
+        for widget in (self.form.label_strategy, self.form.strategy, self.form.setStepDown, self.form.stepDown):
+            widget.setVisible(hasattr(obj, "Strategy"))
+        for widget in (self.form.peck, self.form.peckDepth, self.form.label_peckRetract, self.form.peckRetract,
+                       self.form.peckFullRetract):
+            widget.setVisible(hasattr(obj, "Peck"))
 
     def getFields(self, obj):
         '''getFields(obj) ... transfers values from UI to obj's proprties'''
@@ -732,6 +758,17 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         if obj.AllowGrooving != self.form.allowGrooving.isChecked():
             obj.AllowGrooving = self.form.allowGrooving.isChecked()
 
+        if hasattr(obj, "Strategy") and self.form.strategy.currentText() and obj.Strategy != self.form.strategy.currentText():
+            obj.Strategy = self.form.strategy.currentText()
+        if hasattr(obj, "SetStepDown") and obj.SetStepDown != self.form.setStepDown.isChecked():
+            obj.SetStepDown = self.form.setStepDown.isChecked()
+        for widget, prop in ((self.form.peck, "Peck"), (self.form.peckFullRetract, "PeckFullRetract")):
+            if hasattr(obj, prop) and getattr(obj, prop) != widget.isChecked():
+                setattr(obj, prop, widget.isChecked())
+        for prop, box in self._groove_boxes(obj).items():
+            if prop != "StepDown" or getattr(obj, "SetStepDown", False):    # a worked-out step down is shown, not written
+                box.updateProperty()
+
         if hasattr(obj, "SetLeadIn"):
             if obj.SetLeadIn != self.form.setLeadIn.isChecked():
                 obj.SetLeadIn = self.form.setLeadIn.isChecked()
@@ -748,6 +785,25 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         self.form.finishPasses.setValue(obj.FinishPasses)
 
         self._show_fields(obj)
+        if hasattr(obj, "Strategy"):
+            self.form.strategy.blockSignals(True)
+            self.form.strategy.clear()
+            self.form.strategy.addItems(obj.getEnumerationsOfProperty("Strategy"))
+            self.form.strategy.setCurrentText(obj.Strategy)
+            self.form.strategy.blockSignals(False)
+            self.form.setStepDown.blockSignals(True)
+            self.form.setStepDown.setChecked(bool(obj.SetStepDown))
+            self.form.setStepDown.blockSignals(False)
+            self._side_turn_fields()
+        if hasattr(obj, "Peck"):
+            for widget, prop in ((self.form.peck, "Peck"), (self.form.peckFullRetract, "PeckFullRetract")):
+                widget.blockSignals(True)
+                widget.setChecked(bool(getattr(obj, prop)))
+                widget.blockSignals(False)
+            for w in (self.form.peckDepth, self.form.peckRetract, self.form.peckFullRetract, self.form.label_peckRetract):
+                w.setEnabled(bool(obj.Peck))
+        for box in self._groove_boxes(obj).values():
+            box.updateWidget()
         if hasattr(obj, "SetLeadIn"):
             self.form.setLeadIn.blockSignals(True)
             self.form.setLeadIn.setChecked(bool(obj.SetLeadIn))
@@ -790,6 +846,9 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.side.currentIndexChanged)
         signals.append(self.form.setLeadIn.stateChanged)
         signals.append(self.form.leadIn.editingFinished)
+        signals += [self.form.strategy.currentIndexChanged, self.form.setStepDown.stateChanged,
+                    self.form.stepDown.editingFinished, self.form.peck.stateChanged, self.form.peckDepth.editingFinished,
+                    self.form.peckRetract.editingFinished, self.form.peckFullRetract.stateChanged]
         signals.append(self.form.springPass.stateChanged)
         signals.append(self.form.finishStepOver.editingFinished)
         signals.append(self.form.finishFrontFace.stateChanged)

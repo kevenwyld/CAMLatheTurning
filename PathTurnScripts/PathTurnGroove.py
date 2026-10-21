@@ -26,6 +26,11 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
     turns_to_min_diameter = True
 
     uses_grooving_tool = True
+    uses_pecking = True
+
+    STRATEGIES = ("Plunge", "Side-turn")
+    # the default roughing strategy (Turn Groove-Turn: Side-turn)
+    default_strategy = "Plunge"
 
     def opFeatures(self, obj):
         '''Turning features plus base geometry: the selection sets the Z range.'''
@@ -36,9 +41,27 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
     def initOperation(self, obj):
         super().initOperation(obj)
         self.add_groove_properties(obj)
+        self.add_strategy_properties(obj)
+
+    def add_strategy_properties(self, obj):
+        if not hasattr(obj, "Strategy"):
+            obj.addProperty("App::PropertyEnumeration", "Strategy", "Turn Path", translate(
+                "TurnPath", "Plunge: full-depth plunges side by side. Side-turn: a plunge of one step down, then a "
+                            "pass along Z at that depth, alternating direction, level by level: less tool pressure "
+                            "in wide grooves"))
+            obj.Strategy = list(self.STRATEGIES)
+            obj.Strategy = self.default_strategy
+        tip = ("Side-turn: depth of each level. Unticked: 90% of the insert's turning depth (half its width without "
+               "one), shown greyed")
+        if not hasattr(obj, "StepDown"):
+            obj.addProperty("App::PropertyLength", "StepDown", "Turn Path", translate("TurnPath", tip))
+        if not hasattr(obj, "SetStepDown"):
+            obj.addProperty("App::PropertyBool", "SetStepDown", "Turn Path", translate("TurnPath", tip))
+        obj.setEditorMode("StepDown", 0 if getattr(obj, "SetStepDown", False) else 1)
 
     def opOnDocumentRestored(self, obj):
         super().opOnDocumentRestored(obj)
+        self.add_strategy_properties(obj)
         if not hasattr(obj, "FinishAllowance"):
             self.add_groove_properties(obj)
         for prop, typ, group, tip in (
@@ -109,6 +132,14 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
             'turning_depth': length("TurningDepth"),
             'finish_allowance': obj.FinishAllowance.Value,
         })
+        # roughing strategy and pecking
+        turning = length("TurningDepth")
+        auto_step = 0.9 * turning if turning > 0 else 0.5 * width
+        step_down = obj.StepDown.Value if getattr(obj, "SetStepDown", False) else auto_step
+        if not getattr(obj, "SetStepDown", False) and abs(obj.StepDown.Value - auto_step) > 1e-9:
+            obj.StepDown = FreeCAD.Units.Quantity(auto_step, FreeCAD.Units.Length)
+        op.set_params(dict({'strategy': "side_turn" if getattr(obj, "Strategy", "Plunge") == "Side-turn" else "plunge",
+                            'step_down': step_down}, **self.peck_params(obj)))
         op.add_stock(PathTurnHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox))
         op.add_part_edges(self.part_outline)
 

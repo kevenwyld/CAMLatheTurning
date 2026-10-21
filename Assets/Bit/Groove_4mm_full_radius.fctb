@@ -6,7 +6,8 @@
   "parameter": {
     "Width": "4.00 mm",
     "GroovingDepth": "22.00 mm",
-    "TurningDepth": "1.50 mm"
+    "TurningDepth": "1.50 mm",
+    "NeckWidth": "4.00 mm"
   },
   "attribute": {}
 }

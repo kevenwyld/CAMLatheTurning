@@ -8,7 +8,7 @@ This addon when installed will appear in the Path Workbench toolbar menu and wil
 
 ## Features
 * Turning operations: Face, Drill, Rough, Profile (both outside and boring),
-  Groove, Thread (G33 passes or a G76 cycle) and Partoff
+  Groove, Groove-Turn, Thread (G33 passes or a G76 cycle) and Partoff
 * Turning tool shapes: ISO turning insert, grooving / parting insert, full
   radius insert, threading insert, with example bits
 * A LinuxCNC lathe post processor
@@ -226,6 +226,26 @@ box.
   Turning Depth deep over more than the Turning Depth of length: where the
   plunges leave more (e.g. a flat blade over a fillet, or a groove no plunge
   fits), it adds short side-turning passes, and says so in the Report view.
+
+## Groove roughing strategies, pecking, groove turning
+* **Strategy** (Turn Groove): **Plunge** roughs with full-depth plunges
+  side by side; **Side-turn** plunges one **Step down**, turns along Z at
+  that depth, steps down and turns back, level by level, for less tool
+  pressure in wide grooves. Step down defaults to 90% of the insert's
+  Turning depth (shown greyed; tick to set). Stretches too short to
+  traverse (grooves under about 1.5 blade widths) are plunged.
+* **Peck** (Turn Groove, Groove-Turn, Partoff): plunges feed in **Peck
+  depth** at a time, backing off by **Back-off** between pecks to break the
+  chip, or out of the cut with **Retract fully between pecks**.
+* **Turn Groove-Turn**: groove turning (plunge turning) along the whole
+  profile with a grooving or full radius insert, in both directions: Turn
+  Groove with Side-turn roughing, the whole part as its range by default,
+  and the finish passes down walls, across and up walls.
+* The Full Radius insert has a **Neck width** (ISO BW): its width gives
+  tangent flanks; less is a lollipop groove-turn insert. The turning
+  operations see the part from outside (its largest radius at each Z), so
+  the neck does not change paths yet; it will once undercut geometry is
+  modelled.
 
 ## Grooving, parting and full radius inserts
 Two tool shapes cover these inserts:

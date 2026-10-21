@@ -142,6 +142,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_side_property(obj)
         self.add_clearance_properties(obj)
         self.add_lead_in_property(obj)
+        self.add_peck_properties(obj)
         obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
                         translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
                                               "cutting angle allows"))
@@ -209,6 +210,28 @@ class ObjectOp(PathOp.ObjectOp):
             if hasattr(obj, prop) and not getattr(obj, switch) and abs(getattr(obj, prop).Value - value) > 1e-9:
                 setattr(obj, prop, FreeCAD.Units.Quantity(value, FreeCAD.Units.Length))
 
+    # pecking on plunges (Turn Groove, Turn Groove-Turn, Turn Partoff)
+    uses_pecking = False
+
+    def add_peck_properties(self, obj):
+        if not self.uses_pecking:
+            return
+        for prop, typ, tip, default in (
+                ("Peck", "App::PropertyBool", "Plunge in pecks, backing off between them to break the chip", False),
+                ("PeckDepth", "App::PropertyLength", "How far each peck feeds in", 2.0),
+                ("PeckRetract", "App::PropertyLength", "How far the tool backs off between pecks", 0.2),
+                ("PeckFullRetract", "App::PropertyBool",
+                 "Retract out of the cut between pecks (clearing the chips), not just back off", False)):
+            if not hasattr(obj, prop):
+                obj.addProperty(typ, prop, "Pecking", translate("TurnPath", tip))
+                setattr(obj, prop, FreeCAD.Units.Quantity(default, FreeCAD.Units.Length) if typ.endswith("Length") else default)
+
+    def peck_params(self, obj):
+        if not getattr(obj, "Peck", False):
+            return {'peck_depth': 0.0}
+        return {'peck_depth': obj.PeckDepth.Value, 'peck_retract': obj.PeckRetract.Value,
+                'peck_full_retract': bool(obj.PeckFullRetract)}
+
     def add_side_property(self, obj):
         '''Side (External / Internal) for the operations that can bore.'''
         if self.supports_internal and not hasattr(obj, "Side"):
@@ -268,6 +291,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_side_property(obj)
         self.add_clearance_properties(obj)
         self.add_lead_in_property(obj)
+        self.add_peck_properties(obj)
         for prop, tip in (("StockToLeaveX", STOCK_X_TIP), ("StockToLeaveZ", STOCK_Z_TIP)):
             if obj.getTypeIdOfProperty(prop) == "App::PropertyLength":
                 value = getattr(obj, prop).Value

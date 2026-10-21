@@ -147,10 +147,14 @@ class ToolBitGroove(ToolBit):
 
 class ToolBitShapeFullRadius(ToolBitShape):
     """
-    Full radius insert: a blade of width Width ending in a semicircle of
-    radius Width / 2, with straight flanks. Drawn from the same reference
-    point as the grooving insert (X at the bottom of the radius, Z at the
-    chuck-side flank).
+    Full radius insert: a blade of width Width (ISO 13399 CW) ending in a
+    radius of half the width (RE = CW / 2). Behind the head the body is
+    NeckWidth (BW) wide: the width itself gives tangent flanks (with their
+    side relief); less gives a "lollipop" groove-turn insert, a full circle
+    on a narrower neck that clears the cut both ways. Drawn from the same
+    reference point as the grooving insert (X at the bottom of the radius,
+    Z at the chuck-side flank). GroovingDepth is ISO's CDX, TurningDepth
+    its APMX.
     """
     name = "FullRadius"
     aliases = ("fullradius", "full_radius")
@@ -168,6 +172,12 @@ class ToolBitShapeFullRadius(ToolBitShape):
             ),
             "TurningDepth": (
                 FreeCAD.Qt.translate("ToolBitShape", "Largest depth of cut when turning sideways (T)"),
+                "App::PropertyLength",
+            ),
+            "NeckWidth": (
+                FreeCAD.Qt.translate("ToolBitShape",
+                                     "Width of the body behind the head (ISO BW): the width itself for tangent "
+                                     "flanks, less for a lollipop groove-turn insert"),
                 "App::PropertyLength",
             ),
             "Diameter": (
