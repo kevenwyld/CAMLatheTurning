@@ -40,11 +40,15 @@ an internal thread (Type can also be set by hand).
   **Lead-in** (0: three pitches, so Z is at speed).
 * Output: explicit passes using **G33** (spindle-synchronized motion; works
   on a mill with a spindle encoder, such as PathPilot in mill mode), or one
-  **G76** cycle with **Use G76 cycle** on controls that have it.
-* The insert is kept clear of the part: nothing in front of the thread may
-  stand above the root, and a shoulder behind its end must clear the
-  insert's flank; the op says where the thread must end, or to cut a relief
-  groove.
+  **G76** cycle with **Use G76 cycle** on controls that have it. Both are
+  marked for CAM's posts to pass through. CAM's posts currently drop G76's
+  Q word (the infeed angle), so check a posted G76 line or use the explicit
+  passes.
+* The insert is kept clear of the part and the chuck: nothing in front of
+  the thread may stand above its root (every pass starts in front at depth,
+  so the part there needs a chamfer or a relief groove), and a shoulder or
+  the end of the stock behind it must clear the insert's flank; the op says
+  where the thread must end.
 
 ## Diameter limits
 The **Diameters** page limits every operation: **Min Diameter** (e.g. the

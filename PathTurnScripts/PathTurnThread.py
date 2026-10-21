@@ -29,6 +29,10 @@ def translate(context, text, disambig=None):
     return QtCore.QCoreApplication.translate(context, text, disambig)
 
 
+# spindle-synchronized commands, which posts do not list by default
+SYNCHRONIZED = ("G33", "G76")
+ALLOW_UNSUPPORTED = "allow_unsupported"   # CAM's Constants.ANNOT_ALLOW_UNSUPPORTED
+
 INFEEDS = (("Modified flank (29.5\u00b0)", 29.5), ("Flank (30\u00b0)", 30.0), ("Radial", 0.0))
 THREAD_TYPES = ("From the selection", "External", "Internal")
 
@@ -128,10 +132,17 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             obj.ThreadDepth = FreeCAD.Units.Quantity(ThreadData.depth(pitch, self.internal(obj)), FreeCAD.Units.Length)
 
     def onChanged(self, obj, prop):
-        if prop == "ThreadStandard" and hasattr(obj, "ThreadSize"):
+        # while a document is restored, properties arrive one at a time: the
+        # standard's pitch and depth were saved with it, nothing to update
+        restoring = "Restore" in getattr(obj, "State", []) or getattr(getattr(obj, "Document", None), "Restoring", False)
+        needed = all(hasattr(obj, p) for p in ("ThreadStandard", "ThreadSize", "ThreadType", "Pitch", "ThreadDepth"))
+        if restoring or not needed:
+            super().onChanged(obj, prop)
+            return
+        if prop == "ThreadStandard":
             self.update_sizes(obj)
             self.apply_standard(obj)
-        elif prop in ("ThreadSize", "ThreadType") and hasattr(obj, "Pitch"):
+        elif prop in ("ThreadSize", "ThreadType"):
             self.apply_standard(obj)
         super().onChanged(obj, prop)
 
@@ -178,9 +189,20 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         op.add_part_edges(self.part_outline)
 
         for command in op.get_gcode():
-            self.commandlist.append(Path.Command(command.get_movement(), command.get_params()))
+            name = command.get_movement()
+            if name in SYNCHRONIZED:
+                # posts accept only the commands their machine lists; G33 and
+                # G76 are not in CAM's default list, so mark them to be passed
+                # through as they are
+                self.commandlist.append(Path.Command(name, command.get_params(), {ALLOW_UNSUPPORTED: True}))
+            else:
+                self.commandlist.append(Path.Command(name, command.get_params()))
         for warning in getattr(op, "warnings", []):
             FreeCAD.Console.PrintWarning("{}: {}\n".format(obj.Label, warning))
+        if obj.UseG76 and dict(INFEEDS).get(obj.Infeed, 29.5) > 0:
+            FreeCAD.Console.PrintWarning(
+                "{}: CAM's posts currently drop G76's Q word (the infeed angle): the control then feeds in "
+                "radially. Check the posted G76 line, or use the explicit passes (Use G76 cycle off)\n".format(obj.Label))
 
     def check_size(self, obj, diameter, internal):
         '''Warn when the selected face does not look like the size chosen.'''
