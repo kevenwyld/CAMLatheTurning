@@ -46,6 +46,14 @@ an internal thread (Type can also be set by hand).
   insert's flank; the op says where the thread must end, or to cut a relief
   groove.
 
+## Diameter limits
+The **Diameters** page limits every operation: **Min Diameter** (e.g. the
+bore of a tube: Face finishes the face to its edge, Partoff goes just past
+it) and **Max Diameter** (the outside the material already has). The arrow buttons beside
+them take the diameter of the selected circular edge, cylindrical face or
+vertex; a flat ring-shaped face, such as the end of a tube, gives its inner
+diameter for Min and its outer for Max.
+
 ## Operation settings
 * **Step over**: Rough, the depth of cut per pass (per side); Profile, the
   spacing of the finish passes; Face, the step along Z; Turn Groove, the
@@ -99,9 +107,10 @@ surface has already been turned smaller, set Max Diameter to that diameter.
 **Turn Partoff** parts off with a Grooving or Full Radius insert: one plunge
 with the blade's part-side flank on the part's back face (the model's, or
 the back of a selection on the Z Range page), Overtravel (default 0.2 mm)
-past the centreline so no pip is left, or down to Min Diameter if one is
-set. It warns when the insert's grooving depth cannot reach, and refuses
-to part off when there is not a blade's width of stock behind the back face.
+past the centreline so no pip is left, or past Min Diameter if one is set
+(the bore of a tube). It warns when the insert's grooving depth cannot
+reach, and refuses to part off when there is not a blade's width of stock
+behind the back face.
 
 Rough, Profile and Face need a turning insert, and Turn Groove and Turn
 Partoff a grooving

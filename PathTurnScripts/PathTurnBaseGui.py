@@ -182,8 +182,171 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         self.updateRangeLabel()
 
 
+class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
+    """
+    CAM's Diameters page with its arrow buttons working, as on the Depths
+    page: they transfer the diameter of the selected feature to Min or Max
+    Diameter. CAM's page file has the buttons but does not use them.
+    """
+
+    def initPage(self, obj):
+        super().initPage(obj)
+        self.form.startDepthSet.setToolTip(FreeCAD.Qt.translate(
+            "PathTurn", "Set Min Diameter from the selected circular edge, cylindrical face or vertex "
+                        "(a flat ring-shaped face gives its inner diameter, e.g. a bore)"))
+        self.form.finalDepthSet.setToolTip(FreeCAD.Qt.translate(
+            "PathTurn", "Set Max Diameter from the selected circular edge, cylindrical face or vertex "
+                        "(a flat ring-shaped face gives its outer diameter)"))
+        self.updateSelection(obj, FreeCADGui.Selection.getSelectionEx())
+
+    def registerSignalHandlers(self, obj):
+        self.form.startDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.minDiameter, "MinDiameter", min))
+        self.form.finalDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.maxDiameter, "MaxDiameter", max))
+
+    def updateSelection(self, obj, sel):
+        enabled = self.selectionDiameters(sel) is not None
+        self.form.startDepthSet.setEnabled(enabled)
+        self.form.finalDepthSet.setEnabled(enabled)
+
+    @staticmethod
+    def selectionDiameters(sel):
+        """Diameters named by the selection (one feature), or None."""
+        import math
+        import Part
+        if len(sel) != 1 or len(sel[0].SubObjects) != 1:
+            return None
+        sub = sel[0].SubObjects[0]
+        if sub.ShapeType == "Vertex":
+            return [2 * math.hypot(sub.Point.x, sub.Point.y)]
+        if sub.ShapeType == "Edge" and isinstance(sub.Curve, Part.Circle):
+            return [2 * sub.Curve.Radius]
+        if sub.ShapeType == "Face":
+            if isinstance(sub.Surface, Part.Cylinder):
+                return [2 * sub.Surface.Radius]
+            circles = [2 * e.Curve.Radius for e in sub.Edges if isinstance(e.Curve, Part.Circle)]
+            if circles:
+                return circles
+        return None
+
+    def diameterSet(self, obj, spinbox, prop, pick):
+        values = self.selectionDiameters(FreeCADGui.Selection.getSelectionEx())
+        if not values:
+            return
+        if spinbox.expression():
+            obj.setExpression(prop, None)
+            self.setDirty()
+        spinbox.updateWidget(FreeCAD.Units.Quantity(pick(values), FreeCAD.Units.Length))
+        if spinbox.updateProperty():
+            self.setDirty()
+
+
+def selection_diameter(selection, which):
+    """
+    The diameter named by a selection (one sub-element), measured about the
+    spindle axis (Z): a circular edge or a cylindrical face gives its
+    diameter; a vertex twice its distance from the axis; a flat face with
+    circular edges (e.g. the end of a tube) its inner circle for the minimum
+    (which == "min") and its outer circle for the maximum. None otherwise.
+    """
+    import math
+    import Part
+    if len(selection) != 1 or len(selection[0].SubObjects) != 1:
+        return None
+    sub = selection[0].SubObjects[0]
+    if sub.ShapeType == "Vertex":
+        return 2 * math.hypot(sub.Point.x, sub.Point.y)
+    if sub.ShapeType == "Edge" and isinstance(sub.Curve, Part.Circle):
+        return 2 * sub.Curve.Radius
+    if sub.ShapeType == "Face":
+        if isinstance(sub.Surface, Part.Cylinder):
+            return 2 * sub.Surface.Radius
+        radii = [e.Curve.Radius for e in sub.Edges if isinstance(e.Curve, Part.Circle)]
+        if radii:
+            return 2 * (min(radii) if which == "min" else max(radii))
+    return None
+
+
+class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
+    """
+    CAM's Diameters page with its arrow buttons working, as on the Depths
+    page: they transfer the diameter of the selected feature (a circular
+    edge, a cylindrical face, a vertex, or a flat face such as the end of a
+    tube, whose inner circle is the minimum and outer circle the maximum),
+    and a diagram of what the two limits are, in the style of the Heights
+    diagram.
+    """
+
+    DIAGRAM = "CAM-TurnDiametersDiagram.svg"
+
+    def getForm(self):
+        form = super().getForm()
+        form.startDepthSet.setToolTip(QtCore.QCoreApplication.translate("PathTurn",
+            "Transfer the diameter of the selected feature (a circular edge, cylindrical face, vertex, or the "
+            "inner circle of a flat face such as a tube's end) as the minimum diameter"))
+        form.finalDepthSet.setToolTip(QtCore.QCoreApplication.translate("PathTurn",
+            "Transfer the diameter of the selected feature (a circular edge, cylindrical face, vertex, or the "
+            "outer circle of a flat face) as the maximum diameter"))
+        self.add_diagram(form)
+        return form
+
+    def add_diagram(self, form):
+        import os
+        from PySide import QtGui as _QtGui, QtSvg
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "Gui", "Resources", "Icons", self.DIAGRAM)
+        layout = form.layout()
+        if not os.path.exists(path) or layout is None or not hasattr(layout, "getItemPosition"):
+            return
+        renderer = QtSvg.QSvgRenderer(path)
+        size = renderer.defaultSize()
+        pixmap = _QtGui.QPixmap(size)
+        pixmap.fill(QtCore.Qt.transparent)
+        painter = _QtGui.QPainter(pixmap)
+        renderer.render(painter, QtCore.QRectF(0, 0, size.width(), size.height()))
+        painter.end()
+        label = QtGui.QLabel()
+        label.setPixmap(pixmap)
+        label.setObjectName("diametersDiagram")
+        # put the diagram on top: move the existing rows down by one
+        items = []
+        while layout.count():
+            index = layout.count() - 1
+            position = layout.getItemPosition(index)
+            items.append((layout.takeAt(index), position))
+        for item, (row, col, rows, cols) in items:
+            layout.addItem(item, row + 1, col, rows, cols)
+        layout.addWidget(label, 0, 0, 1, max(1, layout.columnCount()), QtCore.Qt.AlignHCenter)
+
+    def registerSignalHandlers(self, obj):
+        self.form.startDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.minDiameter, "MinDiameter", "min"))
+        self.form.finalDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.maxDiameter, "MaxDiameter", "max"))
+
+    def diameterSet(self, obj, spinbox, prop, which):
+        d = selection_diameter(FreeCADGui.Selection.getSelectionEx(), which)
+        if d is None:
+            return
+        if spinbox.expression():
+            obj.setExpression(prop, None)
+            self.setDirty()
+        spinbox.updateWidget(FreeCAD.Units.Quantity(d, FreeCAD.Units.Length))
+        if spinbox.updateProperty():
+            self.setDirty()
+
+    def updateSelection(self, obj, sel):
+        self.form.startDepthSet.setEnabled(selection_diameter(sel, "min") is not None)
+        self.form.finalDepthSet.setEnabled(selection_diameter(sel, "max") is not None)
+
+
 class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
     '''Page controller class for turning operations '''
+
+    def taskPanelDiametersPage(self, obj, features):
+        '''The Diameters page with its from-selection buttons working.'''
+        return TaskPanelTurnDiametersPage(obj, features)
+
+    def taskPanelDiametersPage(self, obj, features):
+        '''The Diameters page, with its from-selection buttons and diagram.'''
+        return TaskPanelTurnDiametersPage(obj, features)
 
     def taskPanelBaseGeometryPage(self, obj, features):
         '''Use the Base Geometry page with the turning note.'''
