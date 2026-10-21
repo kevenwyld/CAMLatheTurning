@@ -7,8 +7,8 @@ A FreeCAD Path Addon to encourage the development of CNC turning functionality f
 This addon when installed will appear in the Path Workbench toolbar menu and will allow the creation of turning paths for use with a CNC lathe. This addon includes [LibLathe](https://github.com/dubstar-04/LibLathe) as a submodule.
 
 ## Features
-* Turning operations: Face, Rough, Profile, Groove, Thread (G33 passes or a
-  G76 cycle) and Partoff
+* Turning operations: Face, Drill, Rough, Profile (both outside and boring),
+  Groove, Thread (G33 passes or a G76 cycle) and Partoff
 * Turning tool shapes: ISO turning insert, grooving / parting insert, full
   radius insert, threading insert, with example bits
 * A LinuxCNC lathe post processor
@@ -85,6 +85,26 @@ Not yet, because CAM's metric internal (6H) table has few fine pitches
 (most fine internal threads would need Custom), its internal Unified files
 misname the large sizes ("11/2-12" for 1-1/2-12), and a few of its metric
 pitches are not ISO ones (e.g. M10 x 1.12).
+
+## Drilling
+**Turn Drill** drills on the spindle axis with a CAM drill bit (the Drill
+shape: Diameter and TipAngle). Select the hole (its cylindrical face) on
+the Z Range page: its front and back give the depth.
+
+* **Cycle:** Peck (G83, backing out of the hole after each peck), Chip
+  break (G73, backing off a little), Drill (G81, straight to depth) or
+  Dwell (G82, a dwell at the bottom); **Peck depth**, **Dwell**, and the
+  **Retract height** in front of the hole (the R plane).
+* **Depth to the drill's tip:** off (the default), the drill's full
+  diameter reaches the bottom of the selected hole, so its point goes
+  deeper by the point's length; on, the point reaches it.
+* **Use a canned cycle:** the cycle as G81/G82/G83/G73 (canned cycles drill
+  along the active plane's axis, so the program switches to G17 for the
+  cycle and back to G18 after: drilling along Z on a lathe and on a mill
+  used as a lathe alike); off, the same moves written out.
+* The page reports the drill, the depths and the cycle, and warns when the
+  drill is not the hole's size. The drill approaches along Z on the axis
+  and leaves the hole along Z before moving away from it.
 
 ## Boring (internal)
 Turn Rough and Turn Profile can bore: set **Side** to **Internal** on the

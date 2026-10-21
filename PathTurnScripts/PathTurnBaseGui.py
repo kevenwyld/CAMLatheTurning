@@ -60,7 +60,7 @@ else:
 # faces, edges and whole objects, so give them a gate that allows exactly
 # that.
 
-TURNING_OPS = ("TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove", "TurnThread")
+TURNING_OPS = ("TurnDrill", "TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove", "TurnThread")
 
 
 class TurningGate:

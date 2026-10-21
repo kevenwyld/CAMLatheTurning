@@ -66,6 +66,13 @@ def is_threading_tool(tool):
     return hasattr(tool, "ProfileAngle")
 
 
+def is_drill_tool(tool):
+    '''True for a drill (CAM's Drill shape: a Diameter and a TipAngle, none
+    of the inserts' parameters).'''
+    return (hasattr(tool, "Diameter") and hasattr(tool, "TipAngle")
+            and not any(hasattr(tool, p) for p in ("EdgeLength", "ProfileAngle", "Width", "Rotation")))
+
+
 def is_grooving_tool(tool):
     '''True for a grooving, parting or full radius insert (Grooving / Full Radius shapes).'''
     return (hasattr(tool, "Width") and not hasattr(tool, "TipAngle")
@@ -106,6 +113,8 @@ class ObjectOp(PathOp.ObjectOp):
     uses_grooving_tool = False
     # operations that work with a threading insert
     uses_threading_tool = False
+    # operations that work with a drill (Turn Drill)
+    uses_drill_tool = False
     # operations for which a Min Diameter set by hand is a diameter to turn
     # to across the Z range (into the model where it is bigger); for the
     # others (Face, Partoff, Thread) it stays their inner limit (e.g. a bore)
@@ -615,7 +624,7 @@ class ObjectOp(PathOp.ObjectOp):
         a failure. Say so, and why when Max Diameter is below the part (it is
         where the material starts, not the diameter to turn to).
         '''
-        if any(c.Name in ("G1", "G2", "G3", "G33", "G76") for c in self.commandlist):
+        if any(c.Name in ("G1", "G2", "G3", "G33", "G76", "G73", "G81", "G82", "G83") for c in self.commandlist):
             return
         message = translate('PathTurn', "{}: no path: nothing of the part to cut in the Z range and between the diameters").format(obj.Label)
         part_dia = 2 * max((-seg.start.X for seg in getattr(self, "part_outline", None) or []), default=0.0)
@@ -635,6 +644,13 @@ class ObjectOp(PathOp.ObjectOp):
         opTool = obj.ToolController.Tool
 
         # the operation and the tool must agree on the kind of insert
+        if self.uses_drill_tool:
+            if not is_drill_tool(opTool):
+                raise RuntimeError(translate('PathTurn', "This operation needs a drill (CAM's Drill shape)"))
+            self.op_generate_gcode(obj, opTool)
+            return
+        if is_drill_tool(opTool):
+            raise RuntimeError(translate('PathTurn', "A drill is only for Turn Drill"))
         if self.uses_threading_tool:
             if not is_threading_tool(opTool):
                 raise RuntimeError(translate('PathTurn', "This operation needs a threading insert (Threading shape)"))
