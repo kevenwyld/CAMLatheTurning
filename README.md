@@ -74,7 +74,15 @@ part beyond the wall in the range. The grooving depth is measured from Max
 Diameter (default: the stock), which is also where plunges start; if the
 surface has already been turned smaller, set Max Diameter to that diameter.
 
-Rough, Profile and Face need a turning insert, and Turn Groove a grooving
+**Turn Partoff** parts off with a Grooving or Full Radius insert: one plunge
+with the blade's part-side flank on the part's back face (the model's, or
+the back of a selection on the Z Range page), Overtravel (default 0.2 mm)
+past the centreline so no pip is left, or down to Min Diameter if one is
+set. It warns when the insert's grooving depth cannot reach, and refuses
+to part off when there is not a blade's width of stock behind the back face.
+
+Rough, Profile and Face need a turning insert, and Turn Groove and Turn
+Partoff a grooving
 or full radius insert; each refuses the other kind with a message.
 
 ## Roughing

@@ -50,20 +50,19 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
     def setOpFields(self, obj):
         '''setFields(obj) ... transfers obj's property values to UI'''
 
-        self.form.stepOver.setEnabled(False)
-        self.form.finishPasses.setEnabled(False)
-        self.form.allowGrooving.setEnabled(False)
-        self.form.stockToLeaveX.setEnabled(False)
-        self.form.stockToLeaveZ.setEnabled(False)
+        # a parting plunge has none of these
+        for widget in (self.form.stepOver, self.form.label_4, self.form.stockToLeaveX, self.form.label_6,
+                       self.form.stockToLeaveZ, self.form.label_7, self.form.allowGrooving):
+            widget.setVisible(False)
 
 
 Command = PathOpGui.SetupOperation('TurnPartoff',
                                    PathTurnPartoff.Create,
                                    TaskPanelOpPage,
                                    'CAM-TurnPartoff',
-                                   QtCore.QT_TRANSLATE_NOOP("PathTurnPartoff", "Turn Part"),
+                                   QtCore.QT_TRANSLATE_NOOP("PathTurnPartoff", "Turn Partoff"),
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnPartoff",
-                                                            "Creates a Path Turning Part object from a features of a base object"),
+                                                            "Parts off at the part's back face (or the selection's) with a parting or grooving insert"),
                                    PathTurnPartoff.SetupProperties)
 
 FreeCAD.Console.PrintLog("Loading PathTurnPartoffGui... done\n")
