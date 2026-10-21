@@ -102,12 +102,24 @@ operation page.
   flank. Set the tool offsets to that point.
 * The safe position between moves is inside the hole, a clearance (or half
   the hole's radius, if less) from its wall.
-* Not checked yet: the boring bar itself (its diameter and reach).
+* The insert's outline is checked as for turning (see Collision checks);
+  the boring bar itself (its diameter and reach) is not checked yet.
 
 Internally the operation is the external one in a mirror: radius r maps to
 R - r (R the stock's radius), which turns the bore into an outer profile
 and the hole into the stock's top; the paths are mapped back, arcs
 reversed.
+
+## Collision checks
+The operations place the insert's imaginary tip on the path, keep its nose
+off the part, and do not follow the part where it is steeper than the
+insert's cutting angle. Turn Rough, Profile and Face also check the rest of
+the insert: its outline (from TipAngle, Rotation, EdgeLength and TipRadius)
+is swept along the path, and where an edge or the body (not the cutting
+nose) would enter the part, the Report view says where and how deep, e.g.
+an insert whose leading edge is swept back past 90 degrees reaching into a
+square shoulder. The path is still made, as given: change the insert or the
+operation's range there.
 
 ## Diameters
 As with milling's depths, Min and Max Diameter are worked out to start with

@@ -370,6 +370,12 @@ class ObjectOp(PathOp.ObjectOp):
         self.mirror_r = R
         self.part_outline = self.get_part_outline(solid)
 
+    def report_lathe_warnings(self, obj, op):
+        '''liblathe's warnings for the operation (e.g. the insert's outline
+        reaching into the part) in the Report view.'''
+        for warning in getattr(op, "warnings", []):
+            FreeCAD.Console.PrintWarning("{}: {}\n".format(obj.Label, warning))
+
     def lathe_stock_box(self):
         '''The stock for liblathe: the stock's silhouette, or for boring (in
         the mirrored space) the material from the hole outward.'''

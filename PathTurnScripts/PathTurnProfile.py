@@ -82,6 +82,7 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
         profileOP.add_tool(turnTool)
 
         PathCode = profileOP.get_gcode()
+        self.report_lathe_warnings(obj, profileOP)
         self.commandlist.extend(self.lathe_commands(PathCode))
 
     def opSetDefaultValues(self, obj, job):

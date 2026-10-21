@@ -63,6 +63,7 @@ class ObjectTurnFace(PathTurnBase.ObjectOp):
         facingOP.add_tool(turnTool)
 
         PathCode = facingOP.get_gcode()
+        self.report_lathe_warnings(obj, facingOP)
 
         for command in PathCode:
             pathCommand = Path.Command(command.get_movement(), command.get_params())

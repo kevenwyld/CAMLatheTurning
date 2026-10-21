@@ -83,6 +83,7 @@ class ObjectTurnRough(PathTurnBase.ObjectOp):
         RoughOP.add_tool(turnTool)
 
         PathCode = RoughOP.get_gcode()
+        self.report_lathe_warnings(obj, RoughOP)
         self.commandlist.extend(self.lathe_commands(PathCode))
 
     def opSetDefaultValues(self, obj, job):
