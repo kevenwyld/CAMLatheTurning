@@ -59,9 +59,17 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
             obj.UseG76 = self.form.useG76.isChecked()
         self.updateToolController(obj, self.form.toolController)
         self.updateCoolant(obj, self.form.coolantController)
-        self.setFields(obj)      # sizes, pitch and depth follow the standard
+        # the sizes, pitch and depth follow the standard; refresh just those
+        # (setFields also rebuilds the tool controller editor, which CAM
+        # expects once, when the page opens)
+        self.refresh_thread_fields(obj)
 
     def setFields(self, obj):
+        self.refresh_thread_fields(obj)
+        self.setupToolController(obj, self.form.toolController)
+        self.setupCoolant(obj, self.form.coolantController)
+
+    def refresh_thread_fields(self, obj):
         for widget, prop in COMBOS:
             self._fill_combo(getattr(self.form, widget), obj, prop)
         for box in self._spinboxes(obj):
@@ -78,8 +86,6 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
                 "Cut from the selected face: {} diameter".format(obj.ThreadDiameter.UserString))
         else:
             self.form.threadInfo.setText("Select the cylindrical face to thread on the Z Range page.")
-        self.setupToolController(obj, self.form.toolController)
-        self.setupCoolant(obj, self.form.coolantController)
 
     def getSignalsForUpdate(self, obj):
         signals = [self.form.toolController.currentIndexChanged, self.form.coolantController.currentIndexChanged,
