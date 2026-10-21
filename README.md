@@ -90,11 +90,13 @@ pitches are not ISO ones (e.g. M10 x 1.12).
 **Turn Drill** drills on the spindle axis with a CAM drill bit (the Drill
 shape: Diameter and TipAngle). It has only the settings drilling uses.
 
-* **Hole start** and **Hole depth**: where the hole starts (Z) and how deep
-  it is from there. Select the hole (its cylindrical face) on the Z Range
-  page and both come from it, shown greyed; tick either to set it. With
-  nothing selected the hole starts at the part's front, and you set the
-  depth.
+* The hole is the Z range, as for every operation: on the Z Range page
+  **Front (Z)** is where it starts and **Back (Z)** where the drill's full
+  diameter (or its tip, with Depth to the drill's tip) ends. Select the hole
+  (its cylindrical face) and both come from it, shown greyed; tick either
+  to set it. With nothing selected the hole starts at the part's front, and
+  you set Back. Back is the same plane in every operation, so a hole
+  drilled to Back -15 and bored to Back -15 end together.
 
 * **Cycle:** Peck (G83, backing out of the hole after each peck), Chip
   break (G73, backing off a little), Drill (G81, straight to depth) or

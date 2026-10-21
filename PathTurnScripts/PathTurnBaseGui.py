@@ -154,10 +154,10 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
     )
 
     def _limits_shown(self):
-        '''The ends an op uses: none for Turn Thread and Turn Drill (their own
-        length and depth), only the back for Turn Partoff (where it parts).'''
+        '''The ends an op uses: none for Turn Thread (its own thread length),
+        only the back for Turn Partoff (where it parts).'''
         proxy = getattr(self.obj, "Proxy", None)
-        if getattr(proxy, "uses_threading_tool", False) or getattr(proxy, "uses_drill_tool", False):
+        if getattr(proxy, "uses_threading_tool", False):
             return ()
         if type(proxy).__name__ == "ObjectTurnPart":
             return ("FinalDepth",)
