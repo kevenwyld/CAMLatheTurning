@@ -81,3 +81,40 @@ class TurningMenuManipulator:
 
 
 FreeCADGui.addWorkbenchManipulator(TurningMenuManipulator())
+
+
+def accept_turning_ops_as_ops():
+    """
+    Let CAM treat the turning operations as operations everywhere it asks.
+
+    CAM's Path.Dressup.Utils.isOp() decides by the module of an object's
+    proxy ("Path.Op..." or "Path.Dressup..."), not by its class, so an
+    addon's operations, though they derive from CAM's ObjectOp, are left
+    out: the context menu's Active toggle, Dressup, Array / Copy, Inspect
+    and Post Selected entries, and dressups and Simple Copy refuse them.
+    Extend it to accept the turning operations too. CAM always calls it
+    through the module, so replacing the function there reaches every use.
+
+    TODO: upstream, isOp() should check isinstance(obj.Proxy,
+    Path.Op.Base.ObjectOp) (and the dressup base); then drop this.
+    """
+    try:
+        import Path.Dressup.Utils as DressupUtils
+        from PathTurnScripts import PathTurnBase
+    except Exception:
+        return
+    cam_is_op = DressupUtils.isOp
+    if getattr(cam_is_op, "accepts_turning_ops", False):
+        return
+
+    def isOp(obj):
+        if cam_is_op(obj):
+            return True
+        return isinstance(getattr(obj, "Proxy", None), PathTurnBase.ObjectOp)
+
+    isOp.__doc__ = cam_is_op.__doc__
+    isOp.accepts_turning_ops = True
+    DressupUtils.isOp = isOp
+
+
+accept_turning_ops_as_ops()

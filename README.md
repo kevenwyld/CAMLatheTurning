@@ -216,6 +216,16 @@ directory, and import `Assets/Bit/CCMT060204R.fctb` from the tool library.
 Set TipRadius to your insert's nose radius. Rotation must be greater than 0
 and TipAngle less than 90 degrees.
 
+## CAM integration
+The turning operations are CAM operations, but CAM recognises operations by
+the module their code is in, so an addon's are left out of the context
+menu (Active toggle, dressups, Array / Copy, Inspect, Post Selected). The
+addon extends CAM's check at start-up to include them. **TODO** (upstream):
+CAM's `Path.Dressup.Utils.isOp()` should check the class
+(`Path.Op.Base.ObjectOp`) instead; then the addon can drop this. Of the
+dressups, several are for milling only (e.g. Dogbone, Drag Knife, Tag);
+Axis Map can help on a mill used as a lathe.
+
 ## Feedback
 If you have feedback or need to report bugs please participate on the related [Path Forum](https://forum.freecadweb.org/viewtopic.php?f=15&t=30563&start=0).
 
