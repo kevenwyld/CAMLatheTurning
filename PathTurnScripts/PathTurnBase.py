@@ -389,6 +389,9 @@ class ObjectOp(PathOp.ObjectOp):
             R = self.mirror_r
             props['extra_dia'] = 0.0
             props['min_dia'] = 2 * max(0.0, R - self.maxDia / 2)
+            # and nothing past the hole: no facing to the axis or following
+            # it beyond a blind bore's bottom
+            props['clip_outer'] = True
         if hasattr(obj, "Retract"):
             retract, clearance = self.clearance_values(obj)
             props['clearance_x'] = clearance

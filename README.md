@@ -120,7 +120,10 @@ operation page.
   defaults to the bore's largest diameter, so nothing beyond the bore (such
   as the part's front face) is cut; tick it to set a limit of your own.
 * The bore is the model's: the part of it open to the spindle axis
-  (through or blind, stepped, with tapers and radii).
+  (through or blind, stepped, with tapers and radii). The operation works
+  between the hole and the bore: a blind bore's bottom is faced in to the
+  hole's edge, not to the axis, and Stock to leave X / Z is left on the
+  bore's wall and bottom.
 * The tool is an ISO turning insert used as a boring tool, so its
   reference is the mirror of the turning one: the imaginary tip at the
   cutting edge's outermost point (largest radius) and its chuck-side
