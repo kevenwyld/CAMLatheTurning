@@ -13,7 +13,7 @@ import PathTurnScripts.PathTurnThread as PathTurnThread
 from PySide import QtCore
 
 COMBOS = (("threadStandard", "ThreadStandard"), ("threadSize", "ThreadSize"), ("threadType", "ThreadType"),
-          ("infeed", "Infeed"))
+          ("toleranceClass", "ToleranceClass"), ("infeed", "Infeed"))
 QUANTITIES = (("pitch", "Pitch"), ("threadDepth", "ThreadDepth"), ("threadLength", "ThreadLength"),
               ("firstPassDepth", "FirstPassDepth"), ("minPassDepth", "MinPassDepth"), ("leadIn", "LeadIn"))
 INTEGERS = (("passes", "Passes"), ("springPasses", "SpringPasses"))
@@ -111,7 +111,7 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
 
     # properties the op works out when it recomputes, shown on the page
     RESULTS = ("Pitch", "ThreadDepth", "ThreadDiameter", "PassSchedule", "SizeWarning",
-               "ThreadLength", "Passes", "FirstPassDepth", "LeadIn")
+               "ThreadLength", "Passes", "FirstPassDepth", "LeadIn", "ToleranceClass", "ThreadReport")
 
     def updateData(self, obj, prop):
         '''CAM calls this when a property is assigned: show what the op worked
@@ -133,11 +133,20 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
                 spin.blockSignals(True)
                 spin.setValue(getattr(obj, prop))
                 spin.blockSignals(False)
-        if obj.ThreadDiameter.Value > 0:
-            lines = ["Cut from the selected diameter: {}".format(obj.ThreadDiameter.UserString)]
-            if getattr(obj, "PassSchedule", ""):
-                lines.append(obj.PassSchedule)
-            self.form.threadInfo.setText("\n".join(lines))
+        # the classes on offer follow the standard and whether it is internal,
+        # which the op knows once the selection is made
+        if hasattr(obj, "ToleranceClass"):
+            self._fill_combo(self.form.toleranceClass, obj, "ToleranceClass")
+        if obj.ThreadDiameter.Value > 0 and not getattr(obj, "ThreadReport", "") and getattr(obj, "SizeWarning", ""):
+            self.form.threadInfo.setText("")      # the op could not cut it: the red text says why
+        elif obj.ThreadDiameter.Value > 0:
+            if getattr(obj, "ThreadReport", ""):
+                self.form.threadInfo.setText(obj.ThreadReport)
+            else:
+                lines = ["Cut from the selected diameter: {}".format(obj.ThreadDiameter.UserString)]
+                if getattr(obj, "PassSchedule", ""):
+                    lines.append(obj.PassSchedule)
+                self.form.threadInfo.setText("\n".join(lines))
         else:
             self.form.threadInfo.setText("Select the diameter to thread (its cylindrical face) on the Z Range page.")
         self.form.threadWarning.setText(getattr(obj, "SizeWarning", ""))

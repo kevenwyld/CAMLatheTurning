@@ -32,12 +32,21 @@ gives the thread's Z range and the diameter it is cut from, and a bore is
 an internal thread (Type can also be set by hand).
 
 * **Thread standard / Size:** ISO metric coarse and fine, UNC, UNF, or
-  Custom (enter pitch and depth). A standard thread is cut to the standard's
-  root diameter (external, d - 1.22687 P) or major diameter (internal),
-  whatever the surface was turned or bored to, so turn the crests to their
-  tolerance first (e.g. 11.701-11.966 for M12x1.75 6g). The page shows the
-  pass schedule, and warns in red when the selected diameter does not fit
-  the size (over the major diameter, or well under it).
+  Custom (enter pitch and depth).
+* **Tolerance class:** 6g or 4g6g (metric external), 6H (metric internal),
+  2A or 3A / 2B or 3B (Unified), or Basic, from the thread tables CAM ships
+  for Thread Milling (Mod/CAM/Data/Threads). A standard thread is cut so its
+  pitch diameter is in the middle of the class's range (for M12x1.75 6g:
+  10.754, the root at 9.744), whatever the surface was turned or bored to;
+  Basic, or a size not in the tables, cuts the basic profile (root
+  d - 1.22687 P external, major D internal).
+* **The report** at the bottom of the page gives what the thread needs and
+  how it is cut: the diameter to turn (external, the major) or bore
+  (internal, the minor) first, against the selected diameter; the pitch
+  diameter range and the one cut to; the measurement over three best-size
+  wires (external); the root or major diameter and the depth; the passes;
+  the Z range and lead-in. It warns in red when the selected diameter does
+  not fit the size at all (e.g. M10 chosen for a 12 mm bar).
 * **Thread length** (the whole selected diameter), **Passes** (the
   recommended number for the pitch), **First pass depth** (from the passes
   and the degression) and **Lead-in** (three pitches, so Z is at speed) are

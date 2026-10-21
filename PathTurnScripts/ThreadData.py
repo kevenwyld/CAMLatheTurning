@@ -133,3 +133,108 @@ def size_problem(major, pitch, internal, diameter):
     if diameter < major - allowance:
         return "well under the {:.3f} major diameter".format(major)
     return None
+
+
+# ---------------------------------------------------------------------------
+# Tolerance classes, from the tables CAM ships for Thread Milling
+# (Mod/CAM/Data/Threads): crest, pitch and minor diameter ranges per size.
+
+BASIC = "Basic (no tolerance)"
+_CLASSES = {  # (internal, unified): classes, the first the default
+    (False, False): ("6g", "4g6g"),
+    (True, False): ("6H",),
+    (False, True): ("2A", "3A"),
+    (True, True): ("2B", "3B"),
+}
+_FILES = {"6g": "metric-external-6G.csv", "4g6g": "metric-external-4G6G.csv", "6H": "metric-internal-6H.csv",
+          "2A": "imperial-external-2A.csv", "3A": "imperial-external-3A.csv",
+          "2B": "imperial-internal-2B.csv", "3B": "imperial-internal-3B.csv"}
+_tables = {}
+
+
+def _unified(standard):
+    return standard in ("UNC", "UNF")
+
+
+def classes(standard, internal):
+    """The tolerance classes on offer for a standard, the default first."""
+    if not (standard.startswith("Metric") or _unified(standard)):
+        return [BASIC]
+    return list(_CLASSES[(bool(internal), _unified(standard))]) + [BASIC]
+
+
+def _table(cls):
+    if cls not in _tables:
+        import csv
+        import os
+        rows = []
+        try:
+            import FreeCAD
+            path = os.path.join(FreeCAD.getHomePath(), "Mod", "CAM", "Data", "Threads", _FILES[cls])
+            with open(path, newline="") as fp:
+                rows = list(csv.DictReader(fp))
+        except Exception:
+            rows = []
+        _tables[cls] = rows
+    return _tables[cls]
+
+
+def tolerance(standard, size, internal, cls):
+    """
+    The class's diameter ranges for a size, in mm, or None (no class, or the
+    size is not in CAM's tables): major_min/max, pitch_min/max, minor_min/max.
+    For external threads CAM's minor diameters are the basic profile's flat
+    root (d1 based), not the root an insert cuts (d3); they are not used
+    for the root.
+    """
+    if cls == BASIC or cls not in _FILES:
+        return None
+    found = lookup(standard, size)
+    if found is None:
+        return None
+    major, pitch = found
+    for row in _table(cls):
+        if _unified(standard):
+            if row.get("name") != size.lstrip("#"):
+                continue
+            scale = 25.4
+        else:
+            try:
+                d, p = row["name"].replace("M", "").split(" x ")
+            except (KeyError, ValueError):
+                continue
+            if abs(float(d) - major) > 1e-6 or abs(float(p) - pitch) > 1e-6:
+                continue
+            scale = 1.0
+        try:
+            return {k: float(row[c]) * scale for k, c in (
+                ("major_min", "dMajorMin"), ("major_max", "dMajorMax"), ("pitch_min", "dPitchMin"),
+                ("pitch_max", "dPitchMax"), ("minor_min", "dMinorMin"), ("minor_max", "dMinorMax"))}
+        except (KeyError, ValueError):
+            return None
+    return None
+
+
+def basic_pitch_diameter(major, pitch):
+    """The basic pitch diameter, d2 = d - 0.649519 P."""
+    return major - 0.649519 * pitch
+
+
+def class_target_diameter(major, pitch, internal, tol):
+    """
+    The diameter to cut to so the pitch diameter lands in the middle of the
+    class's range: for a V profile the pitch diameter moves with the root,
+    one for one. Without class data, the basic profile's.
+    """
+    basic = target_diameter(major, pitch, internal)
+    if tol is None:
+        return basic
+    shift = (tol["pitch_min"] + tol["pitch_max"]) / 2 - basic_pitch_diameter(major, pitch)
+    return basic + shift
+
+
+def best_wire(pitch):
+    """Best-size wire diameter for a 60 degree thread, and the term to add to
+    the pitch diameter for the measurement over three wires: M = d2 + 3w - 0.866025 P."""
+    w = 0.57735 * pitch
+    return w, 3 * w - 0.866025 * pitch

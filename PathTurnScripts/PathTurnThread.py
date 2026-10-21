@@ -69,11 +69,35 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         if not hasattr(obj, "ThreadStandard"):
             self.add_thread_properties(obj)
         self.add_auto_switches(obj, migrate=True)
+        self.add_tolerance_class(obj)
         for prop, tip in (("PassSchedule", "The passes the thread is cut in (read only)"),
                           ("SizeWarning", "How the selected diameter does not fit the thread size, if it does not (read only)")):
             if not hasattr(obj, prop):
                 obj.addProperty("App::PropertyString", prop, "Thread", translate("TurnPath", tip))
                 obj.setEditorMode(prop, 1)
+
+    def add_tolerance_class(self, obj):
+        '''ToleranceClass (and the ThreadReport), added to older ops too.'''
+        if not hasattr(obj, "ToleranceClass"):
+            obj.addProperty("App::PropertyEnumeration", "ToleranceClass", "Thread", translate(
+                "TurnPath", "Tolerance class (from CAM's thread tables): the thread is cut so its pitch diameter is "
+                            "in the middle of the class's range; Basic cuts the basic profile"))
+            obj.ToleranceClass = ThreadData.classes(obj.ThreadStandard, self.internal(obj))
+        if not hasattr(obj, "ThreadReport"):
+            obj.addProperty("App::PropertyString", "ThreadReport", "Thread", translate(
+                "TurnPath", "What the thread needs and how it is cut: diameters to turn or bore first, pitch "
+                            "diameter, measurement over wires, root, passes, Z range (read only)"))
+            obj.setEditorMode("ThreadReport", 1)
+
+    def update_classes(self, obj):
+        '''The classes on offer follow the standard and whether the thread is internal.'''
+        if not hasattr(obj, "ToleranceClass"):
+            return
+        names = ThreadData.classes(obj.ThreadStandard, self.internal(obj))
+        if list(obj.getEnumerationsOfProperty("ToleranceClass")) != names:
+            current = obj.ToleranceClass
+            obj.ToleranceClass = names
+            obj.ToleranceClass = current if current in names else names[0]
 
     def add_auto_switches(self, obj, migrate=False):
         '''The Set* switches; on an older document a non-zero value was set by hand.'''
@@ -141,6 +165,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         obj.setEditorMode("Pitch", 1)
         obj.setEditorMode("ThreadDepth", 1)
         self.add_auto_switches(obj)
+        self.add_tolerance_class(obj)
 
     def update_sizes(self, obj):
         names = ThreadData.sizes(obj.ThreadStandard) or ["-"]
@@ -167,6 +192,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             _, pitch = found
             obj.Pitch = FreeCAD.Units.Quantity(pitch, FreeCAD.Units.Length)
             obj.ThreadDepth = FreeCAD.Units.Quantity(ThreadData.depth(pitch, self.internal(obj)), FreeCAD.Units.Length)
+        self.update_classes(obj)
 
     def onChanged(self, obj, prop):
         # while a document is restored, properties arrive one at a time: the
@@ -199,7 +225,20 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         return None
 
     def op_generate_gcode(self, obj, tool):
-        '''Thread the selected cylindrical face with liblathe's ThreadOP.'''
+        '''Thread the selected cylindrical face with liblathe's ThreadOP. When
+        it cannot, the error replaces the report on the page (in red), as
+        well as going to the Report view, so the page never shows a stale
+        report.'''
+        try:
+            self.generate_thread(obj, tool)
+        except Exception as e:
+            if getattr(obj, "ThreadReport", None) is not None and obj.ThreadReport:
+                obj.ThreadReport = ""
+            if obj.SizeWarning != str(e):
+                obj.SizeWarning = str(e)
+            raise
+
+    def generate_thread(self, obj, tool):
         face = self.selected_face(obj)
         if face is None:
             raise RuntimeError(translate('PathTurn', "Select the diameter to thread (its cylindrical face) on the Z Range page"))
@@ -218,7 +257,10 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             # major (internal) diameter, whatever the surface was turned or
             # bored to: the depth is from the surface to there
             major, pitch = found
-            target = ThreadData.target_diameter(major, pitch, internal) / 2
+            # cut so the pitch diameter is in the middle of the class's range
+            # (basic profile without class data)
+            tol = ThreadData.tolerance(obj.ThreadStandard, obj.ThreadSize, internal, getattr(obj, "ToleranceClass", ThreadData.BASIC))
+            target = ThreadData.class_target_diameter(major, pitch, internal, tol) / 2
             depth = (target - radius) if internal else (radius - target)
             if depth <= 1e-6:
                 raise RuntimeError(translate('PathTurn',
@@ -227,7 +269,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             obj.ThreadDepth = FreeCAD.Units.Quantity(depth, FreeCAD.Units.Length)
             problem = ThreadData.size_problem(major, pitch, internal, 2 * radius)
         else:
-            problem = None
+            problem, tol, major, pitch, target = None, None, None, obj.Pitch.Value, None
         warning = ""
         if problem:
             warning = "The selected diameter ({:.3f}) is {} of {} {}".format(
@@ -279,6 +321,10 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                 2 * (radius + depths[-1]) if internal else 2 * (radius - depths[-1]))
             if obj.PassSchedule != schedule:
                 obj.PassSchedule = schedule
+            report = self.report(obj, internal, radius, major, pitch, tol, depths[-1], n, cuts,
+                                 abs(op.z_drive - op.z_front), op.z_front, op.z_back)
+            if getattr(obj, "ThreadReport", None) is not None and obj.ThreadReport != report:
+                obj.ThreadReport = report
             used = {"Passes": n, "FirstPassDepth": cuts[0], "LeadIn": abs(op.z_drive - op.z_front),
                     "ThreadLength": abs(op.z_front - op.z_back)}
             for switch, prop, _ in AUTO_VALUES:
@@ -294,6 +340,46 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             FreeCAD.Console.PrintWarning(
                 "{}: CAM's posts currently drop G76's Q word (the infeed angle): the control then feeds in "
                 "radially. Check the posted G76 line, or use the explicit passes (Use G76 cycle off)\n".format(obj.Label))
+
+    def report(self, obj, internal, radius, major, pitch, tol, depth, n, cuts, lead, z_front, z_back):
+        '''What the thread needs and how it is cut, for the page: one item a line.'''
+        d = 2 * radius
+        name = "{} {}".format(obj.ThreadStandard, obj.ThreadSize) if major else "Custom thread, pitch {:.3f}".format(pitch)
+        cls = getattr(obj, "ToleranceClass", ThreadData.BASIC)
+        lines = ["{} {}{}".format(name, "internal" if internal else "external",
+                                  ", class {}".format(cls) if tol else "")]
+
+        def against(lo, hi):
+            if d > hi + 1e-4:
+                return "the selected {:.3f} is {:.3f} over".format(d, d - hi)
+            if d < lo - 1e-4:
+                return "the selected {:.3f} is {:.3f} under".format(d, lo - d)
+            return "the selected {:.3f} is within".format(d)
+
+        if tol:
+            if internal:
+                lines.append("Bore the minor diameter to {:.3f}-{:.3f} first: {}".format(
+                    tol["minor_min"], tol["minor_max"], against(tol["minor_min"], tol["minor_max"])))
+            else:
+                lines.append("Turn the major diameter to {:.3f}-{:.3f} first: {}".format(
+                    tol["major_min"], tol["major_max"], against(tol["major_min"], tol["major_max"])))
+            mid = (tol["pitch_min"] + tol["pitch_max"]) / 2
+            lines.append("Pitch diameter {:.3f}-{:.3f}, cut to {:.3f}".format(tol["pitch_min"], tol["pitch_max"], mid))
+            if not internal:
+                w, add = ThreadData.best_wire(pitch)
+                lines.append("Over three best-size wires (dia {:.4f}): {:.3f}-{:.3f}".format(
+                    w, tol["pitch_min"] + add, tol["pitch_max"] + add))
+        elif major:
+            reason = "Basic profile chosen" if cls == ThreadData.BASIC else "No {} data for this size".format(cls)
+            lines.append("{}: cut to the basic profile (pitch diameter {:.3f})".format(
+                reason, ThreadData.basic_pitch_diameter(major, pitch)))
+        lines.append("{} {:.3f}, {:.3f} deep from the selected diameter".format(
+            "Major diameter" if internal else "Root diameter", d + 2 * depth if internal else d - 2 * depth, depth))
+        lines.append("{} passes{}: first {:.3f}, last {:.3f}".format(
+            n, " + {} spring".format(obj.SpringPasses) if obj.SpringPasses else "", cuts[0], cuts[-1]))
+        lines.append("Z {:.3f} to {:.3f} ({:.3f} long); each pass starts {:.3f} in front".format(
+            z_front, z_back, abs(z_front - z_back), lead))
+        return "\n".join(lines)
 
     def outline_radius(self, face):
         '''The part outline's radius at the middle of a face's Z range, or None.'''
