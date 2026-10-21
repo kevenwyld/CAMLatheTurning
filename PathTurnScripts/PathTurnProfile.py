@@ -45,6 +45,7 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
     '''Proxy class for turning profile operations.'''
 
     uses_pass_retract = True
+    uses_pass_lead_in = True
 
     turns_to_min_diameter = True
     supports_internal = True
@@ -85,6 +86,7 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
 
         PathCode = profileOP.get_gcode()
         self.report_lathe_warnings(obj, profileOP)
+        self.show_lead_in(obj, profileOP)
         self.commandlist.extend(self.lathe_commands(PathCode))
 
     def opSetDefaultValues(self, obj, job):

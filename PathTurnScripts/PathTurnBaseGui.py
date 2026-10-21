@@ -569,6 +569,21 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
     # to the property (units, styling, and the fx button for expressions)
     QUANTITY_FIELDS = (("stepOver", "StepOver"), ("stockToLeaveX", "StockToLeaveX"), ("stockToLeaveZ", "StockToLeaveZ"),
                        ("finishStepOver", "FinishStepOver"))
+    def _lead_in_box(self, obj):
+        if getattr(self, "_lead_box", None) is None and hasattr(obj, "LeadIn"):
+            self._lead_box = PathGuiUtil.QuantitySpinBox(self.form.leadIn, obj, "LeadIn")
+        return getattr(self, "_lead_box", None)
+
+    def updateData(self, obj, prop):
+        '''The worked-out (greyed) lead-in follows the op as it recomputes.'''
+        if prop == "LeadIn" and hasattr(self, "form") and not getattr(obj, "SetLeadIn", True):
+            box = self._lead_in_box(obj)
+            if box is not None:
+                box.updateWidget()
+
+    def registerSignalHandlers(self, obj):
+        self.form.setLeadIn.toggled.connect(self.form.leadIn.setEnabled)
+
     def _spinboxes(self, obj):
         if getattr(self, "_quantity_boxes", None) is None:
             self._quantity_boxes = [PathGuiUtil.QuantitySpinBox(getattr(self.form, widget), obj, prop)
@@ -592,6 +607,8 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             widget.setVisible(hasattr(obj, "FinishDirection"))
         for widget in (self.form.side, self.form.label_side):
             widget.setVisible(hasattr(obj, "Side"))
+        for widget in (self.form.setLeadIn, self.form.leadIn):
+            widget.setVisible(hasattr(obj, "LeadIn") and getattr(getattr(obj, "Proxy", None), "uses_pass_lead_in", False))
 
     def getFields(self, obj):
         '''getFields(obj) ... transfers values from UI to obj's proprties'''
@@ -618,6 +635,12 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         if obj.AllowGrooving != self.form.allowGrooving.isChecked():
             obj.AllowGrooving = self.form.allowGrooving.isChecked()
 
+        if hasattr(obj, "SetLeadIn"):
+            if obj.SetLeadIn != self.form.setLeadIn.isChecked():
+                obj.SetLeadIn = self.form.setLeadIn.isChecked()
+            if obj.SetLeadIn and self._lead_in_box(obj) is not None:
+                self._lead_in_box(obj).updateProperty()    # only a value set by hand is written
+
 
     def setFields(self, obj):
         '''setFields(obj) ... transfers obj's property values to UI'''
@@ -628,6 +651,13 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         self.form.finishPasses.setValue(obj.FinishPasses)
 
         self._show_fields(obj)
+        if hasattr(obj, "SetLeadIn"):
+            self.form.setLeadIn.blockSignals(True)
+            self.form.setLeadIn.setChecked(bool(obj.SetLeadIn))
+            self.form.setLeadIn.blockSignals(False)
+            self.form.leadIn.setEnabled(bool(obj.SetLeadIn))
+            if self._lead_in_box(obj) is not None:
+                self._lead_in_box(obj).updateWidget()
         if hasattr(obj, "SpringPass"):
             self.form.springPass.setChecked(obj.SpringPass)
         if hasattr(obj, "FinishFrontFace"):
@@ -661,6 +691,8 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.stockToLeaveZ.editingFinished)
         signals.append(self.form.finishPasses.valueChanged)
         signals.append(self.form.side.currentIndexChanged)
+        signals.append(self.form.setLeadIn.stateChanged)
+        signals.append(self.form.leadIn.editingFinished)
         signals.append(self.form.springPass.stateChanged)
         signals.append(self.form.finishStepOver.editingFinished)
         signals.append(self.form.finishFrontFace.stateChanged)

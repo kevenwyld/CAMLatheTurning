@@ -114,6 +114,8 @@ class ObjectOp(PathOp.ObjectOp):
     supports_internal = False
     # operations made of passes that lift off at their end (Retract)
     uses_pass_retract = False
+    # operations whose passes lead in along Z (Lead-in)
+    uses_pass_lead_in = False
 
     '''Base class for proxy objects of all turning operations.'''
 
@@ -130,6 +132,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_diameter_switches(obj)
         self.add_side_property(obj)
         self.add_clearance_properties(obj)
+        self.add_lead_in_property(obj)
         obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
                         translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
                                               "cutting angle allows"))
@@ -155,6 +158,28 @@ class ObjectOp(PathOp.ObjectOp):
             # (getattr with a default: the Job dialog's operation prototypes
             # cannot read back a property just added)
             obj.setEditorMode(prop, 0 if getattr(obj, switch, False) else 1)
+
+    def add_lead_in_property(self, obj):
+        '''Lead-in, with its Set switch, for the operations whose passes lead
+        in along Z (Turn Thread has its own, along the thread).'''
+        if not self.uses_pass_lead_in:
+            return
+        tip = ("How far in front of the Z range's start the passes begin, along Z; 0 enters them radially. "
+               "Unticked: a clearance in front; through the stock in front when the range starts inside the "
+               "stock with only stock there (e.g. a diameter selected up to the part's front); radially when "
+               "part of the model is in front")
+        if not hasattr(obj, "LeadIn"):
+            obj.addProperty("App::PropertyLength", "LeadIn", "Turn Path", translate("TurnPath", tip))
+        if not hasattr(obj, "SetLeadIn"):
+            obj.addProperty("App::PropertyBool", "SetLeadIn", "Turn Path", translate("TurnPath", tip))
+        obj.setEditorMode("LeadIn", 0 if getattr(obj, "SetLeadIn", False) else 1)
+
+    def show_lead_in(self, obj, op):
+        '''The lead-in liblathe worked out, in the (greyed) field.'''
+        used = getattr(op, "lead_in_used", None)
+        if used is not None and hasattr(obj, "LeadIn") and not getattr(obj, "SetLeadIn", False) \
+                and abs(obj.LeadIn.Value - used) > 1e-9:
+            obj.LeadIn = FreeCAD.Units.Quantity(used, FreeCAD.Units.Length)
 
     def clearance_values(self, obj):
         '''(retract, radial clearance) the op uses: as set, or worked out.'''
@@ -233,6 +258,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_diameter_switches(obj, migrate=True)
         self.add_side_property(obj)
         self.add_clearance_properties(obj)
+        self.add_lead_in_property(obj)
         for prop, tip in (("StockToLeaveX", STOCK_X_TIP), ("StockToLeaveZ", STOCK_Z_TIP)):
             if obj.getTypeIdOfProperty(prop) == "App::PropertyLength":
                 value = getattr(obj, prop).Value
@@ -359,6 +385,8 @@ class ObjectOp(PathOp.ObjectOp):
             props['clearance_x'] = clearance
             # unset outside: liblathe's own (the same value), so paths stay as they were
             props['retract'] = retract if (getattr(obj, "SetRetract", False) or getattr(self, "mirror_r", None) is not None) else None
+        if self.uses_pass_lead_in and getattr(obj, "SetLeadIn", False):
+            props['pass_lead_in'] = obj.LeadIn.Value
         return props
 
     def get_stock_silhoutte(self, obj):

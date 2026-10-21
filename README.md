@@ -163,6 +163,12 @@ tube, gives its inner diameter for Min and its outer for Max), and tick the
 box.
 
 ## Operation settings
+* **Lead-in** (Rough, Profile): how far in front of the Z range's start the
+  passes begin, along Z; 0 enters them radially. Unticked it is worked out
+  and shown greyed: a clearance in front; when the range starts inside the
+  stock with only stock in front (e.g. a diameter selected up to the part's
+  front, the stock longer), a clearance in front of the stock, cutting
+  through that stock; radially when part of the model is in front.
 * **Step over**: Rough, the depth of cut per pass (per side); Profile, the
   spacing of the finish passes; Face, the step along Z; Turn Groove, the
   spacing of the plunges. Turn Groove's defaults to 0.7 x the insert width

@@ -199,7 +199,19 @@
         </property>
        </spacer>
       </item>
-     </layout>
+           <item row="11" column="0">
+       <widget class="QCheckBox" name="setLeadIn">
+        <property name="toolTip"><string>How far in front of the Z range's start the passes begin, along Z; 0 enters them radially. Unticked: a clearance in front; through the stock in front when the range starts inside the stock with only stock there; radially when part of the model is in front. Shown greyed out</string></property>
+        <property name="text"><string>Lead-in</string></property>
+       </widget>
+      </item>
+      <item row="11" column="1">
+       <widget class="Gui::QuantitySpinBox" name="leadIn">
+        <property name="toolTip"><string>How far in front of the Z range's start the passes begin, along Z; 0 enters them radially. Unticked: a clearance in front; through the stock in front when the range starts inside the stock with only stock there; radially when part of the model is in front. Shown greyed out</string></property>
+        <property name="minimum"><double>0.000000000000000</double></property>
+       </widget>
+      </item>
+</layout>
     </widget>
    </item>
   </layout>
