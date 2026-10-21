@@ -8,6 +8,7 @@
 <stop id="steel-2" offset="1" style="stop-color:#6b6b6b;stop-opacity:1"/>
 </linearGradient>
 </defs>
+<g id="machine-view" transform="matrix(1,0,0,-1,0,297)">
 <g id="artwork">
 <path id="insert" d="M 68.51,239.42 L 162.83,200.35 A 7.60 7.60 0 0 0 167.34,194.98 L 189.44,95.30 A 7.60 7.60 0 0 0 179.11,86.63 L 84.79,125.70 A 7.60 7.60 0 0 0 80.28,131.08 L 58.18,230.76 A 7.60 7.60 0 0 0 68.51,239.42 Z" style="fill:url(#steel);stroke:#000000;stroke-width:1.2;stroke-linejoin:round"/>
 <circle id="insert-hole" cx="123.81" cy="163.03" r="16.15" style="fill:#8f8f8f;stroke:#000000;stroke-width:1"/>
@@ -22,13 +23,13 @@
 <path id="dim-edge_length-line" d="M 38.33,241.31 L 64.44,123.52" style="fill:none;stroke:#ff0000;stroke-width:0.9"/>
 <path id="dim-edge_length-line-a" d="M 38.33,241.31 L 37.13,232.85 L 42.99,234.15 Z" style="fill:#ff0000;stroke:none"/>
 <path id="dim-edge_length-line-b" d="M 64.44,123.52 L 65.64,131.98 L 59.78,130.68 Z" style="fill:#ff0000;stroke:none"/>
-<text id="edge_length" x="29.90" y="187.65" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">L</text>
+<text id="edge_length" x="29.90" y="187.65" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle" transform="matrix(1,0,0,-1,0,354.30)">L</text>
 </g>
 <g id="dim-tip_angle">
 <path id="dim-tip_angle-arc" d="M 86.62,231.92 A 34.20 34.20 0 0 0 62.42,211.62" style="fill:none;stroke:#ff0000;stroke-width:0.9"/>
 <path id="dim-tip_angle-a" d="M 86.62,231.92 L 80.94,225.53 L 86.54,223.38 Z" style="fill:#ff0000;stroke:none"/>
 <path id="dim-tip_angle-b" d="M 62.42,211.62 L 70.85,210.21 L 69.70,216.10 Z" style="fill:#ff0000;stroke:none"/>
-<text id="tip_angle" x="86.00" y="213.71" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">ε</text>
+<text id="tip_angle" x="86.00" y="213.71" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle" transform="matrix(1,0,0,-1,0,406.42)">ε</text>
 </g>
 <g id="dim-rotation">
 <path id="dim-rotation-axis" d="M 55.02,245.01 L 136.72,245.01" style="fill:none;stroke:#ff0000;stroke-width:0.6"/>
@@ -36,12 +37,13 @@
 <path id="dim-rotation-arc" d="M 138.62,245.01 A 83.60 83.60 0 0 0 108.76,180.97" style="fill:none;stroke:#ff0000;stroke-width:0.9"/>
 <path id="dim-rotation-a" d="M 138.62,245.01 L 135.82,236.94 L 141.82,237.09 Z" style="fill:#ff0000;stroke:none"/>
 <path id="dim-rotation-b" d="M 108.76,180.97 L 116.88,183.61 L 113.14,188.30 Z" style="fill:#ff0000;stroke:none"/>
-<text id="rotation" x="157.92" y="239.73" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">φ</text>
+<text id="rotation" x="157.92" y="239.73" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle" transform="matrix(1,0,0,-1,0,458.46)">φ</text>
 </g>
 <g id="dim-tip_radius">
 <path id="dim-tip_radius-line" d="M 106.71,272.22 L 62.71,239.72" style="fill:none;stroke:#ff0000;stroke-width:0.9"/>
 <path id="dim-tip_radius-b" d="M 60.71,238.22 L 68.93,240.56 L 65.37,245.39 Z" style="fill:#ff0000;stroke:none"/>
 <path id="dim-tip_radius-shelf" d="M 106.71,272.22 L 122.71,272.22" style="fill:none;stroke:#ff0000;stroke-width:0.9"/>
-<text id="tip_radius" x="132.71" y="284.22" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle">r</text>
+<text id="tip_radius" x="132.71" y="284.22" style="font-size:30px;line-height:1.25;font-family:'DejaVu Sans';fill:#ff0000;stroke:none;text-anchor:middle" transform="matrix(1,0,0,-1,0,547.44)">r</text>
+</g>
 </g>
 </svg>
