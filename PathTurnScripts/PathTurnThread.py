@@ -82,7 +82,11 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             obj.addProperty("App::PropertyEnumeration", "ToleranceClass", "Thread", translate(
                 "TurnPath", "Tolerance class (from CAM's thread tables): the thread is cut so its pitch diameter is "
                             "in the middle of the class's range; Basic cuts the basic profile"))
-            obj.ToleranceClass = ThreadData.classes(obj.ThreadStandard, self.internal(obj))
+            try:
+                internal = self.internal(obj)
+            except Exception:       # a Job dialog prototype: no selection
+                internal = False
+            obj.ToleranceClass = ThreadData.classes(getattr(obj, "ThreadStandard", "Metric coarse"), internal)
         if not hasattr(obj, "ThreadReport"):
             obj.addProperty("App::PropertyString", "ThreadReport", "Thread", translate(
                 "TurnPath", "What the thread needs and how it is cut: diameters to turn or bore first, pitch "
@@ -101,12 +105,15 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
 
     def add_auto_switches(self, obj, migrate=False):
         '''The Set* switches; on an older document a non-zero value was set by hand.'''
+        # (also run on the Job dialog's operation prototypes, whose properties
+        # cannot all be read back: hence the defaults)
         for switch, prop, tip in AUTO_VALUES:
             if not hasattr(obj, switch):
                 obj.addProperty("App::PropertyBool", switch, "Thread", translate("TurnPath", tip))
-                value = getattr(obj, prop)
-                setattr(obj, switch, bool(migrate and (value.Value if hasattr(value, "Value") else value) > 0))
-            obj.setEditorMode(prop, 0 if getattr(obj, switch) else 1)
+                value = getattr(obj, prop, 0)
+                value = getattr(value, "Value", value) or 0
+                setattr(obj, switch, bool(migrate and value > 0))
+            obj.setEditorMode(prop, 0 if getattr(obj, switch, False) else 1)
 
     def add_thread_properties(self, obj):
         group = "Thread"

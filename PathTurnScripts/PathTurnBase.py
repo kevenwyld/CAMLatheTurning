@@ -70,6 +70,12 @@ def is_grooving_tool(tool):
             and any(hasattr(tool, p) for p in ("GroovingDepth", "CuttingDepth", "CornerRadius")))
 
 
+STOCK_X_TIP = ("Material to leave radially, per side (on diameters). Negative cuts under the model's size, e.g. "
+               "-0.075 to turn a 12 mm model to 11.85, a thread's major diameter turned to its tolerance")
+STOCK_Z_TIP = ("Material to leave axially (on faces and shoulders). Negative cuts under the model's size, "
+               "moving faces into the part")
+
+
 class ObjectOp(PathOp.ObjectOp):
 
     # operations that work with a grooving insert instead of a turning insert
@@ -98,21 +104,31 @@ class ObjectOp(PathOp.ObjectOp):
 
     def add_stock_properties(self, obj, value=0.0):
         '''Stock to leave, per side: X (radially, on diameters) and Z (axially, on faces).'''
-        obj.addProperty("App::PropertyLength", "StockToLeaveX", "Turn Path",
-                        translate("TurnPath", "Material to leave radially, per side (on diameters)"))
-        obj.addProperty("App::PropertyLength", "StockToLeaveZ", "Turn Path",
-                        translate("TurnPath", "Material to leave axially (on faces and shoulders)"))
+        obj.addProperty("App::PropertyDistance", "StockToLeaveX", "Turn Path",
+                        translate("TurnPath", STOCK_X_TIP))
+        obj.addProperty("App::PropertyDistance", "StockToLeaveZ", "Turn Path",
+                        translate("TurnPath", STOCK_Z_TIP))
         obj.StockToLeaveX = FreeCAD.Units.Quantity(value, FreeCAD.Units.Length)
         obj.StockToLeaveZ = FreeCAD.Units.Quantity(value, FreeCAD.Units.Length)
 
     def opOnDocumentRestored(self, obj):
-        '''Migrate the single StockToLeave of earlier versions to X and Z.'''
+        '''Migrate the single StockToLeave of earlier versions to X and Z, and
+        X and Z from lengths (never negative) to distances (signed).'''
         super().opOnDocumentRestored(obj)
         if not hasattr(obj, "StockToLeaveX"):
             old = float(getattr(obj, "StockToLeave", 0.0) or 0.0)
             self.add_stock_properties(obj, old)
             if hasattr(obj, "StockToLeave"):
                 obj.removeProperty("StockToLeave")
+        for prop, tip in (("StockToLeaveX", STOCK_X_TIP), ("StockToLeaveZ", STOCK_Z_TIP)):
+            if obj.getTypeIdOfProperty(prop) == "App::PropertyLength":
+                value = getattr(obj, prop).Value
+                expression = dict(obj.ExpressionEngine or []).get(prop)
+                obj.removeProperty(prop)
+                obj.addProperty("App::PropertyDistance", prop, "Turn Path", translate("TurnPath", tip))
+                setattr(obj, prop, FreeCAD.Units.Quantity(value, FreeCAD.Units.Length))
+                if expression:
+                    obj.setExpression(prop, expression)
 
     def depths_from_base(self, obj):
         '''
@@ -182,6 +198,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.stock_silhoutte = self.get_stock_silhoutte(obj)
         self.part_outline = self.get_part_outline()
         self.generate_gcode(obj)
+        self.warn_if_nothing_cut(obj)
 
     def getProps(self, obj):
         parentJob = PathUtils.findParentJob(obj)
@@ -287,6 +304,24 @@ class ObjectOp(PathOp.ObjectOp):
         # Part.show(Part.makePolygon([FreeCAD.Vector(s[0], 0, s[1]) for s, e, a in chain] +
         #                            [FreeCAD.Vector(chain[-1][1][0], 0, chain[-1][1][1])]), 'TurnProfile')
         return part_segments
+
+    def warn_if_nothing_cut(self, obj):
+        '''
+        An operation with nothing to cut makes an empty path, which looks like
+        a failure. Say so, and why when Max Diameter is below the part (it is
+        where the material starts, not the diameter to turn to).
+        '''
+        if any(c.Name in ("G1", "G2", "G3", "G33", "G76") for c in self.commandlist):
+            return
+        message = translate('PathTurn', "{}: no path: nothing of the part to cut in the Z range and between the diameters").format(obj.Label)
+        part_dia = 2 * max((-seg.start.X for seg in getattr(self, "part_outline", None) or []), default=0.0)
+        max_dia = getattr(obj, "MaxDiameter", None)
+        if max_dia is not None and max_dia.Value > 0 and part_dia > max_dia.Value + 1e-6:
+            message += translate('PathTurn',
+                ". Max Diameter ({:.3f}) is below the part ({:.3f}): it is where the material starts (a surface already "
+                "turned smaller), not the diameter to turn to; to cut under the model's size, use a negative Stock to "
+                "leave X (e.g. -0.075 turns 12 mm to 11.85)").format(max_dia.Value, part_dia)
+        FreeCAD.Console.PrintWarning(message + "\n")
 
     def generate_gcode(self, obj):
         '''

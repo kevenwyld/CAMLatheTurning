@@ -100,6 +100,11 @@ diameter for Min and its outer for Max.
   with different values corners stay sharp instead of being rounded by the
   stock. Documents with the older single Stock to leave are converted when
   opened.
+  A negative value cuts under the model's size: for example Stock to leave X
+  -0.075 turns a bar modelled at 12 mm to 11.85, the major diameter of an
+  M12x1.75 6g thread before Turn Thread (its report gives the range). Max
+  Diameter does not do this: it is where the material starts (a surface
+  already turned smaller), and an op with nothing to cut says so.
 * **Finish passes**, **Finish step over** (their spacing) and **Spring
   pass** (repeat the last one once more, with no step over): Profile and
   Turn Groove.

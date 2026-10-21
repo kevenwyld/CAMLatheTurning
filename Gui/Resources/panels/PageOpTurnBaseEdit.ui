@@ -56,10 +56,10 @@
       <item row="1" column="1">
        <widget class="Gui::QuantitySpinBox" name="stockToLeaveX">
         <property name="toolTip">
-         <string>Material to leave radially, per side (on diameters)</string>
+         <string>Material to leave radially, per side (on diameters). Negative cuts under the model's size, e.g. -0.075 to turn a 12 mm model to 11.85</string>
         </property>
         <property name="minimum">
-         <double>0.000000000000000</double>
+         <double>-1000.000000000000000</double>
         </property>
        </widget>
       </item>
@@ -79,10 +79,10 @@
       <item row="2" column="1">
        <widget class="Gui::QuantitySpinBox" name="stockToLeaveZ">
         <property name="toolTip">
-         <string>Material to leave axially (on faces and shoulders)</string>
+         <string>Material to leave axially (on faces and shoulders). Negative cuts under the model's size, moving faces into the part</string>
         </property>
         <property name="minimum">
-         <double>0.000000000000000</double>
+         <double>-1000.000000000000000</double>
         </property>
        </widget>
       </item>
