@@ -105,9 +105,9 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         "Turning uses the selection only for its position along the Z axis: the "
         "operation is limited to the Z range from the front-most to the back-most "
         "selected face, edge or object (e.g. a sketch or wire), and everything in that "
-        "range is turned, including geometry between them that is not selected. This "
-        "sets Start Depth and Final Depth. With nothing selected, the operation covers "
-        "the whole stock.")
+        "range is turned, including geometry between them that is not selected. With "
+        "nothing selected, the operation covers the whole stock. Front and Back below "
+        "show the range used; tick either to set it by hand.")
 
     def getTitle(self, obj):
         return FreeCAD.Qt.translate("PathTurn", "Z Range")
@@ -121,18 +121,109 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         self.rangeLabel = QtGui.QLabel()
         self.rangeLabel.setWordWrap(True)
         self.rangeLabel.setObjectName("turningBaseGeometryRange")
+        limits = self.make_limits()
         layout = panel.layout()
         if layout is None:
             return
         if hasattr(layout, "insertWidget"):
-            # box layout: put the note and the range first
+            # box layout: put the note, the range and the limits first
             layout.insertWidget(0, label)
             layout.insertWidget(1, self.rangeLabel)
+            if limits is not None:
+                layout.insertWidget(2, limits)
         else:
             # grid layout: add them below the existing widgets, full width
             columns = max(1, layout.columnCount())
             layout.addWidget(label, layout.rowCount(), 0, 1, columns)
             layout.addWidget(self.rangeLabel, layout.rowCount(), 0, 1, columns)
+            if limits is not None:
+                layout.addWidget(limits, layout.rowCount(), 0, 1, columns)
+
+    # The Z range's two ends, worked out unless set, as the diameters are:
+    # CAM ties StartDepth / FinalDepth to OpStartDepth / OpFinalDepth (the
+    # selection's extent, or the op's defaults) by an expression; ticking
+    # an end removes it and the value is the user's, unticking restores it.
+    # (property, checkbox text, tooltip)
+    LIMITS = (
+        ("StartDepth", "Front (Z)",
+         "The front of the Z range. Unticked: the selection's front, or without one the op's own (the stock's "
+         "front), shown greyed out. Ticked: this value, whatever is selected"),
+        ("FinalDepth", "Back (Z)",
+         "The back of the Z range. Unticked: the selection's back, or without one the op's own (e.g. the part's "
+         "back), shown greyed out. Ticked: this value, whatever is selected"),
+    )
+
+    def _limits_shown(self):
+        '''The ends an op uses: none for Turn Thread and Turn Drill (their own
+        length and depth), only the back for Turn Partoff (where it parts).'''
+        proxy = getattr(self.obj, "Proxy", None)
+        if getattr(proxy, "uses_threading_tool", False) or getattr(proxy, "uses_drill_tool", False):
+            return ()
+        if type(proxy).__name__ == "ObjectTurnPart":
+            return ("FinalDepth",)
+        return ("StartDepth", "FinalDepth")
+
+    def make_limits(self):
+        shown = self._limits_shown()
+        if not shown:
+            return None
+        box = QtGui.QWidget()
+        grid = QtGui.QGridLayout(box)
+        grid.setContentsMargins(0, 4, 0, 0)
+        loader = FreeCADGui.UiLoader()
+        self._limits = {}
+        for row, (prop, text, tip) in enumerate(l for l in self.LIMITS if l[0] in shown):
+            check = QtGui.QCheckBox(FreeCAD.Qt.translate("PathTurn", text))
+            check.setToolTip(FreeCAD.Qt.translate("PathTurn", tip))
+            spin = loader.createWidget("Gui::QuantitySpinBox")
+            spin.setToolTip(check.toolTip())
+            spin.setProperty("minimum", -1.0e6)
+            spin.setProperty("maximum", 1.0e6)
+            grid.addWidget(check, row, 0)
+            grid.addWidget(spin, row, 1)
+            bound = PathGuiUtil.QuantitySpinBox(spin, self.obj, prop)
+            check.toggled.connect(lambda on, p=prop: self.set_limit(p, on))
+            spin.editingFinished.connect(lambda p=prop: self.limit_edited(p))
+            self._limits[prop] = (check, spin, bound)
+        self.refresh_limits()
+        return box
+
+    def _is_set(self, prop):
+        return prop not in dict(self.obj.ExpressionEngine or [])
+
+    def set_limit(self, prop, on):
+        '''Ticked: the value is the user's (the expression goes); unticked:
+        back to the worked-out one.'''
+        check, spin, bound = self._limits[prop]
+        spin.setEnabled(on)
+        if on and not self._is_set(prop):
+            value = getattr(self.obj, prop).Value
+            self.obj.setExpression(prop, None)
+            setattr(self.obj, prop, FreeCAD.Units.Quantity(value, FreeCAD.Units.Length))
+        elif not on and self._is_set(prop):
+            self.obj.setExpression(prop, "Op" + prop)
+            self.obj.recompute()
+        self.refresh_limits()
+
+    def limit_edited(self, prop):
+        check, spin, bound = self._limits[prop]
+        if check.isChecked():
+            bound.updateProperty()
+            self.updateRangeLabel()
+
+    def refresh_limits(self):
+        for prop, (check, spin, bound) in getattr(self, "_limits", {}).items():
+            on = self._is_set(prop)
+            check.blockSignals(True)
+            check.setChecked(on)
+            check.blockSignals(False)
+            spin.setEnabled(on)
+            bound.updateWidget()
+        self.updateRangeLabel()
+
+    def updateData(self, obj, prop):
+        if prop in ("StartDepth", "FinalDepth", "OpStartDepth", "OpFinalDepth", "ExpressionEngine"):
+            self.refresh_limits()
 
     def rangeText(self):
         '''The front and back of the selection, and which faces set them.'''
@@ -149,8 +240,10 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
                     front = (bb.ZMax, name)
                 if back is None or bb.ZMin < back[0]:
                     back = (bb.ZMin, name)
+        set_ends = [n for p, n in (("StartDepth", "front"), ("FinalDepth", "back")) if p in getattr(self, "_limits", {}) and self._is_set(p)]
+        note = ("\n" + FreeCAD.Qt.translate("PathTurn", "Set by hand: the {} (below).").format(" and ".join(set_ends))) if set_ends else ""
         if front is None:
-            return FreeCAD.Qt.translate("PathTurn", "Nothing selected: the whole stock.")
+            return FreeCAD.Qt.translate("PathTurn", "Nothing selected: the op's own range.") + note
 
         def z(value):
             return FreeCAD.Units.Quantity(value, FreeCAD.Units.Length).UserString
@@ -161,7 +254,7 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
             text += "\n" + FreeCAD.Qt.translate(
                 "PathTurn",
                 "The selection has no length along Z: select geometry at two different Z positions.")
-        return text
+        return text + note
 
     def updateRangeLabel(self):
         label = getattr(self, "rangeLabel", None)
@@ -171,6 +264,7 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
     # the list is refreshed through these; update the range after each
     def setFields(self, obj):
         super().setFields(obj)
+        self.refresh_limits()
         self.updateRangeLabel()
 
     def updateBase(self):

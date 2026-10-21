@@ -284,6 +284,12 @@ Rough and Profile only cut inside the operation's limits:
   Z Range page sets Start and Final Depth to the Z range they span.
   Everything in that range is turned. A selection with no length along Z,
   such as a single shoulder face or circular edge, is rejected.
+  Under the selection, **Front (Z)** and **Back (Z)** show the range the op
+  uses, greyed: the selection's, or without one the op's own (the stock's
+  front, the part's back). Tick either end to set it by hand, whatever is
+  selected (e.g. "from the selection's front, but stop at Z -15"); untick
+  to go back. Turn Partoff has only Back (where it parts off); Turn Thread
+  and Turn Drill have their own length and depth instead.
 * **Min Diameter**, when set (see Diameters): Rough, Profile and Turn
   Groove turn to it across the Z range; no op cuts below it.
 * **Max Diameter.** The outer diameter cutting starts from (default: the
