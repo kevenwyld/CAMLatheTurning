@@ -83,6 +83,17 @@ DIAMETER_SWITCHES = (
      "Set Max Diameter by hand: where the material starts (e.g. a surface already turned smaller). Otherwise the stock"),
 )
 
+# the lift-off between passes and the radial clearance: worked out unless set
+CLEARANCE_SWITCHES = (
+    ("SetRetract", "Retract",
+     "Radial lift-off at the end of each pass, beyond the furthest the tool reached. Unset: step over x finish "
+     "passes outside, 0.5 (or a quarter of the hole's radius) when boring"),
+    ("SetRadialClearance", "RadialClearance",
+     "Radial distance of the safe position (and radial approaches) from the stock, or from the hole when boring. "
+     "Unset: the Setup Sheet's safe height offset outside, 0.5 (or a quarter of the hole's radius) when boring"),
+)
+BORING_CLEARANCE = 0.5      # mm, and at most a quarter of the hole's radius
+
 STOCK_X_TIP = ("Material to leave radially, per side (on diameters). Negative cuts under the model's size, e.g. "
                "-0.075 to turn a 12 mm model to 11.85, a thread's major diameter turned to its tolerance")
 STOCK_Z_TIP = ("Material to leave axially (on faces and shoulders). Negative cuts under the model's size, "
@@ -101,6 +112,8 @@ class ObjectOp(PathOp.ObjectOp):
     turns_to_min_diameter = False
     # operations that can also cut inside (boring): Side = Internal
     supports_internal = False
+    # operations made of passes that lift off at their end (Retract)
+    uses_pass_retract = False
 
     '''Base class for proxy objects of all turning operations.'''
 
@@ -116,12 +129,51 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_stock_properties(obj)
         self.add_diameter_switches(obj)
         self.add_side_property(obj)
+        self.add_clearance_properties(obj)
         obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
                         translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
                                               "cutting angle allows"))
 
         obj.StepOver = FreeCAD.Units.Quantity(1.0, FreeCAD.Units.Length)
         obj.FinishPasses = 2
+        # the worked-out clearances, shown before the first recompute
+        try:
+            obj.Retract = FreeCAD.Units.Quantity(obj.StepOver.Value * obj.FinishPasses, FreeCAD.Units.Length)
+            job = PathUtils.findParentJob(obj)
+            offset = job.SetupSheet.SafeHeightOffset.Value if job is not None else 3.0
+            obj.RadialClearance = FreeCAD.Units.Quantity(offset, FreeCAD.Units.Length)
+        except Exception:
+            pass
+
+    def add_clearance_properties(self, obj):
+        '''Retract and Radial clearance, each with its Set switch.'''
+        for switch, prop, tip in CLEARANCE_SWITCHES:
+            if not hasattr(obj, prop):
+                obj.addProperty("App::PropertyLength", prop, "Turn Path", translate("TurnPath", tip))
+            if not hasattr(obj, switch):
+                obj.addProperty("App::PropertyBool", switch, "Turn Path", translate("TurnPath", tip))
+            # (getattr with a default: the Job dialog's operation prototypes
+            # cannot read back a property just added)
+            obj.setEditorMode(prop, 0 if getattr(obj, switch, False) else 1)
+
+    def clearance_values(self, obj):
+        '''(retract, radial clearance) the op uses: as set, or worked out.'''
+        if getattr(self, "mirror_r", None) is not None:
+            auto = min(BORING_CLEARANCE, 0.25 * self.hole_r)
+            auto_retract, auto_clearance = auto, auto
+        else:
+            auto_retract = obj.StepOver.Value * obj.FinishPasses
+            auto_clearance = PathUtils.findParentJob(obj).SetupSheet.SafeHeightOffset.Value
+        retract = obj.Retract.Value if getattr(obj, "SetRetract", False) else auto_retract
+        clearance = obj.RadialClearance.Value if getattr(obj, "SetRadialClearance", False) else auto_clearance
+        return retract, clearance
+
+    def show_clearance_values(self, obj):
+        '''The worked-out values in the (greyed) fields.'''
+        retract, clearance = self.clearance_values(obj)
+        for switch, prop, value in (("SetRetract", "Retract", retract), ("SetRadialClearance", "RadialClearance", clearance)):
+            if hasattr(obj, prop) and not getattr(obj, switch) and abs(getattr(obj, prop).Value - value) > 1e-9:
+                setattr(obj, prop, FreeCAD.Units.Quantity(value, FreeCAD.Units.Length))
 
     def add_side_property(self, obj):
         '''Side (External / Internal) for the operations that can bore.'''
@@ -180,6 +232,7 @@ class ObjectOp(PathOp.ObjectOp):
                 obj.removeProperty("StockToLeave")
         self.add_diameter_switches(obj, migrate=True)
         self.add_side_property(obj)
+        self.add_clearance_properties(obj)
         for prop, tip in (("StockToLeaveX", STOCK_X_TIP), ("StockToLeaveZ", STOCK_Z_TIP)):
             if obj.getTypeIdOfProperty(prop) == "App::PropertyLength":
                 value = getattr(obj, prop).Value
@@ -269,6 +322,7 @@ class ObjectOp(PathOp.ObjectOp):
         else:
             self.mirror_r = None
             self.part_outline = self.get_part_outline(self.turned_model(obj))
+        self.show_clearance_values(obj)
         self.generate_gcode(obj)
         self.warn_if_nothing_cut(obj)
 
@@ -294,13 +348,17 @@ class ObjectOp(PathOp.ObjectOp):
         props['clearance'] = parentJob.SetupSheet.SafeHeightOffset.Value
         if getattr(self, "mirror_r", None) is not None:
             # boring, in the mirrored space (see setup_internal): the stock's
-            # top is the hole, the inner limit the max diameter (the bore's
-            # largest unless set), and the safe position stays inside the
-            # hole, not past the axis
+            # top is the hole and the inner limit the max diameter (the bore's
+            # largest unless set); the radial clearance and retract are small
+            # (see clearance_values), so the bar stays near the wall it cuts
             R = self.mirror_r
             props['extra_dia'] = 0.0
             props['min_dia'] = 2 * max(0.0, R - self.maxDia / 2)
-            props['clearance'] = min(props['clearance'], 0.5 * self.hole_r)
+        if hasattr(obj, "Retract"):
+            retract, clearance = self.clearance_values(obj)
+            props['clearance_x'] = clearance
+            # unset outside: liblathe's own (the same value), so paths stay as they were
+            props['retract'] = retract if (getattr(obj, "SetRetract", False) or getattr(self, "mirror_r", None) is not None) else None
         return props
 
     def get_stock_silhoutte(self, obj):

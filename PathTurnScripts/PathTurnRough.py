@@ -44,6 +44,8 @@ def translate(context, text, disambig=None):
 class ObjectTurnRough(PathTurnBase.ObjectOp):
     '''Proxy class for turning roughing operations.'''
 
+    uses_pass_retract = True
+
     turns_to_min_diameter = True
     supports_internal = True
 

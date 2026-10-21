@@ -402,7 +402,28 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
     # length fields, as CAM's own op pages do them: Gui::QuantitySpinBox bound
     # to the property (units, styling, and the fx button for expressions)
     QUANTITY_FIELDS = (("stepOver", "StepOver"), ("stockToLeaveX", "StockToLeaveX"), ("stockToLeaveZ", "StockToLeaveZ"),
-                       ("finishStepOver", "FinishStepOver"))
+                       ("finishStepOver", "FinishStepOver"), ("retract", "Retract"), ("radialClearance", "RadialClearance"))
+    # a checkbox that sets a value by hand: (checkbox, switch, value property, field)
+    SWITCHED = (("setRetract", "SetRetract", "Retract", "retract"),
+                ("setRadialClearance", "SetRadialClearance", "RadialClearance", "radialClearance"))
+
+    def _auto(self, obj, prop):
+        '''True when the op works prop out (its Set switch is off).'''
+        for _, switch, value, _ in self.SWITCHED:
+            if value == prop:
+                return not getattr(obj, switch, True)
+        return False
+
+    def updateData(self, obj, prop):
+        '''The worked-out (greyed) values follow the op as it recomputes.'''
+        if prop in ("Retract", "RadialClearance") and hasattr(self, "form") and self._auto(obj, prop):
+            for box in self._spinboxes(obj):
+                if box.prop == prop:
+                    box.updateWidget()
+
+    def registerSignalHandlers(self, obj):
+        for box, _, _, field in self.SWITCHED:
+            getattr(self.form, box).toggled.connect(getattr(self.form, field).setEnabled)
 
     def _spinboxes(self, obj):
         if getattr(self, "_quantity_boxes", None) is None:
@@ -427,13 +448,22 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             widget.setVisible(hasattr(obj, "FinishDirection"))
         for widget in (self.form.side, self.form.label_side):
             widget.setVisible(hasattr(obj, "Side"))
+        uses_retract = getattr(getattr(obj, "Proxy", None), "uses_pass_retract", False)
+        for widget in (self.form.setRetract, self.form.retract):
+            widget.setVisible(uses_retract and hasattr(obj, "Retract"))
+        for widget in (self.form.setRadialClearance, self.form.radialClearance):
+            widget.setVisible(hasattr(obj, "RadialClearance"))
 
     def getFields(self, obj):
         '''getFields(obj) ... transfers values from UI to obj's proprties'''
         PathLog.track()
 
+        for box, switch, _, _ in self.SWITCHED:
+            if hasattr(obj, switch) and getattr(obj, switch) != getattr(self.form, box).isChecked():
+                setattr(obj, switch, getattr(self.form, box).isChecked())
         for box in self._spinboxes(obj):
-            box.updateProperty()
+            if not self._auto(obj, box.prop):      # values the op works out are shown, not written
+                box.updateProperty()
 
         if obj.FinishPasses != self.form.finishPasses.value():
             obj.FinishPasses = self.form.finishPasses.value()
@@ -463,6 +493,13 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         self.form.finishPasses.setValue(obj.FinishPasses)
 
         self._show_fields(obj)
+        for box, switch, _, field in self.SWITCHED:
+            if hasattr(obj, switch):
+                check = getattr(self.form, box)
+                check.blockSignals(True)
+                check.setChecked(bool(getattr(obj, switch)))
+                check.blockSignals(False)
+                getattr(self.form, field).setEnabled(bool(getattr(obj, switch)))
         if hasattr(obj, "SpringPass"):
             self.form.springPass.setChecked(obj.SpringPass)
         if hasattr(obj, "FinishFrontFace"):
@@ -496,6 +533,10 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.stockToLeaveZ.editingFinished)
         signals.append(self.form.finishPasses.valueChanged)
         signals.append(self.form.side.currentIndexChanged)
+        signals.append(self.form.setRetract.stateChanged)
+        signals.append(self.form.setRadialClearance.stateChanged)
+        signals.append(self.form.retract.editingFinished)
+        signals.append(self.form.radialClearance.editingFinished)
         signals.append(self.form.springPass.stateChanged)
         signals.append(self.form.finishStepOver.editingFinished)
         signals.append(self.form.finishFrontFace.stateChanged)

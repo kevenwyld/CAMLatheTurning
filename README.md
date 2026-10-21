@@ -100,8 +100,11 @@ operation page.
   reference is the mirror of the turning one: the imaginary tip at the
   cutting edge's outermost point (largest radius) and its chuck-side
   flank. Set the tool offsets to that point.
-* The safe position between moves is inside the hole, a clearance (or half
-  the hole's radius, if less) from its wall.
+* **Radial clearance** and **Retract** (see Operation settings) default
+  to 0.5 mm, or a quarter of the hole's radius if less: the safe position
+  is that far inside the hole wall, and each pass lifts off that much, so
+  the bar stays near the wall it cuts. A larger back-off moves the bar's
+  back toward the opposite wall; in a small bore, set them smaller still.
 * The insert's outline is checked as for turning (see Collision checks);
   the boring bar itself (its diameter and reach) is not checked yet.
 
@@ -144,6 +147,14 @@ tube, gives its inner diameter for Min and its outer for Max), and tick the
 box.
 
 ## Operation settings
+* **Retract** (Rough, Profile, Face): the radial lift-off at the end of each
+  pass, beyond the furthest the tool reached. **Radial clearance** (all
+  but Turn Thread): the safe position's radial distance from the stock (or
+  from the hole, boring), also used for radial approaches. Each is worked
+  out unless ticked and shown greyed: outside, Retract is step over x
+  finish passes and Radial clearance the Setup Sheet's safe height offset;
+  boring, both are 0.5 mm or a quarter of the hole's radius. The clearance
+  along Z (lead-ins in front of the cut) stays the Setup Sheet's.
 * **Step over**: Rough, the depth of cut per pass (per side); Profile, the
   spacing of the finish passes; Face, the step along Z; Turn Groove, the
   spacing of the plunges. Turn Groove's defaults to 0.7 x the insert width

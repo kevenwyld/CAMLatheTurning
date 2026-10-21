@@ -44,6 +44,8 @@ def translate(context, text, disambig=None):
 class ObjectTurnProfile(PathTurnBase.ObjectOp):
     '''Proxy class for turning profile operations.'''
 
+    uses_pass_retract = True
+
     turns_to_min_diameter = True
     supports_internal = True
 
