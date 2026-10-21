@@ -212,9 +212,10 @@ update brings the shapes up to date; tool bits you have are never changed. Exist
 are never overwritten. Then add the example bit to a tool library, or create
 your own bits from the **ISO Turning Insert** shape.
 
-To install them by hand instead, copy `Assets/Shape/isoshape.fcstd` and
-`Assets/Shape/isoshape.svg` into the `Tools/Shape` folder of your CAM asset
-directory, and import `Assets/Bit/CCMT060204R.fctb` from the tool library.
+To install them by hand instead, copy the shapes in `Assets/Shape` (each
+`.fcstd` with its `.svg`: isoshape, grooving, fullradius, threading) into the
+`Tools/Shape` folder of your CAM asset directory, and import the example bits
+in `Assets/Bit` from the tool library.
 
 Set TipRadius to your insert's nose radius. Rotation must be greater than 0
 and TipAngle less than 90 degrees.
