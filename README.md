@@ -185,6 +185,9 @@ Rough and Profile only cut inside the operation's limits:
   chuck: no tool move goes past it, so set it short of the jaws. If Start
   Depth is behind the front of the stock, passes are entered radially from
   outside the stock instead of along Z (this assumes the tool can plunge).
+* **Models.** All the Job's models are turned as one (their union), e.g. a
+  shaft and a separate collar body, or two parts end to end on one bar. A
+  model off the spindle axis gets a warning.
 * **Z Range selection.** Selecting faces, edges or whole objects (for
   example a sketch or Draft wire drawn to mark the range) on the operation's
   Z Range page sets Start and Final Depth to the Z range they span.

@@ -293,6 +293,34 @@ class ObjectOp(PathOp.ObjectOp):
                                      FreeCAD.Vector(-stock_plane_width, 0, stock_z_pos), FreeCAD.Vector(0, -1, 0))
         return stock_plane
 
+    def job_model_shape(self, obj):
+        '''
+        All the Job's models as one shape: on a lathe they share the spindle
+        axis, so their union is what is turned (two bodies making one part,
+        or two parts end to end on one bar). Using only the first, as before,
+        turned straight through the others. A model off the axis cannot be a
+        turned part; the op warns rather than cutting it as if it were round.
+        '''
+        shapes = [m.Shape for m in self.model if getattr(m, "Shape", None) is not None and not m.Shape.isNull()]
+        if not shapes:
+            return self.model[0].Shape
+        label = obj.Label if obj is not None else "Turning"
+        for m in self.model:
+            bb = getattr(m, "Shape", None) and m.Shape.BoundBox
+            if bb and (abs(bb.Center.x) > 0.01 or abs(bb.Center.y) > 0.01):
+                FreeCAD.Console.PrintWarning(translate('PathTurn',
+                    "{}: the model {} is off the spindle axis ({:.3f}, {:.3f}): a turned part is round about "
+                    "the axis. Check its placement (e.g. Set Origin with a circular edge)\n").format(
+                        label, m.Label, bb.Center.x, bb.Center.y))
+        if len(shapes) == 1:
+            return shapes[0]
+        fused = shapes[0].fuse(shapes[1:])
+        try:
+            fused = fused.removeSplitter()
+        except Exception:
+            pass
+        return fused
+
     def turned_model(self, obj):
         '''
         The model as the operation is to leave it. With Min Diameter set by
@@ -302,7 +330,7 @@ class ObjectOp(PathOp.ObjectOp):
         floor at its final depth). The outline they follow, and check their
         paths against, is then the target, arcs and all outside the range.
         '''
-        model = self.model[0].Shape
+        model = self.job_model_shape(obj)
         if not (self.turns_to_min_diameter and getattr(obj, "SetMinDiameter", False) and self.minDia > 0):
             return model
         z_lo, z_hi = obj.FinalDepth.Value, obj.StartDepth.Value
@@ -331,7 +359,7 @@ class ObjectOp(PathOp.ObjectOp):
         Get Part Outline
         '''
         # TODO: Revisit the edge extraction and find a more elegant method
-        model = self.model[0].Shape if model is None else model
+        model = self.job_model_shape(None) if model is None else model
         # get a section through the part origin on the XZ Plane
         sections = Path.Area().add(model).makeSections(mode=0, heights=[0.0], project=True, plane=self.stock_silhoutte)
         part_silhoutte = sections[0].setParams(Offset=0.0).getShape()
