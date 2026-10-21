@@ -63,6 +63,21 @@ else:
 TURNING_OPS = ("TurnDrill", "TurnGrooveTurn", "TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove", "TurnThread")
 
 
+# Everything a page caches that refers to its widgets. Qt deletes the widgets
+# when the panel closes; a Python reference kept past that leaves PySide with
+# a wrapper for freed memory, which it can then hand out for a new object at
+# the same address (seen as a widget of the wrong type, or a crash). Pages
+# drop these in cleanupPage, which CAM calls before the panel is destroyed.
+CACHED_WIDGETS = ("_limits", "_cl_boxes", "_diagram", "_lead_box", "_gboxes", "_quantity_boxes", "_boxes",
+                  "rangeLabel")
+
+
+def release_widgets(page):
+    for name in CACHED_WIDGETS:
+        if name in vars(page):
+            setattr(page, name, None)
+
+
 class TurningGate:
     """Allow faces, edges and whole objects with a shape; not vertices."""
 
@@ -99,6 +114,10 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
     and a line showing the resulting front and back and which faces set
     them.
     '''
+
+    def cleanupPage(self, obj):
+        release_widgets(self)
+        super().cleanupPage(obj)
 
     NOTE = QtCore.QT_TRANSLATE_NOOP(
         "PathTurn",
@@ -215,7 +234,7 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
             self.updateRangeLabel()
 
     def refresh_limits(self):
-        for prop, (check, spin, bound) in getattr(self, "_limits", {}).items():
+        for prop, (check, spin, bound) in (getattr(self, "_limits", None) or {}).items():
             on = self._is_set(prop)
             check.blockSignals(True)
             check.setChecked(on)
@@ -243,7 +262,7 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
                     front = (bb.ZMax, name)
                 if back is None or bb.ZMin < back[0]:
                     back = (bb.ZMin, name)
-        set_ends = [n for p, n in (("StartDepth", "front"), ("FinalDepth", "back")) if p in getattr(self, "_limits", {}) and self._is_set(p)]
+        set_ends = [n for p, n in (("StartDepth", "front"), ("FinalDepth", "back")) if p in (getattr(self, "_limits", None) or {}) and self._is_set(p)]
         note = ("\n" + FreeCAD.Qt.translate("PathTurn", "Set by hand: the {} (below).").format(" and ".join(set_ends))) if set_ends else ""
         if front is None:
             return FreeCAD.Qt.translate("PathTurn", "Nothing selected: the op's own range.") + note
@@ -364,6 +383,10 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
     diagram.
     """
 
+    def cleanupPage(self, obj):
+        release_widgets(self)
+        super().cleanupPage(obj)
+
     DIAGRAMS = {"External": "CAM-TurnDiameters-External.svg", "Internal": "CAM-TurnDiameters-Internal.svg"}
     # radial distances that belong with the diameters: (checkbox, switch,
     # property, field, label, tooltip)
@@ -385,10 +408,25 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
         form.finalDepthSet.setToolTip(QtCore.QCoreApplication.translate("PathTurn",
             "Transfer the diameter of the selected feature (a circular edge, cylindrical face, vertex, or the "
             "outer circle of a flat face) as the maximum diameter"))
-        self.add_diagram(form)
         self.add_switches(form)
         self.add_clearance_rows(form)
-        return form
+        # The diagram goes above CAM's form in a container, leaving CAM's grid
+        # as it is: moving widgets within it (or walking its items) has given
+        # PySide wrappers of the wrong type (a spacer for a widget) and freed
+        # layout items. The container carries the form's widgets by name.
+        container = QtGui.QWidget()
+        box = QtGui.QVBoxLayout(container)
+        box.setContentsMargins(0, 0, 0, 0)
+        diagram = self.make_diagram()
+        if diagram is not None:
+            box.addWidget(diagram)
+        box.addWidget(form)
+        box.addStretch(1)
+        for name, value in vars(form).items():
+            if not name.startswith("_") and not hasattr(container, name):
+                setattr(container, name, value)
+        container.setWindowTitle(form.windowTitle())
+        return container
 
     def _shows(self, obj, prop):
         '''Retract only for operations made of passes; neither for Turn Thread
@@ -402,13 +440,6 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
         layout = form.layout()
         if layout is None or not hasattr(layout, "rowCount"):
             return
-        # CAM's page ends with an expanding spacer: collapse it where it is
-        # (moving it would take the layout item out, see add_diagram) and
-        # stretch an empty row after these instead, so they follow the diameters
-        for index in range(layout.count()):
-            spacer = layout.itemAt(index).spacerItem()
-            if spacer is not None:
-                spacer.changeSize(0, 0, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
         loader = FreeCADGui.UiLoader()
         for box, _, prop, field, text, tip in self.CLEARANCES:
             check = QtGui.QCheckBox(QtCore.QCoreApplication.translate("PathTurn", text))
@@ -426,11 +457,11 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
             shown = self._shows(self.obj, prop)
             check.setVisible(shown)
             spin.setVisible(shown)
-        layout.setRowStretch(layout.rowCount(), 1)
-        layout.invalidate()
 
     def _clearance_boxes(self, obj):
         if getattr(self, "_cl_boxes", None) is None:
+            if not hasattr(self.form, "retract"):
+                return {}
             self._cl_boxes = {prop: PathGuiUtil.QuantitySpinBox(getattr(self.form, field), obj, prop)
                               for _, _, prop, field, _, _ in self.CLEARANCES if hasattr(obj, prop)}
         return self._cl_boxes
@@ -573,31 +604,17 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
                 label.set_svg(text)
                 self._diagram_side = side
 
-    def add_diagram(self, form):
-        layout = form.layout()
+    def make_diagram(self):
+        '''The diagram for the op's side, as a widget for above the form.'''
         side = getattr(getattr(self, "obj", None), "Side", "External")
         text = self._diagram_svg(side)
-        if text is None or layout is None or not hasattr(layout, "getItemPosition"):
-            return
+        if text is None:
+            return None
         label = SvgDiagram()
         label.set_svg(text)
         label.setObjectName("diametersDiagram")
         self._diagram, self._diagram_side = label, side
-        # put the diagram on top: move the existing widgets down a row.
-        # removeWidget / addWidget, not takeAt / addItem: a layout item taken
-        # out belongs to Python, and once its wrapper is collected the layout
-        # holds freed memory (intermittent crashes, widgets of the wrong
-        # type); the widgets themselves stay owned by the form throughout
-        moves = []
-        for index in range(layout.count()):
-            widget = layout.itemAt(index).widget()
-            if widget is not None:
-                moves.append((widget, layout.getItemPosition(index)))
-        for widget, _ in moves:
-            layout.removeWidget(widget)
-        for widget, (row, col, rows, cols) in moves:
-            layout.addWidget(widget, row + 1, col, rows, cols)
-        layout.addWidget(label, 0, 0, 1, max(1, layout.columnCount()))
+        return label
 
     def registerSignalHandlers(self, obj):
         self.form.startDepthSet.clicked.connect(lambda: self.diameterSet(obj, self.minDiameter, "MinDiameter", "min"))
@@ -636,6 +653,10 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
 
 
 class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
+
+    def cleanupPage(self, obj):
+        release_widgets(self)
+        super().cleanupPage(obj)
     # The tool controller and coolant are on CAM's own Tool Controller page;
     # these pages used to carry them too, and setting them up twice made CAM
     # delete widgets out from under this page.
