@@ -42,7 +42,7 @@ A proof of concept simulator to help visualize these new operations is available
 * Qt5
 
 ## Installation
-1. Use `git clone --recurse` or download the `.zip` file of this repo directly in to your [FreeCAD `Mod/` directory](https://www.freecadweb.org/wiki/Installing_more_workbenches).
+1. Use `git clone --recurse` or download the `.zip` file of this repo directly in to your [FreeCAD `Mod/` directory](https://wiki.freecad.org/Installing_more_workbenches).
 2. Restart FreeCAD
 
 Note: If the LibLathe folder inside the addon is empty or missing you may need to add the submodule manually: `git submodule update --init --recursive`
