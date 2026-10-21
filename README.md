@@ -6,6 +6,8 @@ A FreeCAD Path Addon to encourage the development of CNC turning functionality f
 ## Description
 This addon when installed will appear in the Path Workbench toolbar menu and will allow the creation of turning paths for use with a CNC lathe. This addon includes [LibLathe](https://github.com/dubstar-04/LibLathe) as a submodule.
 
+A proof of concept simulator to help visualize these new operations is available [here](https://github.com/kevenwyld/CAMRotarySim)
+
 ## Features
 * Turning operations: Face, Drill, Rough, Profile (both outside and boring),
   Groove, Groove-Turn, Thread (G33 passes or a G76 cycle) and Partoff
