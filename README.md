@@ -269,8 +269,9 @@ box.
   and the finish passes down walls, across and up walls.
 * The Full Radius insert has a **Neck width** (ISO BW): its width gives
   tangent flanks; less is a lollipop groove-turn insert, a full circle on a
-  narrower neck. **Side relief** (α) leans the flanks inward from the head,
-  as on tangent-relieved inserts. The tool's 3D model follows both (and so
+  narrower neck, straight behind the head (only the head cuts). **Side
+  relief** (α) leans tangent flanks inward from the head, as on
+  tangent-relieved inserts. The tool's 3D model follows both (and so
   does a simulation that cuts with it). The turning operations see the part
   from outside (its largest radius at each Z), so neither changes paths yet;
   they will once undercut geometry is modelled.
