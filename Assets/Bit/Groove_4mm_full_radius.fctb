@@ -7,7 +7,8 @@
     "Width": "4.00 mm",
     "GroovingDepth": "22.00 mm",
     "TurningDepth": "1.50 mm",
-    "NeckWidth": "4.00 mm"
+    "NeckWidth": "4.00 mm",
+    "SideRelief": "0.00 \u00b0"
   },
   "attribute": {}
 }

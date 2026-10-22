@@ -268,10 +268,12 @@ box.
   Groove with Side-turn roughing, the whole part as its range by default,
   and the finish passes down walls, across and up walls.
 * The Full Radius insert has a **Neck width** (ISO BW): its width gives
-  tangent flanks; less is a lollipop groove-turn insert. The turning
-  operations see the part from outside (its largest radius at each Z), so
-  the neck does not change paths yet; it will once undercut geometry is
-  modelled.
+  tangent flanks; less is a lollipop groove-turn insert, a full circle on a
+  narrower neck. **Side relief** (α) leans the flanks inward from the head,
+  as on tangent-relieved inserts. The tool's 3D model follows both (and so
+  does a simulation that cuts with it). The turning operations see the part
+  from outside (its largest radius at each Z), so neither changes paths yet;
+  they will once undercut geometry is modelled.
 
 ## Grooving, parting and full radius inserts
 Two tool shapes cover these inserts:

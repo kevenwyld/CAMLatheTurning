@@ -151,7 +151,8 @@ class ToolBitShapeFullRadius(ToolBitShape):
     radius of half the width (RE = CW / 2). Behind the head the body is
     NeckWidth (BW) wide: the width itself gives tangent flanks (with their
     side relief); less gives a "lollipop" groove-turn insert, a full circle
-    on a narrower neck that clears the cut both ways. Drawn from the same
+    on a narrower neck that clears the cut both ways. SideRelief leans the
+    flanks inward from the head (tangent-relieved inserts). Drawn from the same
     reference point as the grooving insert (X at the bottom of the radius,
     Z at the chuck-side flank). GroovingDepth is ISO's CDX, TurningDepth
     its APMX.
@@ -179,6 +180,12 @@ class ToolBitShapeFullRadius(ToolBitShape):
                                      "Width of the body behind the head (ISO BW): the width itself for tangent "
                                      "flanks, less for a lollipop groove-turn insert"),
                 "App::PropertyLength",
+            ),
+            "SideRelief": (
+                FreeCAD.Qt.translate("ToolBitShape",
+                                     "Flank relief (α): the flanks lean inward by this angle from where they leave the "
+                                     "head (0: straight)"),
+                "App::PropertyAngle",
             ),
             "Diameter": (
                 FreeCAD.Qt.translate("ToolBitShape", "Required by CAM, not used for turning; follows the width"),
