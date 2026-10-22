@@ -19,6 +19,8 @@ it. It adds:
     Assets/Bit/Threading_60_partial.fctb  example 60 degree threading insert
     Assets/Bit/Groove_4mm_full_radius.fctb, ZTFD0303.fctb
                                   example full radius and parting inserts
+    Assets/Bit/GrooveTurn_4mm_lollipop.fctb
+                                  example groove-turn (lollipop) insert
 
 No tool library is written; add the bit to a library of your choice.
 The shapes and their drawings belong to the addon: an installed copy that
@@ -48,6 +50,7 @@ ASSETS = [
     ("toolbitshapesvg", "Shape/threading.svg", "threading.svg"),
     ("toolbit", "Bit/Threading_60_partial.fctb", "Threading_60_partial"),
     ("toolbit", "Bit/Groove_4mm_full_radius.fctb", "Groove_4mm_full_radius"),
+    ("toolbit", "Bit/GrooveTurn_4mm_lollipop.fctb", "GrooveTurn_4mm_lollipop"),
     ("toolbit", "Bit/ZTFD0303.fctb", "ZTFD0303"),
 ]
 

@@ -357,11 +357,14 @@ Diameter the whole nose stays inside.
 The turning operations need a turning tool bit. FreeCAD's tool library has no
 turning shape, so the addon provides an ISO turning insert shape and an
 example bit, plus the Grooving, Full Radius and Threading shapes with an
-example insert each. To add them to your CAM tool assets, switch to the CAM workbench and
-run **Install Turning Tools** from the CAM menu or the Turning toolbar. Running it again after an
-update brings the shapes up to date; tool bits you have are never changed. Existing files
-are never overwritten. Then add the example bit to a tool library, or create
-your own bits from the **ISO Turning Insert** shape.
+example insert each. The Full Radius shape has two: a tangent-flank insert
+(Full radius 4 mm) and a lollipop groove-turn insert (Groove-turn 4 mm, a
+4 mm head on a 2.8 mm neck). To add them to your CAM tool assets, switch to
+the CAM workbench and run **Install Turning Tools** from the CAM menu or the
+Turning toolbar. Running it again after an update brings the shapes up to
+date and adds any new example bits; tool bits you already have are never
+changed. Then add the example bits to a tool library, or create your own
+bits from the shapes.
 
 To install them by hand instead, copy the shapes in `Assets/Shape` (each
 `.fcstd` with its `.svg`: isoshape, grooving, fullradius, threading) into the

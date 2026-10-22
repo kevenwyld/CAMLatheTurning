@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "name": "Groove-turn 4 mm (lollipop)",
+  "shape": "fullradius.fcstd",
+  "shape-type": "FullRadius",
+  "parameter": {
+    "Width": "4.00 mm",
+    "GroovingDepth": "22.00 mm",
+    "TurningDepth": "1.50 mm",
+    "NeckWidth": "2.80 mm",
+    "SideRelief": "0.00 \u00b0"
+  },
+  "attribute": {}
+}
