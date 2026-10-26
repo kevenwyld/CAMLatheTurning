@@ -163,7 +163,9 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
         stock = self.stock.Shape.BoundBox
         safe_z = max(stock.ZMax, r_plane) + clearance
         safe_x = stock.XLength / 2 + clearance
-        feed = obj.ToolController.VertFeed.Value
+        # the drilling feed is the vertical feed; with none set the horizontal
+        # one (CAM Sanity warns about it)
+        feed = obj.ToolController.VertFeed.Value or obj.ToolController.HorizFeed.Value
         code = CODE[obj.Cycle]
         peck = max(obj.PeckDepth.Value, 0.01)
 

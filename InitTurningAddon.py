@@ -166,6 +166,75 @@ def offer_turning_dressups():
 offer_turning_dressups()
 
 
+def turning_feed_squawks(sanity):
+    """
+    The turning operations' feed checks, as CAM Sanity squawks: a tool
+    controller with no vertical feed, used by a turning operation. The
+    operations then plunge and enter the cut at the horizontal feed: a
+    CAUTION for a turning insert; a WARNING for a drill or a grooving or
+    parting blade, which plunge with it (as near an error as CAM's squawks
+    go). Turn Thread is fed by the pitch and is not checked.
+    """
+    import PathTurnScripts.PathTurnBase as PathTurnBase
+    job = getattr(sanity, "job", None)
+    if job is None or not hasattr(job, "Operations"):
+        return []
+    users = {}
+    for op in job.Operations.Group:
+        proxy = getattr(op, "Proxy", None)
+        tc = getattr(op, "ToolController", None)
+        if not isinstance(proxy, PathTurnBase.ObjectOp) or tc is None or not getattr(op, "Active", True):
+            continue
+        if getattr(proxy, "uses_threading_tool", False):
+            continue
+        users.setdefault(tc.Name, (tc, []))[1].append(op.Label)
+    squawks = []
+    for tc, labels in users.values():
+        if tc.VertFeed.Value > 0:
+            continue
+        tool = getattr(tc, "Tool", None)
+        plunging = tool is not None and (PathTurnBase.is_drill_tool(tool) or PathTurnBase.is_grooving_tool(tool))
+        where = "Tool Controller '{}' ({})".format(tc.Label, ", ".join(labels))
+        if plunging:
+            note = ("{}: No vertical feedrate. A drill or a grooving or parting blade plunges with it: set one. "
+                    "Falling back to horizontal feedrate of {}").format(where, tc.HorizFeed.UserString)
+            kind = "WARNING"
+        else:
+            note = "{}: No vertical feedrate, falling back to horizontal feedrate of {}".format(where, tc.HorizFeed.UserString)
+            kind = "CAUTION"
+        squawks.append(sanity.squawk("CAMSanity", note, squawkType=kind))
+    return squawks
+
+
+def add_turning_feed_checks():
+    """CAM Sanity (the post dialog's warnings and the Sanity report) gets the
+    turning operations' feed checks."""
+    try:
+        import Path.Main.Sanity.Sanity as Sanity
+    except Exception:
+        return
+    cls = Sanity.CAMSanity
+    original = cls.get_all_squawks
+    if getattr(original, "turning_feeds", False):
+        return
+
+    def get_all_squawks(self, *args, **kwargs):
+        all_squawks, critical = original(self, *args, **kwargs)
+        try:
+            extra = turning_feed_squawks(self)
+        except Exception as e:
+            FreeCAD.Console.PrintLog("Turning feed checks failed: {}\n".format(e))
+            extra = []
+        return (list(all_squawks) + extra,
+                list(critical) + [s for s in extra if s["squawkType"] in ("WARNING", "CAUTION")])
+
+    get_all_squawks.turning_feeds = True
+    cls.get_all_squawks = get_all_squawks
+
+
+add_turning_feed_checks()
+
+
 def add_turning_toolbar():
     """
     A Turning toolbar in the CAM workbench, with the same commands as the

@@ -113,6 +113,22 @@ Not yet, because CAM's metric internal (6H) table has few fine pitches
 misname the large sizes ("11/2-12" for 1-1/2-12), and a few of its metric
 pitches are not ISO ones (e.g. M10 x 1.12).
 
+## Feeds
+The tool controller's two feeds, whose names come from milling, mean for
+the turning operations:
+
+* **Horizontal feed**: the cutting feed, for turning, facing, profiling and
+  finishing, in any direction.
+* **Vertical feed**: plunges and moves into the material: Turn Rough's and
+  Turn Profile's entries, Turn Groove's, Groove-Turn's and Partoff's plunges
+  and step downs, and Turn Drill's drilling feed. With none set the
+  horizontal feed is used, and CAM Sanity (the post dialog's warnings and
+  the Sanity report) says so: a caution for a turning insert, a warning for
+  a drill or a grooving or parting blade, which plunge with it.
+
+Turn Thread is fed by the pitch. A tool controller with no horizontal feed
+gets CAM's own warning, and the operations still make their paths.
+
 ## Facing
 **Turn Face** faces from the stock's front down to Back (Z), at the Step
 over, radially from outside the stock in to Min Diameter. With nothing
