@@ -127,6 +127,9 @@ insert. It is visual only: paths and collision checks use the insert.
   overhangs its front side, e.g. WF 16 for a 12 mm shank): a Tip offset
   less than the shank's width is taken as the width plus a standard 4 mm
   overhang, so the shank always has its full width.
+- A boring bar's head is round like the bar below the insert's seat, so
+  the bar fits the smallest bore a real one would (13 mm for a 10 mm bar
+  with Tip offset 8).
 * **Boring bar**: a round bar of **Bar diameter** (ISO DCON), running at
   right angles to a shank (out of the bore when boring, as a simulation
   turns boring tools), **Holder length** (LF) long, its centre line **Tip
