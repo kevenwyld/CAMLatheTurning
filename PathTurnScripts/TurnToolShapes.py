@@ -22,13 +22,30 @@ def _mm(value) -> float:
     return float(value.Value if hasattr(value, "Value") else value)
 
 
+def holder_schema():
+    """The holder drawn with an insert (visual only: the simulation shows it;
+    paths and collision checks use the insert): ISO 13399's names."""
+    tr = FreeCAD.Qt.translate
+    return {
+        "Shank": (tr("ToolBitShape", "Draw a turning shank with the insert (visual only)"), "App::PropertyBool"),
+        "BoringBar": (tr("ToolBitShape", "Draw a boring bar with the insert (visual only)"), "App::PropertyBool"),
+        "ShankWidth": (tr("ToolBitShape", "Shank width (ISO B)"), "App::PropertyLength"),
+        "ShankHeight": (tr("ToolBitShape", "Shank height (ISO H)"), "App::PropertyLength"),
+        "BarDiameter": (tr("ToolBitShape", "Boring bar diameter (ISO DCON)"), "App::PropertyLength"),
+        "HolderLength": (tr("ToolBitShape", "Holder length behind the cutting point (ISO LF)"), "App::PropertyLength"),
+        "FunctionalWidth": (tr("ToolBitShape",
+                               "Cutting point to the shank's back side, or to the bar's axis (ISO WF)"),
+                            "App::PropertyLength"),
+    }
+
+
 class ToolBitShapeIso(ToolBitShape):
     name = "Isoshape"
     aliases = ("isoshape", "iso")
 
     @classmethod
     def schema(cls) -> Mapping[str, Tuple[str, str]]:
-        return {
+        return dict({
             # CAM's operation base class requires a non-zero Diameter on every
             # tool (Op/Base.py setDefaultValues and execute). Turning ops don't
             # use it; set it to 2 x TipRadius.
@@ -52,7 +69,7 @@ class ToolBitShapeIso(ToolBitShape):
                 FreeCAD.Qt.translate("ToolBitShape", "Tip radius"),
                 "App::PropertyLength",
             ),
-        }
+        }, **holder_schema())
 
     @classmethod
     def derived_parameters(cls) -> Mapping[str, Any]:
@@ -98,7 +115,7 @@ class ToolBitShapeGroove(ToolBitShape):
 
     @classmethod
     def schema(cls) -> Mapping[str, Tuple[str, str]]:
-        return {
+        return dict({
             "Width": (FreeCAD.Qt.translate("ToolBitShape", "Cutting width (S)"), "App::PropertyLength"),
             "CornerRadius": (
                 FreeCAD.Qt.translate("ToolBitShape", "Corner radius (R), at most half the width"),
@@ -118,7 +135,7 @@ class ToolBitShapeGroove(ToolBitShape):
                 FreeCAD.Qt.translate("ToolBitShape", "Required by CAM, not used for turning; follows the width"),
                 "App::PropertyLength",
             ),
-        }
+        }, **holder_schema())
 
     @classmethod
     def derived_parameters(cls) -> Mapping[str, Any]:
@@ -163,7 +180,7 @@ class ToolBitShapeFullRadius(ToolBitShape):
 
     @classmethod
     def schema(cls) -> Mapping[str, Tuple[str, str]]:
-        return {
+        return dict({
             "Width": (
                 FreeCAD.Qt.translate("ToolBitShape", "Cutting width (S); the end is a radius of half the width"),
                 "App::PropertyLength",
@@ -192,7 +209,7 @@ class ToolBitShapeFullRadius(ToolBitShape):
                 FreeCAD.Qt.translate("ToolBitShape", "Required by CAM, not used for turning; follows the width"),
                 "App::PropertyLength",
             ),
-        }
+        }, **holder_schema())
 
     @classmethod
     def derived_parameters(cls) -> Mapping[str, Any]:
@@ -230,7 +247,7 @@ class ToolBitShapeThreading(ToolBitShape):
 
     @classmethod
     def schema(cls) -> Mapping[str, Tuple[str, str]]:
-        return {
+        return dict({
             "ProfileAngle": (
                 FreeCAD.Qt.translate("ToolBitShape", "Included angle of the thread profile (60 metric and Unified)"),
                 "App::PropertyAngle",
@@ -241,7 +258,7 @@ class ToolBitShapeThreading(ToolBitShape):
                 FreeCAD.Qt.translate("ToolBitShape", "Required by CAM, not used for turning; follows the width"),
                 "App::PropertyLength",
             ),
-        }
+        }, **holder_schema())
 
     @classmethod
     def derived_parameters(cls) -> Mapping[str, Any]:

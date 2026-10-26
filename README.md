@@ -113,6 +113,23 @@ Not yet, because CAM's metric internal (6H) table has few fine pitches
 misname the large sizes ("11/2-12" for 1-1/2-12), and a few of its metric
 pitches are not ISO ones (e.g. M10 x 1.12).
 
+## Tool holders
+The turning shapes (ISO insert, grooving, full radius, threading) can be
+drawn with a holder, so a simulation shows the whole tool, not just the
+insert. It is visual only: paths and collision checks use the insert.
+
+* **Shank**: a turning shank under the insert, running from the cutting
+  point out to **Holder length** (ISO LF), **Shank width** x **Shank
+  height** (ISO B x H), its back side **Functional width** (ISO WF) from
+  the cutting point.
+* **Boring bar**: a round bar of **Bar diameter** (ISO DCON) under the
+  insert, along the same direction (out of the bore when boring), its axis
+  **Functional width** (WF) from the cutting point.
+
+The examples have a 12 x 12 shank (WF 16), and a 10 mm boring bar (WF 6)
+on the new Boring bar 10 mm (CCMT06) example. Tools made before this keep
+their old model: make them again to see their holders.
+
 ## Feeds
 The tool controller's two feeds, whose names come from milling, mean for
 the turning operations:
@@ -408,7 +425,8 @@ turning shape, so the addon provides an ISO turning insert shape and an
 example bit, plus the Grooving, Full Radius and Threading shapes with an
 example insert each. The Full Radius shape has two: a tangent-flank insert
 (Full radius 4 mm) and a lollipop groove-turn insert (Groove-turn 4 mm, a
-4 mm head on a 2.8 mm neck). To add them to your CAM tool assets, switch to
+4 mm head on a 2.8 mm neck), and the ISO insert a boring one (Boring bar 10 mm,
+on a 10 mm bar). To add them to your CAM tool assets, switch to
 the CAM workbench and run **Install Turning Tools** from the CAM menu or the
 Turning toolbar. Running it again after an update brings the shapes up to
 date and adds any new example bits; tool bits you already have are never

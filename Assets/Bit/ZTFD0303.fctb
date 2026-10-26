@@ -7,7 +7,13 @@
     "Width": "3.00 mm",
     "CornerRadius": "0.30 mm",
     "GroovingDepth": "17.00 mm",
-    "TurningDepth": "0.50 mm"
+    "TurningDepth": "0.50 mm",
+    "Shank": true,
+    "BoringBar": false,
+    "ShankWidth": "12.00 mm",
+    "ShankHeight": "12.00 mm",
+    "HolderLength": "80.00 mm",
+    "FunctionalWidth": "16.00 mm"
   },
   "attribute": {}
 }

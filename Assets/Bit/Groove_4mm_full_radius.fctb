@@ -8,7 +8,13 @@
     "GroovingDepth": "22.00 mm",
     "TurningDepth": "1.50 mm",
     "NeckWidth": "4.00 mm",
-    "SideRelief": "0.00 \u00b0"
+    "SideRelief": "0.00 \u00b0",
+    "Shank": true,
+    "BoringBar": false,
+    "ShankWidth": "12.00 mm",
+    "ShankHeight": "12.00 mm",
+    "HolderLength": "80.00 mm",
+    "FunctionalWidth": "16.00 mm"
   },
   "attribute": {}
 }

@@ -51,6 +51,7 @@ ASSETS = [
     ("toolbit", "Bit/Threading_60_partial.fctb", "Threading_60_partial"),
     ("toolbit", "Bit/Groove_4mm_full_radius.fctb", "Groove_4mm_full_radius"),
     ("toolbit", "Bit/GrooveTurn_4mm_lollipop.fctb", "GrooveTurn_4mm_lollipop"),
+    ("toolbit", "Bit/BoringBar_10mm_CCMT06.fctb", "BoringBar_10mm_CCMT06"),
     ("toolbit", "Bit/ZTFD0303.fctb", "ZTFD0303"),
 ]
 

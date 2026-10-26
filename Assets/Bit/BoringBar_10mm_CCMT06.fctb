@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "name": "Boring bar 10 mm (CCMT06)",
+  "shape": "isoshape.fcstd",
+  "shape-type": "Isoshape",
+  "parameter": {
+    "EdgeLength": "6.35 mm",
+    "Rotation": "45.00 \u00b0",
+    "TipAngle": "80.00 \u00b0",
+    "TipRadius": "0.40 mm",
+    "HolderLength": "100.00 mm",
+    "FunctionalWidth": "6.00 mm",
+    "BarDiameter": "10.00 mm",
+    "Shank": false,
+    "BoringBar": true
+  },
+  "attribute": {}
+}
