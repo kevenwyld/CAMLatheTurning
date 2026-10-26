@@ -113,6 +113,20 @@ Not yet, because CAM's metric internal (6H) table has few fine pitches
 misname the large sizes ("11/2-12" for 1-1/2-12), and a few of its metric
 pitches are not ISO ones (e.g. M10 x 1.12).
 
+## Facing
+**Turn Face** faces from the stock's front down to Back (Z), at the Step
+over, radially from outside the stock in to Min Diameter. With nothing
+selected Back is the part's front. Select a flat face (square to the axis)
+on its Z Range page to face down to that face instead, e.g. a shoulder.
+
+* **Min Diameter** is worked out (shown greyed; tick to set): the selected
+  face's inner edge when the part is there just in front of it (a shoulder
+  behind a smaller diameter, so the passes stop at that diameter), the
+  centre otherwise (a front face, including one round a hole that is not
+  drilled yet).
+* A facing pass that would cut into the part is refused, with the Min
+  Diameter it needs (e.g. a shoulder faced with Min Diameter set too small).
+
 ## Edge breaking and chamfers
 * **Break edges** (Turn Rough, Turn Profile, Turn Face): tick it and give a
   size (0.2 mm by default) to chamfer every sharp outside corner of the part

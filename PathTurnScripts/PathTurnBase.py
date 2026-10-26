@@ -217,6 +217,11 @@ class ObjectOp(PathOp.ObjectOp):
     # over (Turn Rough's cleanup pass, Turn Profile, Turn Face)
     uses_break_edges = False
 
+    def auto_min_diameter(self, obj):
+        '''Min Diameter when not set by hand: none (0), the op follows the part
+        (Turn Face: the selected face's inner edge, when the part is there).'''
+        return 0.0
+
     def add_break_edges_properties(self, obj):
         if not self.uses_break_edges:
             return
@@ -369,8 +374,10 @@ class ObjectOp(PathOp.ObjectOp):
             stock = self.stock_diameter(obj)
             if stock is not None and abs(obj.MaxDiameter.Value - stock) > 1e-9:
                 obj.MaxDiameter = FreeCAD.Units.Quantity(stock, FreeCAD.Units.Length)
-        if not getattr(obj, "SetMinDiameter", True) and obj.MinDiameter.Value != 0:
-            obj.MinDiameter = FreeCAD.Units.Quantity(0.0, FreeCAD.Units.Length)
+        if not getattr(obj, "SetMinDiameter", True):
+            auto = self.auto_min_diameter(obj)
+            if abs(obj.MinDiameter.Value - auto) > 1e-9:
+                obj.MinDiameter = FreeCAD.Units.Quantity(auto, FreeCAD.Units.Length)
         self.minDia = obj.MinDiameter.Value
         self.maxDia = obj.MaxDiameter.Value
 

@@ -24,6 +24,7 @@
 
 import FreeCAD
 import Path
+import PathScripts.PathUtils as PathUtils
 import PathTurnScripts.PathTurnBase as PathTurnBase
 from PySide import QtCore
 
@@ -47,9 +48,47 @@ class ObjectTurnFace(PathTurnBase.ObjectOp):
     uses_pass_retract = True
     uses_break_edges = True
 
-    # def opFeatures(self, obj):
-    #    '''opFeatures(obj) ... returns the OR'ed list of features used and supported by the operation.'''
-    #    return PathTurnBase.PathOp.FeatureDiameters | PathTurnBase.PathOp.FeatureTool | PathTurnBase.PathOp.FeatureDepths | PathTurnBase.PathOp.FeatureNoFinalDepth | PathTurnBase.PathOp.FeatureCoolant
+    def opFeatures(self, obj):
+        '''Turning features plus base faces: a selected face (flat, square to
+        the axis) is the plane to face down to.'''
+        return super().opFeatures(obj) | PathTurnBase.PathOp.FeatureBaseFaces
+
+    def selected_face(self, obj):
+        '''The selected flat face square to the spindle axis, or None.'''
+        import Part
+        for base, subs in (getattr(obj, "Base", None) or []):
+            for sub in subs:
+                if sub.startswith("Face"):
+                    face = base.Shape.getElement(sub)
+                    if isinstance(face.Surface, Part.Plane) and abs(abs(face.Surface.Axis.z) - 1) < 1e-6:
+                        return base, face
+        return None
+
+    def part_front(self, obj, job=None):
+        job = job or PathUtils.findParentJob(obj)
+        models = [m for m in (job.Model.Group if job is not None else []) if hasattr(m, "Shape")]
+        if models:
+            return max(m.Shape.BoundBox.ZMax for m in models)
+        return job.Stock.Shape.BoundBox.ZMax if job is not None else 0.0
+
+    def auto_min_diameter(self, obj):
+        '''The selected face's inner edge, when the part is there just in front
+        of the face inside it (a shoulder behind a smaller diameter); otherwise
+        none (a front face, or one round a hole not drilled yet).'''
+        import Part
+        picked = self.selected_face(obj)
+        if picked is None:
+            return 0.0
+        base, face = picked
+        z = face.BoundBox.ZMax
+        circles = [e.Curve.Radius for e in face.Edges if isinstance(e.Curve, Part.Circle) and e.Curve.Radius > 1e-6]
+        if len(circles) < 2:
+            return 0.0
+        r_in = min(circles)
+        probe = FreeCAD.Vector(max(r_in - 0.01, 0.0), 0, z + 0.01)
+        if base.Shape.isInside(probe, 1e-6, True):
+            return 2 * r_in
+        return 0.0
 
     def op_generate_gcode(self, obj, turnTool):
         '''
@@ -58,6 +97,8 @@ class ObjectTurnFace(PathTurnBase.ObjectOp):
         # self.clear_path()
         facingOP = LLF.FaceOP()
         facingOP.set_params(self.getProps(obj))
+        # down to Back (Z): the selected face, the part's front, or as set
+        facingOP.set_params({'face_z': obj.FinalDepth.Value})
 
         stockBoundbox = PathTurnHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox)
         facingOP.add_stock(stockBoundbox)
@@ -73,14 +114,15 @@ class ObjectTurnFace(PathTurnBase.ObjectOp):
             pathCommand = Path.Command(command.get_movement(), command.get_params())
             self.commandlist.append(pathCommand)
 
+    # Back is the plane faced to: the selected face's, or the part's front
     def opSetDefaultValues(self, obj, job):
         obj.OpStartDepth = job.Stock.Shape.BoundBox.ZMax
-        obj.OpFinalDepth = job.Stock.Shape.BoundBox.ZMin
-        # obj.MaxDiameter = job.Stock.Shape.BoundBox.XMin # - job.SetupSheet.SafeHeightOffset.Value
+        obj.OpFinalDepth = self.part_front(obj, job)
 
     def opUpdateDepths(self, obj):
         obj.OpStartDepth = obj.OpStockZMax
-        obj.OpFinalDepth = obj.OpStockZMin
+        picked = self.selected_face(obj)
+        obj.OpFinalDepth = picked[1].BoundBox.ZMax if picked is not None else self.part_front(obj)
 
 
 def SetupProperties():
