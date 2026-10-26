@@ -27,7 +27,8 @@ A proof of concept simulator to help visualize these new operations is available
 
 ## Features
 * Turning operations: Face, Drill, Rough, Profile (both outside and boring),
-  Groove, Groove-Turn, Thread (G33 passes or a G76 cycle) and Partoff
+  Chamfer, Groove, Groove-Turn, Thread (G33 passes or a G76 cycle) and
+  Partoff
 * Turning tool shapes: ISO turning insert, grooving / parting insert, full
   radius insert, threading insert, with example bits
 * A LinuxCNC lathe post processor
@@ -111,6 +112,24 @@ Not yet, because CAM's metric internal (6H) table has few fine pitches
 (most fine internal threads would need Custom), its internal Unified files
 misname the large sizes ("11/2-12" for 1-1/2-12), and a few of its metric
 pitches are not ISO ones (e.g. M10 x 1.12).
+
+## Edge breaking and chamfers
+* **Break edges** (Turn Rough, Turn Profile, Turn Face): tick it and give a
+  size (0.2 mm by default) to chamfer every sharp outside corner of the part
+  the finishing pass goes over: the front corner, the outer edges of
+  shoulders and grooves (45 degrees at a square corner). Inside corners are
+  left alone (breaking them would add material), and so are corners already
+  modelled with a chamfer or fillet, corners on the axis and the part's
+  back end. Turn Rough breaks them in its cleanup pass; Turn Face with a
+  short pass round the front corner. The Report view lists the corners
+  broken.
+* **Turn Chamfer**: a chamfer or a fillet at chosen corners only. Select the
+  corners' circular edges on its Edges page, and set **Corner** (Chamfer, or
+  Fillet: an arc tangent to both edges) and **Size** (the chamfer's leg along
+  each edge, or the fillet's radius). Each is cut by a short contour pass
+  round it with nose radius compensation. Only sharp outside corners between
+  two straight edges can be; the others (inside corners, corners next to a
+  curve, edges too short for the size) are reported and left alone.
 
 ## Drilling
 **Turn Drill** drills on the spindle axis with a CAM drill bit (the Drill

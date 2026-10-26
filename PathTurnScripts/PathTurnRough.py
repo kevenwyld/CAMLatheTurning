@@ -45,6 +45,7 @@ class ObjectTurnRough(PathTurnBase.ObjectOp):
     '''Proxy class for turning roughing operations.'''
 
     uses_pass_retract = True
+    uses_break_edges = True
     uses_pass_lead_in = True
 
     turns_to_min_diameter = True
@@ -87,6 +88,7 @@ class ObjectTurnRough(PathTurnBase.ObjectOp):
 
         PathCode = RoughOP.get_gcode()
         self.report_lathe_warnings(obj, RoughOP)
+        self.report_broken_edges(obj, RoughOP)
         self.show_lead_in(obj, RoughOP)
         self.commandlist.extend(self.lathe_commands(PathCode))
 

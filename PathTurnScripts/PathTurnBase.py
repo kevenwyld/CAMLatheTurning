@@ -143,6 +143,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_clearance_properties(obj)
         self.add_lead_in_property(obj)
         self.add_peck_properties(obj)
+        self.add_break_edges_properties(obj)
         obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
                         translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
                                               "cutting angle allows"))
@@ -212,6 +213,27 @@ class ObjectOp(PathOp.ObjectOp):
 
     # pecking on plunges (Turn Groove, Turn Groove-Turn, Turn Partoff)
     uses_pecking = False
+    # edge breaking: chamfering every sharp outside corner the finish goes
+    # over (Turn Rough's cleanup pass, Turn Profile, Turn Face)
+    uses_break_edges = False
+
+    def add_break_edges_properties(self, obj):
+        if not self.uses_break_edges:
+            return
+        tip = ("Break edges: chamfer every sharp outside corner of the part the finishing pass goes over by this much "
+               "(45 degrees at a square corner). Not inside corners, nor corners already chamfered or filleted")
+        if not hasattr(obj, "BreakEdges"):
+            obj.addProperty("App::PropertyBool", "BreakEdges", "Turn Path", translate("TurnPath", tip))
+        if not hasattr(obj, "BreakEdgeSize"):
+            obj.addProperty("App::PropertyLength", "BreakEdgeSize", "Turn Path", translate("TurnPath", tip))
+            obj.BreakEdgeSize = FreeCAD.Units.Quantity(0.2, FreeCAD.Units.Length)
+
+    def report_broken_edges(self, obj, op):
+        broken = getattr(op, "edges_broken", [])
+        if broken:
+            FreeCAD.Console.PrintMessage("{}: edges broken ({} chamfer) at {}\n".format(
+                obj.Label, FreeCAD.Units.Quantity(obj.BreakEdgeSize.Value, FreeCAD.Units.Length).UserString,
+                ", ".join("radius {:.3f}, Z {:.3f}".format(-p.X, p.Z) for p in broken)))
 
     def add_peck_properties(self, obj):
         if not self.uses_pecking:
@@ -292,6 +314,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_clearance_properties(obj)
         self.add_lead_in_property(obj)
         self.add_peck_properties(obj)
+        self.add_break_edges_properties(obj)
         for prop, tip in (("StockToLeaveX", STOCK_X_TIP), ("StockToLeaveZ", STOCK_Z_TIP)):
             if obj.getTypeIdOfProperty(prop) == "App::PropertyLength":
                 value = getattr(obj, prop).Value
@@ -423,6 +446,8 @@ class ObjectOp(PathOp.ObjectOp):
             props['retract'] = retract if (getattr(obj, "SetRetract", False) or getattr(self, "mirror_r", None) is not None) else None
         if self.uses_pass_lead_in and getattr(obj, "SetLeadIn", False):
             props['pass_lead_in'] = obj.LeadIn.Value
+        if self.uses_break_edges and getattr(obj, "BreakEdges", False):
+            props['break_edges'] = obj.BreakEdgeSize.Value
         return props
 
     def get_stock_silhoutte(self, obj):

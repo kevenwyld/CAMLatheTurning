@@ -60,7 +60,7 @@ else:
 # faces, edges and whole objects, so give them a gate that allows exactly
 # that.
 
-TURNING_OPS = ("TurnDrill", "TurnGrooveTurn", "TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove", "TurnThread")
+TURNING_OPS = ("TurnDrill", "TurnChamfer", "TurnGrooveTurn", "TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove", "TurnThread")
 
 
 # Everything a page caches that refers to its widgets. Qt deletes the widgets
@@ -128,12 +128,20 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         "nothing selected, the operation covers the whole stock. Front and Back below "
         "show the range used; tick either to set it by hand.")
 
+    CORNER_NOTE = QtCore.QT_TRANSLATE_NOOP(
+        "PathTurn",
+        "Select the circular edges of the corners to chamfer or fillet (circles round the spindle axis). Only "
+        "sharp outside corners between two straight edges can be; the others are reported and left alone.")
+
     def getTitle(self, obj):
+        if getattr(getattr(obj, "Proxy", None), "selects_corners", False):
+            return FreeCAD.Qt.translate("PathTurn", "Edges")
         return FreeCAD.Qt.translate("PathTurn", "Z Range")
 
     def modifyPanel(self, panel):
         super().modifyPanel(panel)
-        label = QtGui.QLabel(FreeCAD.Qt.translate("PathTurn", self.NOTE))
+        corners = getattr(getattr(self.obj, "Proxy", None), "selects_corners", False)
+        label = QtGui.QLabel(FreeCAD.Qt.translate("PathTurn", self.CORNER_NOTE if corners else self.NOTE))
         label.setWordWrap(True)
         label.setObjectName("turningBaseGeometryNote")
         # the resulting front and back, updated whenever the list changes
@@ -176,7 +184,7 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         '''The ends an op uses: none for Turn Thread (its own thread length),
         only the back for Turn Partoff (where it parts).'''
         proxy = getattr(self.obj, "Proxy", None)
-        if getattr(proxy, "uses_threading_tool", False):
+        if getattr(proxy, "uses_threading_tool", False) or getattr(proxy, "selects_corners", False):
             return ()
         if type(proxy).__name__ == "ObjectTurnPart":
             return ("FinalDepth",)
@@ -704,11 +712,12 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
                 box.updateWidget()
 
     def _groove_boxes(self, obj):
-        '''Step down and the pecking lengths, bound to the op.'''
+        '''Step down, the pecking lengths, the edge break and corner sizes, bound to the op.'''
         if getattr(self, "_gboxes", None) is None:
             self._gboxes = {prop: PathGuiUtil.QuantitySpinBox(getattr(self.form, field), obj, prop)
                             for field, prop in (("stepDown", "StepDown"), ("peckDepth", "PeckDepth"),
-                                                ("peckRetract", "PeckRetract")) if hasattr(obj, prop)}
+                                                ("peckRetract", "PeckRetract"), ("breakEdgeSize", "BreakEdgeSize"),
+                                                ("cornerSize", "CornerSize")) if hasattr(obj, prop)}
         return self._gboxes
 
     def registerSignalHandlers(self, obj):
@@ -717,6 +726,7 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         for w in (self.form.peckDepth, self.form.peckRetract, self.form.peckFullRetract, self.form.label_peckRetract):
             self.form.peck.toggled.connect(w.setEnabled)
         self.form.strategy.currentIndexChanged.connect(lambda _: self._side_turn_fields())
+        self.form.breakEdges.toggled.connect(self.form.breakEdgeSize.setEnabled)
 
     def _side_turn_fields(self):
         on = self.form.strategy.currentText() == "Side-turn"
@@ -753,6 +763,16 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         for widget in (self.form.peck, self.form.peckDepth, self.form.label_peckRetract, self.form.peckRetract,
                        self.form.peckFullRetract):
             widget.setVisible(hasattr(obj, "Peck"))
+        for widget in (self.form.breakEdges, self.form.breakEdgeSize):
+            widget.setVisible(hasattr(obj, "BreakEdges"))
+        for widget in (self.form.label_cornerType, self.form.cornerType, self.form.label_cornerSize, self.form.cornerSize):
+            widget.setVisible(hasattr(obj, "CornerType"))
+        if hasattr(obj, "CornerType"):
+            # one pass per corner: no step over
+            for name in ("stepOver", "label_4"):
+                widget = getattr(self.form, name, None)
+                if widget is not None:
+                    widget.setVisible(False)
 
     def getFields(self, obj):
         '''getFields(obj) ... transfers values from UI to obj's proprties'''
@@ -783,9 +803,12 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             obj.Strategy = self.form.strategy.currentText()
         if hasattr(obj, "SetStepDown") and obj.SetStepDown != self.form.setStepDown.isChecked():
             obj.SetStepDown = self.form.setStepDown.isChecked()
-        for widget, prop in ((self.form.peck, "Peck"), (self.form.peckFullRetract, "PeckFullRetract")):
+        for widget, prop in ((self.form.peck, "Peck"), (self.form.peckFullRetract, "PeckFullRetract"),
+                             (self.form.breakEdges, "BreakEdges")):
             if hasattr(obj, prop) and getattr(obj, prop) != widget.isChecked():
                 setattr(obj, prop, widget.isChecked())
+        if hasattr(obj, "CornerType") and self.form.cornerType.currentText() and obj.CornerType != self.form.cornerType.currentText():
+            obj.CornerType = self.form.cornerType.currentText()
         for prop, box in self._groove_boxes(obj).items():
             if prop != "StepDown" or getattr(obj, "SetStepDown", False):    # a worked-out step down is shown, not written
                 box.updateProperty()
@@ -823,6 +846,17 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
                 widget.blockSignals(False)
             for w in (self.form.peckDepth, self.form.peckRetract, self.form.peckFullRetract, self.form.label_peckRetract):
                 w.setEnabled(bool(obj.Peck))
+        if hasattr(obj, "BreakEdges"):
+            self.form.breakEdges.blockSignals(True)
+            self.form.breakEdges.setChecked(bool(obj.BreakEdges))
+            self.form.breakEdges.blockSignals(False)
+            self.form.breakEdgeSize.setEnabled(bool(obj.BreakEdges))
+        if hasattr(obj, "CornerType"):
+            self.form.cornerType.blockSignals(True)
+            self.form.cornerType.clear()
+            self.form.cornerType.addItems(obj.getEnumerationsOfProperty("CornerType"))
+            self.form.cornerType.setCurrentText(obj.CornerType)
+            self.form.cornerType.blockSignals(False)
         for box in self._groove_boxes(obj).values():
             box.updateWidget()
         if hasattr(obj, "SetLeadIn"):
@@ -869,7 +903,9 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.leadIn.editingFinished)
         signals += [self.form.strategy.currentIndexChanged, self.form.setStepDown.stateChanged,
                     self.form.stepDown.editingFinished, self.form.peck.stateChanged, self.form.peckDepth.editingFinished,
-                    self.form.peckRetract.editingFinished, self.form.peckFullRetract.stateChanged]
+                    self.form.peckRetract.editingFinished, self.form.peckFullRetract.stateChanged,
+                    self.form.breakEdges.stateChanged, self.form.breakEdgeSize.editingFinished,
+                    self.form.cornerType.currentIndexChanged, self.form.cornerSize.editingFinished]
         signals.append(self.form.springPass.stateChanged)
         signals.append(self.form.finishStepOver.editingFinished)
         signals.append(self.form.finishFrontFace.stateChanged)

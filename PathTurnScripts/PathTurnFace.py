@@ -45,6 +45,7 @@ class ObjectTurnFace(PathTurnBase.ObjectOp):
     '''Proxy class for turning facing operations.'''
 
     uses_pass_retract = True
+    uses_break_edges = True
 
     # def opFeatures(self, obj):
     #    '''opFeatures(obj) ... returns the OR'ed list of features used and supported by the operation.'''
@@ -66,6 +67,7 @@ class ObjectTurnFace(PathTurnBase.ObjectOp):
 
         PathCode = facingOP.get_gcode()
         self.report_lathe_warnings(obj, facingOP)
+        self.report_broken_edges(obj, facingOP)
 
         for command in PathCode:
             pathCommand = Path.Command(command.get_movement(), command.get_params())

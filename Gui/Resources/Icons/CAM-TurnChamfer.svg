@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs><linearGradient id="shaft" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f5a66"/><stop offset="0.3" stop-color="#b9d3de"/><stop offset="1" stop-color="#30454f"/></linearGradient></defs>
+  <path d="M 4,10 H 44 L 54,20 V 44 L 44,54 H 4 Z" style="fill:url(#shaft);stroke:#1e2a30;stroke-width:1.5"/>
+  <path d="M 44,10 L 54,20 M 54,44 L 44,54" style="fill:none;stroke:#e8a317;stroke-width:3"/>
+  <path d="M 2,32 H 62" style="fill:none;stroke:#cc3333;stroke-width:1;stroke-dasharray:6,2,1,2"/>
+</svg>

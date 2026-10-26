@@ -186,7 +186,13 @@
         </property>
        </widget>
       </item>
-      <item row="17" column="0">
+      <item row="17" column="0"><widget class="QCheckBox" name="breakEdges"><property name="toolTip"><string>Chamfer every sharp outside corner of the part the finishing pass goes over by this much (45 degrees at a square corner); not inside corners, nor corners already chamfered or filleted. Turn Rough: in its cleanup pass</string></property><property name="text"><string>Break edges</string></property></widget></item>
+      <item row="17" column="1"><widget class="Gui::QuantitySpinBox" name="breakEdgeSize"><property name="toolTip"><string>Chamfer every sharp outside corner of the part the finishing pass goes over by this much (45 degrees at a square corner); not inside corners, nor corners already chamfered or filleted. Turn Rough: in its cleanup pass</string></property><property name="minimum"><double>0.000000000000000</double></property></widget></item>
+      <item row="18" column="0"><widget class="QLabel" name="label_cornerType"><property name="text"><string>Corner</string></property></widget></item>
+      <item row="18" column="1"><widget class="QComboBox" name="cornerType"><property name="toolTip"><string>Chamfer (equal legs: 45 degrees at a square corner) or Fillet (an arc tangent to both edges)</string></property></widget></item>
+      <item row="19" column="0"><widget class="QLabel" name="label_cornerSize"><property name="text"><string>Size</string></property></widget></item>
+      <item row="19" column="1"><widget class="Gui::QuantitySpinBox" name="cornerSize"><property name="toolTip"><string>A chamfer's leg along each edge, or a fillet's radius</string></property><property name="minimum"><double>0.000000000000000</double></property></widget></item>
+      <item row="20" column="0">
        <spacer name="verticalSpacer">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
