@@ -2,7 +2,7 @@
 <package format="1">
   <name>CAM Lathe Turning</name>
   <description>A FreeCAD CAM Addon to encourage the development of CNC turning functionality for the CAM workbench</description>
-  <version>0.13.0</version>
+  <version>0.13.1</version>
   <date>2026-10-26</date>
   <maintainer email="11936535+kevenwyld@users.noreply.github.com">Keven Wyld</maintainer>
   <license file="LICENSE">LGPL-2.1</license>

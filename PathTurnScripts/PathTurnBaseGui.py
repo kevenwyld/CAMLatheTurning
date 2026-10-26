@@ -258,7 +258,7 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
     def rangeText(self):
         '''The front and back of the selection, and which faces set them.'''
         front = back = None
-        for base_obj, subs in (self.obj.Base or []):
+        for base_obj, subs in (getattr(self.obj, "Base", None) or []):
             for sub in (subs or [""]):
                 try:
                     shape = base_obj.Shape.getElement(sub) if sub else base_obj.Shape
@@ -418,23 +418,24 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
             "outer circle of a flat face) as the maximum diameter"))
         self.add_switches(form)
         self.add_clearance_rows(form)
-        # The diagram goes above CAM's form in a container, leaving CAM's grid
-        # as it is: moving widgets within it (or walking its items) has given
-        # PySide wrappers of the wrong type (a spacer for a widget) and freed
-        # layout items. The container carries the form's widgets by name.
-        container = QtGui.QWidget()
-        box = QtGui.QVBoxLayout(container)
-        box.setContentsMargins(0, 0, 0, 0)
+        # The diagram goes in a new row at the bottom of CAM's grid: added, not
+        # moved (moving CAM's widgets, or walking its layout items, gave PySide
+        # wrappers of the wrong type). No container of our own either: one
+        # that carried CAM's widgets by name kept their wrappers alive after
+        # the panel closed, and PySide then handed one out, dead and of the
+        # wrong type, for a new widget at the same address.
         diagram = self.make_diagram()
-        if diagram is not None:
-            box.addWidget(diagram)
-        box.addWidget(form)
-        box.addStretch(1)
-        for name, value in vars(form).items():
-            if not name.startswith("_") and not hasattr(container, name):
-                setattr(container, name, value)
-        container.setWindowTitle(form.windowTitle())
-        return container
+        layout = form.layout()
+        if diagram is not None and layout is not None:
+            if hasattr(layout, "rowCount"):
+                layout.addWidget(diagram, layout.rowCount(), 0, 1, max(1, layout.columnCount()))
+            else:
+                layout.addWidget(diagram)
+        if layout is not None and hasattr(layout, "setRowStretch"):
+            # spare height to an empty last row, not to CAM's spacer between
+            # its fields and ours (rows with a stretch factor take it first)
+            layout.setRowStretch(layout.rowCount(), 1)
+        return form
 
     def _shows(self, obj, prop):
         '''Retract only for operations made of passes; neither for Turn Thread

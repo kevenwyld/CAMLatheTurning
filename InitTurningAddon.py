@@ -235,6 +235,39 @@ def add_turning_feed_checks():
 add_turning_feed_checks()
 
 
+def release_closed_button_boxes():
+    """
+    CAM's operation task panel keeps the dialog's button box (given to it by
+    modifyStandardButtons) after the dialog and its widgets are deleted.
+    PySide can then hand that dead wrapper out for a new widget at the same
+    address: "QDialogButtonBox has no attribute ..." errors on other
+    widgets, at random. The panel drops its reference as it closes, while
+    the box still exists.
+    """
+    try:
+        import Path.Op.Gui.Base as PathOpGui
+    except Exception:
+        return
+    panel = PathOpGui.TaskPanel
+    cleanup = panel.cleanup
+    if getattr(cleanup, "releases_button_box", False):
+        return
+
+    def release(self, resetEdit):
+        self.buttonBox = None
+        for page in list(getattr(self, "featurePages", []) or []):
+            point = getattr(page, "getPoint", None)
+            if point is not None and hasattr(point, "buttonBox"):
+                point.buttonBox = None
+        return cleanup(self, resetEdit)
+
+    release.releases_button_box = True
+    panel.cleanup = release
+
+
+release_closed_button_boxes()
+
+
 def add_turning_toolbar():
     """
     A Turning toolbar in the CAM workbench, with the same commands as the

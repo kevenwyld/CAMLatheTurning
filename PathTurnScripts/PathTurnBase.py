@@ -305,6 +305,15 @@ class ObjectOp(PathOp.ObjectOp):
         obj.StockToLeaveX = FreeCAD.Units.Quantity(value, FreeCAD.Units.Length)
         obj.StockToLeaveZ = FreeCAD.Units.Quantity(value, FreeCAD.Units.Length)
 
+    def onDocumentRestored(self, obj):
+        # an operation that selects geometry now (Turn Face, since 0.8.0) but
+        # was made before: CAM's restore reads Base's type first, which fails
+        # when there is none (and the rest of the restore with it); it never
+        # adds a missing one
+        if PathOp.FeatureBaseGeometry & self.opFeatures(obj) and not hasattr(obj, "Base"):
+            self.addBaseProperty(obj)
+        super().onDocumentRestored(obj)
+
     def opOnDocumentRestored(self, obj):
         '''Migrate the single StockToLeave of earlier versions to X and Z, and
         X and Z from lengths (never negative) to distances (signed).'''
