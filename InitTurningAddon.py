@@ -252,6 +252,12 @@ def add_turning_toolbar():
 
     def Initialize(self):
         cam_initialize(self)
+        # the addon's shapes already in CAM's store, as the addon has them now
+        try:
+            from PathTurnScripts import TurnAssets
+            TurnAssets.refresh_installed_shapes()
+        except Exception as e:
+            FreeCAD.Console.PrintLog("TurningAddon: refreshing the tool shapes failed: {}\n".format(e))
         try:
             self.appendToolbar(TOOLBAR, COMMANDS)
         except Exception as e:

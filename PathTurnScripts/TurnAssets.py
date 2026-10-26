@@ -65,6 +65,36 @@ def translate(context, text):
 ADDON_OWNED = ("toolbitshape", "toolbitshapesvg")
 
 
+def refresh_installed_shapes():
+    """
+    Bring the shapes and drawings already in the local CAM store up to date
+    with the addon's (they belong to the addon), adding nothing new and
+    leaving tool bits alone. Run as the CAM workbench loads, so that after an
+    update of the addon its tools are built from its current shapes without
+    running Install Turning Tools again. Returns the relative paths updated.
+    """
+    from Path.Tool.assets import AssetUri
+    from Path.Tool.camassets import cam_assets
+
+    updated = []
+    for asset_type, rel_path, asset_id in ASSETS:
+        if asset_type not in ADDON_OWNED:
+            continue
+        path = ASSET_DIR / rel_path
+        try:
+            uri = AssetUri.build(asset_type=asset_type, asset_id=asset_id)
+            if cam_assets.exists(uri, store="local") and cam_assets.get_raw(uri, store="local") != path.read_bytes():
+                cam_assets.delete(uri, store="local")
+                cam_assets.add_file(asset_type, path, store="local", asset_id=asset_id)
+                updated.append(rel_path)
+        except Exception as e:
+            FreeCAD.Console.PrintLog("TurningAddon: could not refresh {}: {}\n".format(rel_path, e))
+    if updated:
+        FreeCAD.Console.PrintMessage("TurningAddon: brought {} up to date in the CAM asset store\n".format(
+            ", ".join(updated)))
+    return updated
+
+
 def install_assets():
     """
     Add the addon's assets to the local CAM store. Missing assets are added;

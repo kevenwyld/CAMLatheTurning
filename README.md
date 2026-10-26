@@ -428,10 +428,12 @@ example insert each. The Full Radius shape has two: a tangent-flank insert
 4 mm head on a 2.8 mm neck), and the ISO insert a boring one (Boring bar 10 mm,
 on a 10 mm bar). To add them to your CAM tool assets, switch to
 the CAM workbench and run **Install Turning Tools** from the CAM menu or the
-Turning toolbar. Running it again after an update brings the shapes up to
-date and adds any new example bits; tool bits you already have are never
-changed. Then add the example bits to a tool library, or create your own
-bits from the shapes.
+Turning toolbar. Running it again after an update adds any new example
+bits; tool bits you already have are never changed. The shapes themselves
+are brought up to date automatically whenever the CAM workbench loads, so
+tools are always built from the addon's current shapes (a parameter a tool
+does not have yet, e.g. a holder size, takes the shape's default). Then add
+the example bits to a tool library, or create your own bits from the shapes.
 
 To install them by hand instead, copy the shapes in `Assets/Shape` (each
 `.fcstd` with its `.svg`: isoshape, grooving, fullradius, threading) into the
