@@ -118,15 +118,16 @@ The turning shapes (ISO insert, grooving, full radius, threading) can be
 drawn with a holder, so a simulation shows the whole tool, not just the
 insert. It is visual only: paths and collision checks use the insert.
 
-* **Shank**: a turning shank under the insert, running from the cutting
-  point out to **Holder length** (ISO LF), **Shank width** x **Shank
-  height** (ISO B x H), its back side **Tip offset** (ISO WF) from
+* **Shank**: a turning shank under the insert's seat, running from the
+  cutting point out to **Holder length** (ISO LF), **Shank width** x
+  **Shank height** (ISO B x H), its back side **Tip offset** (ISO WF) from
   the cutting point.
-* **Boring bar**: a round bar of **Bar diameter** (ISO DCON) under the
-  insert, along the same direction (out of the bore when boring), its axis
-  **Tip offset** (WF) from the cutting point: the bar's centre line is level
-  with the insert's top face, and the insert sits in a flat milled into the
-  bar's head.
+* **Boring bar**: a round bar of **Bar diameter** (ISO DCON), running at
+  right angles to a shank (out of the bore when boring, as a simulation
+  turns boring tools), **Holder length** (LF) long, its centre line **Tip
+  offset** (WF) across from the cutting point, level with the insert's rake
+  face; the insert sits in a flat on the bar's head, joined to it by a
+  short web under its seat.
 
 The examples have a 12 x 12 shank (WF 16), and a 10 mm boring bar (WF 6)
 on the new Boring bar 10 mm (CCMT06) example. Tools made before this keep
