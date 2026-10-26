@@ -123,6 +123,10 @@ insert. It is visual only: paths and collision checks use the insert.
   width** x **Shank height** (ISO B x H), its back side **Tip offset** (ISO
   WF) from the cutting point. Its end is cut back at an angle behind the
   insert, so the insert's tip is the furthest point, as on a real holder.
+  On a turning holder WF is more than the shank's width (the insert
+  overhangs its front side, e.g. WF 16 for a 12 mm shank): a Tip offset
+  less than the shank's width is taken as the width plus a standard 4 mm
+  overhang, so the shank always has its full width.
 * **Boring bar**: a round bar of **Bar diameter** (ISO DCON), running at
   right angles to a shank (out of the bore when boring, as a simulation
   turns boring tools), **Holder length** (LF) long, its centre line **Tip
