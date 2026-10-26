@@ -12,7 +12,7 @@
     "BarDiameter": "10.00 mm",
     "Shank": false,
     "BoringBar": true,
-    "TipOffset": "6.00 mm"
+    "TipOffset": "8.00 mm"
   },
   "attribute": {}
 }
