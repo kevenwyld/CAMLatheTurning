@@ -118,10 +118,11 @@ The turning shapes (ISO insert, grooving, full radius, threading) can be
 drawn with a holder, so a simulation shows the whole tool, not just the
 insert. It is visual only: paths and collision checks use the insert.
 
-* **Shank**: a turning shank under the insert's seat, running from the
-  cutting point out to **Holder length** (ISO LF), **Shank width** x
-  **Shank height** (ISO B x H), its back side **Tip offset** (ISO WF) from
-  the cutting point; it never reaches in front of the insert's tip.
+* **Shank**: a turning shank under the insert's seat, running from just
+  behind the cutting point out to **Holder length** (ISO LF), **Shank
+  width** x **Shank height** (ISO B x H), its back side **Tip offset** (ISO
+  WF) from the cutting point. Its end is cut back at an angle behind the
+  insert, so the insert's tip is the furthest point, as on a real holder.
 * **Boring bar**: a round bar of **Bar diameter** (ISO DCON), running at
   right angles to a shank (out of the bore when boring, as a simulation
   turns boring tools), **Holder length** (LF) long, its centre line **Tip
