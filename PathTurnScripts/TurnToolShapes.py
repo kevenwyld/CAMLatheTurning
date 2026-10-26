@@ -33,9 +33,9 @@ def holder_schema():
         "ShankHeight": (tr("ToolBitShape", "Shank height (ISO H)"), "App::PropertyLength"),
         "BarDiameter": (tr("ToolBitShape", "Boring bar diameter (ISO DCON)"), "App::PropertyLength"),
         "HolderLength": (tr("ToolBitShape", "Holder length behind the cutting point (ISO LF)"), "App::PropertyLength"),
-        "FunctionalWidth": (tr("ToolBitShape",
-                               "Cutting point to the shank's back side, or to the bar's axis (ISO WF)"),
-                            "App::PropertyLength"),
+        "TipOffset": (tr("ToolBitShape",
+                         "Tip offset (ISO WF): the cutting point to the shank's back side, or to the bar's centre line"),
+                      "App::PropertyLength"),
     }
 
 

@@ -120,11 +120,13 @@ insert. It is visual only: paths and collision checks use the insert.
 
 * **Shank**: a turning shank under the insert, running from the cutting
   point out to **Holder length** (ISO LF), **Shank width** x **Shank
-  height** (ISO B x H), its back side **Functional width** (ISO WF) from
+  height** (ISO B x H), its back side **Tip offset** (ISO WF) from
   the cutting point.
 * **Boring bar**: a round bar of **Bar diameter** (ISO DCON) under the
   insert, along the same direction (out of the bore when boring), its axis
-  **Functional width** (WF) from the cutting point.
+  **Tip offset** (WF) from the cutting point: the bar's centre line is level
+  with the insert's top face, and the insert sits in a flat milled into the
+  bar's head.
 
 The examples have a 12 x 12 shank (WF 16), and a 10 mm boring bar (WF 6)
 on the new Boring bar 10 mm (CCMT06) example. Tools made before this keep

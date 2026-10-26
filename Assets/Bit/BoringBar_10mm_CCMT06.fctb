@@ -9,10 +9,10 @@
     "TipAngle": "80.00 \u00b0",
     "TipRadius": "0.40 mm",
     "HolderLength": "100.00 mm",
-    "FunctionalWidth": "6.00 mm",
     "BarDiameter": "10.00 mm",
     "Shank": false,
-    "BoringBar": true
+    "BoringBar": true,
+    "TipOffset": "6.00 mm"
   },
   "attribute": {}
 }

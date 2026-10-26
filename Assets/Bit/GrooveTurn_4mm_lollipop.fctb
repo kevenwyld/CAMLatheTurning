@@ -14,7 +14,7 @@
     "ShankWidth": "12.00 mm",
     "ShankHeight": "12.00 mm",
     "HolderLength": "80.00 mm",
-    "FunctionalWidth": "16.00 mm"
+    "TipOffset": "16.00 mm"
   },
   "attribute": {}
 }
