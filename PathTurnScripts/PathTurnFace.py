@@ -26,6 +26,7 @@ import FreeCAD
 import Path
 import PathScripts.PathUtils as PathUtils
 import PathTurnScripts.PathTurnBase as PathTurnBase
+import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
 from PySide import QtCore
 
 import PathTurnScripts.PathTurnAddonHelpers as PathTurnHelpers
@@ -44,6 +45,8 @@ def translate(context, text, disambig=None):
 
 class ObjectTurnFace(PathTurnBase.ObjectOp):
     '''Proxy class for turning facing operations.'''
+    # CAM's feeds & speeds op type (constant surface speed)
+    css_op_type = TurnFeedsSpeeds.OP_TYPE_ROUGHING
 
     uses_pass_retract = True
     uses_break_edges = True

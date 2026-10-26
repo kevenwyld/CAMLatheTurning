@@ -10,6 +10,7 @@ part, so it can follow a groove's walls in both directions.
 import FreeCAD
 import Path
 import PathTurnScripts.PathTurnBase as PathTurnBase
+import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
 import PathTurnScripts.PathTurnAddonHelpers as PathTurnHelpers
 from PySide import QtCore
 
@@ -22,6 +23,8 @@ def translate(context, text, disambig=None):
 
 class ObjectTurnGroove(PathTurnBase.ObjectOp):
     '''Proxy class for turning groove operations.'''
+    # CAM's feeds & speeds op type (constant surface speed)
+    css_op_type = TurnFeedsSpeeds.OP_TYPE_GROOVING
 
     turns_to_min_diameter = True
 

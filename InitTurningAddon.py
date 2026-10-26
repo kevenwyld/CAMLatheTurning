@@ -268,6 +268,19 @@ def release_closed_button_boxes():
 release_closed_button_boxes()
 
 
+def feeds_speeds_for_inserts():
+    """CAM's Feeds & Speeds dialog (the Tool Controller's button) works out
+    the rpm for a turning tool at the stock's diameter, not the insert's."""
+    try:
+        from PathTurnScripts import TurnFeedsSpeeds
+        TurnFeedsSpeeds.install_dialog_hook()
+    except Exception as e:
+        FreeCAD.Console.PrintLog("TurningAddon: Feeds & Speeds hook failed: {}\n".format(e))
+
+
+feeds_speeds_for_inserts()
+
+
 def add_turning_toolbar():
     """
     A Turning toolbar in the CAM workbench, with the same commands as the

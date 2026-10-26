@@ -39,6 +39,7 @@ from liblathe.base.point import Point
 from liblathe.base.segment import Segment
 from liblathe.base.boundbox import BoundBox
 import PathTurnScripts.PathTurnAddonHelpers as PathTurnAddonHelpers
+import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
 from liblathe.base.tool import Tool
 
 __title__ = "Path Turn Base Operation"
@@ -125,6 +126,9 @@ class ObjectOp(PathOp.ObjectOp):
     uses_pass_retract = False
     # operations whose passes lead in along Z (Lead-in)
     uses_pass_lead_in = False
+    # the op type CAM's feeds & speeds presets know the operation by (see
+    # TurnFeedsSpeeds); None: no constant surface speed (Thread, Drill)
+    css_op_type = None
 
     '''Base class for proxy objects of all turning operations.'''
 
@@ -144,6 +148,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_lead_in_property(obj)
         self.add_peck_properties(obj)
         self.add_break_edges_properties(obj)
+        self.add_css_properties(obj)
         obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
                         translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
                                               "cutting angle allows"))
@@ -232,6 +237,88 @@ class ObjectOp(PathOp.ObjectOp):
         if not hasattr(obj, "BreakEdgeSize"):
             obj.addProperty("App::PropertyLength", "BreakEdgeSize", "Turn Path", translate("TurnPath", tip))
             obj.BreakEdgeSize = FreeCAD.Units.Quantity(0.2, FreeCAD.Units.Length)
+
+    CSS_PROPERTIES = (
+        ("App::PropertyBool", "ConstantSurfaceSpeed",
+         "Constant surface speed (G96): vary the spindle speed with the cutting diameter to keep the surface speed, "
+         "up to the maximum spindle speed; back to the tool controller's speed (G97) at the end"),
+        ("App::PropertyFloat", "SurfaceSpeed",
+         "Surface speed for constant surface speed, m/min: the tool's Feeds & Speeds preset for the stock material "
+         "and this kind of operation, else the stock material's for the tool's material (HSS or Carbide), unless set"),
+        ("App::PropertyBool", "SetSurfaceSpeed", "Set the surface speed by hand"),
+        ("App::PropertyString", "SurfaceSpeedSource", "Where the surface speed comes from"),
+        ("App::PropertyFloat", "MaxSpindleSpeed",
+         "Maximum spindle speed under constant surface speed, rpm: the Job's machine's (its spindle's maximum), "
+         "unless set, e.g. lower for the workholding or a long part"),
+        ("App::PropertyBool", "SetMaxSpindleSpeed", "Set the maximum spindle speed by hand"),
+    )
+
+    def add_css_properties(self, obj):
+        '''Constant surface speed, for the operations that cut with a turning
+        or grooving insert.'''
+        if self.css_op_type is None:
+            return
+        for kind, name, tip in self.CSS_PROPERTIES:
+            if not hasattr(obj, name):
+                obj.addProperty(kind, name, "Spindle", translate("TurnPath", tip))
+        obj.setEditorMode("SurfaceSpeedSource", 1)
+        self.show_css_modes(obj)
+
+    @staticmethod
+    def show_css_modes(obj):
+        for switch, prop in (("SetSurfaceSpeed", "SurfaceSpeed"), ("SetMaxSpindleSpeed", "MaxSpindleSpeed")):
+            if hasattr(obj, prop):
+                obj.setEditorMode(prop, 0 if getattr(obj, switch, False) else 1)
+
+    def apply_css(self, obj):
+        '''Work out the surface speed and maximum spindle speed (shown even
+        with constant surface speed off), and with it on, wrap the path in G96
+        ... G97.'''
+        if self.css_op_type is None or not hasattr(obj, "ConstantSurfaceSpeed"):
+            return
+        job = PathUtils.findParentJob(obj)
+        tc = obj.ToolController
+        why = ""
+        if obj.SetSurfaceSpeed:
+            source = translate("TurnPath", "set by hand")
+        else:
+            vc, source = TurnFeedsSpeeds.surface_speed(tc.Tool, job, self.css_op_type)
+            if vc is None:
+                why, source, vc = source, translate("TurnPath", "none found"), 0.0
+            if abs(obj.SurfaceSpeed - vc) > 1e-9:
+                obj.SurfaceSpeed = vc
+        if obj.SurfaceSpeedSource != source:
+            obj.SurfaceSpeedSource = source
+        machine_max = TurnFeedsSpeeds.machine_max_rpm(job)
+        if not obj.SetMaxSpindleSpeed and abs(obj.MaxSpindleSpeed - machine_max) > 1e-9:
+            obj.MaxSpindleSpeed = machine_max
+        self.show_css_modes(obj)
+        if not obj.ConstantSurfaceSpeed:
+            return
+
+        if obj.SurfaceSpeed <= 0:
+            raise RuntimeError(translate("TurnPath",
+                "Constant surface speed needs a surface speed: {}. Add a preset with a surface speed on the tool's "
+                "Feeds & Speeds tab, give the Job's stock a material (Job > Stock), or set Surface speed").format(
+                    why or translate("TurnPath", "it is set to 0")))
+        if obj.MaxSpindleSpeed <= 0:
+            raise RuntimeError(translate("TurnPath",
+                "Constant surface speed needs a maximum spindle speed, or the spindle runs away near the centre: set "
+                "the spindle's maximum rpm in the Job's machine definition, or set Max spindle speed"))
+        rpm = float(tc.SpindleSpeed or 0.0)
+        if rpm <= 0:
+            raise RuntimeError(translate("TurnPath",
+                "Constant surface speed needs the tool controller's spindle speed: G97 returns to it at the end"))
+        if obj.SetMaxSpindleSpeed and 0 < machine_max < obj.MaxSpindleSpeed:
+            FreeCAD.Console.PrintWarning("{}: {}\n".format(obj.Label, translate("TurnPath",
+                "Max spindle speed ({:.0f} rpm) is above the machine's ({:.0f} rpm)").format(
+                    obj.MaxSpindleSpeed, machine_max)))
+        # after the operation's own comments, as CAM puts coolant on before the first move
+        first = 0
+        while first < len(self.commandlist) and self.commandlist[first].Name.startswith("("):
+            first += 1
+        self.commandlist.insert(first, Path.Command("G96", {"S": obj.SurfaceSpeed, "D": obj.MaxSpindleSpeed}))
+        self.commandlist.append(Path.Command("G97", {"S": rpm}))
 
     def report_broken_edges(self, obj, op):
         broken = getattr(op, "edges_broken", [])
@@ -329,6 +416,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_lead_in_property(obj)
         self.add_peck_properties(obj)
         self.add_break_edges_properties(obj)
+        self.add_css_properties(obj)
         for prop, tip in (("StockToLeaveX", STOCK_X_TIP), ("StockToLeaveZ", STOCK_Z_TIP)):
             if obj.getTypeIdOfProperty(prop) == "App::PropertyLength":
                 value = getattr(obj, prop).Value
@@ -423,6 +511,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.show_clearance_values(obj)
         self.generate_gcode(obj)
         self.warn_if_nothing_cut(obj)
+        self.apply_css(obj)
 
     def getProps(self, obj):
         parentJob = PathUtils.findParentJob(obj)

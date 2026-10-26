@@ -661,6 +661,19 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
         self.form.finalDepthSet.setEnabled(selection_diameter(sel, "max") is not None)
 
 
+def imperial_units():
+    '''True when lengths show in inches: surface speed then in ft/min, as
+    CAM's Feeds & Speeds tab shows it.'''
+    try:
+        unit = FreeCAD.Units.Quantity(1.0, "mm").getUserPreferred()[2]
+    except Exception:
+        return False
+    return any(token in unit for token in ("in", "ft", "thou", '"', "'"))
+
+
+M_MIN_PER_FT_MIN = 0.3048
+
+
 class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
 
     def cleanupPage(self, obj):
@@ -703,6 +716,8 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
 
     def updateData(self, obj, prop):
         '''The worked-out (greyed) lead-in and step down follow the op as it recomputes.'''
+        if prop in ("SurfaceSpeed", "SurfaceSpeedSource", "MaxSpindleSpeed") and hasattr(self, "form"):
+            self._css_values(obj)
         if prop == "LeadIn" and hasattr(self, "form") and not getattr(obj, "SetLeadIn", True):
             box = self._lead_in_box(obj)
             if box is not None:
@@ -728,11 +743,59 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             self.form.peck.toggled.connect(w.setEnabled)
         self.form.strategy.currentIndexChanged.connect(lambda _: self._side_turn_fields())
         self.form.breakEdges.toggled.connect(self.form.breakEdgeSize.setEnabled)
+        for w in (self.form.css, self.form.setSurfaceSpeed, self.form.setMaxSpindleSpeed):
+            w.toggled.connect(lambda _: self._css_enabled())
 
     def _side_turn_fields(self):
         on = self.form.strategy.currentText() == "Side-turn"
         self.form.setStepDown.setEnabled(on)
         self.form.stepDown.setEnabled(on and self.form.setStepDown.isChecked())
+
+    def _css_enabled(self):
+        on = self.form.css.isChecked()
+        for switch, field in ((self.form.setSurfaceSpeed, self.form.surfaceSpeed),
+                              (self.form.setMaxSpindleSpeed, self.form.maxSpindleSpeed)):
+            switch.setEnabled(on)
+            field.setEnabled(on and switch.isChecked())
+        self.form.surfaceSpeedSource.setEnabled(on)
+
+    def _css_values(self, obj):
+        '''The surface speed (m/min, or ft/min in inches), where it came from,
+        and the maximum spindle speed, into the fields.'''
+        if not hasattr(obj, "ConstantSurfaceSpeed"):
+            return
+        imperial = imperial_units()
+        self.form.surfaceSpeed.blockSignals(True)
+        self.form.surfaceSpeed.setSuffix(" ft/min" if imperial else " m/min")
+        self.form.surfaceSpeed.setValue(obj.SurfaceSpeed / (M_MIN_PER_FT_MIN if imperial else 1.0))
+        self.form.surfaceSpeed.blockSignals(False)
+        source = obj.SurfaceSpeedSource or ""
+        self.form.surfaceSpeedSource.setText(FreeCAD.Qt.translate("PathTurn", "From: {}").format(source) if source else "")
+        self.form.maxSpindleSpeed.blockSignals(True)
+        self.form.maxSpindleSpeed.setValue(int(round(obj.MaxSpindleSpeed)))
+        self.form.maxSpindleSpeed.blockSignals(False)
+
+    def _css_fields(self, obj):
+        for widget, prop in ((self.form.css, "ConstantSurfaceSpeed"), (self.form.setSurfaceSpeed, "SetSurfaceSpeed"),
+                             (self.form.setMaxSpindleSpeed, "SetMaxSpindleSpeed")):
+            widget.blockSignals(True)
+            widget.setChecked(bool(getattr(obj, prop)))
+            widget.blockSignals(False)
+        self._css_values(obj)
+        self._css_enabled()
+
+    def _get_css_fields(self, obj):
+        for widget, prop in ((self.form.css, "ConstantSurfaceSpeed"), (self.form.setSurfaceSpeed, "SetSurfaceSpeed"),
+                             (self.form.setMaxSpindleSpeed, "SetMaxSpindleSpeed")):
+            if getattr(obj, prop) != widget.isChecked():
+                setattr(obj, prop, widget.isChecked())
+        # only values set by hand are written; worked-out ones are shown
+        if obj.SetSurfaceSpeed:
+            value = self.form.surfaceSpeed.value() * (M_MIN_PER_FT_MIN if imperial_units() else 1.0)
+            if abs(obj.SurfaceSpeed - value) > 1e-6:
+                obj.SurfaceSpeed = value
+        if obj.SetMaxSpindleSpeed and abs(obj.MaxSpindleSpeed - self.form.maxSpindleSpeed.value()) > 1e-6:
+            obj.MaxSpindleSpeed = float(self.form.maxSpindleSpeed.value())
 
     def _spinboxes(self, obj):
         if getattr(self, "_quantity_boxes", None) is None:
@@ -768,6 +831,9 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             widget.setVisible(hasattr(obj, "BreakEdges"))
         for widget in (self.form.label_cornerType, self.form.cornerType, self.form.label_cornerSize, self.form.cornerSize):
             widget.setVisible(hasattr(obj, "CornerType"))
+        for widget in (self.form.css, self.form.setSurfaceSpeed, self.form.surfaceSpeed, self.form.surfaceSpeedSource,
+                       self.form.setMaxSpindleSpeed, self.form.maxSpindleSpeed):
+            widget.setVisible(hasattr(obj, "ConstantSurfaceSpeed"))
         if hasattr(obj, "CornerType"):
             # one pass per corner: no step over
             for name in ("stepOver", "label_4"):
@@ -813,6 +879,9 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         for prop, box in self._groove_boxes(obj).items():
             if prop != "StepDown" or getattr(obj, "SetStepDown", False):    # a worked-out step down is shown, not written
                 box.updateProperty()
+
+        if hasattr(obj, "ConstantSurfaceSpeed"):
+            self._get_css_fields(obj)
 
         if hasattr(obj, "SetLeadIn"):
             if obj.SetLeadIn != self.form.setLeadIn.isChecked():
@@ -884,6 +953,9 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             self.form.side.setCurrentText(obj.Side)
             self.form.side.blockSignals(False)
 
+        if hasattr(obj, "ConstantSurfaceSpeed"):
+            self._css_fields(obj)
+
         if obj.AllowGrooving:
             self.form.allowGrooving.setCheckState(QtCore.Qt.Checked)
         else:
@@ -912,6 +984,9 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         signals.append(self.form.finishFrontFace.stateChanged)
         signals.append(self.form.finishDirection.currentIndexChanged)
         signals.append(self.form.allowGrooving.stateChanged)
+        signals += [self.form.css.stateChanged, self.form.setSurfaceSpeed.stateChanged,
+                    self.form.surfaceSpeed.editingFinished, self.form.setMaxSpindleSpeed.stateChanged,
+                    self.form.maxSpindleSpeed.editingFinished]
 
 
         return signals

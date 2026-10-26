@@ -11,6 +11,9 @@ CAM's LinuxCNC post, with what a lathe program needs:
 - G33 (spindle-synchronized motion) and G76 (threading cycle) accepted, and
   G76's Q word (the infeed angle) kept: CAM's LinuxCNC post writes Q only
   for G10, G64, G73 and G83, which made a G76 infeed radially.
+- G96 / G97 (constant surface speed) accepted, G96's S (the surface speed,
+  m/min in the path) written in ft/min for an inch program (G20), as G96
+  takes it there, and its D (the maximum spindle speed) in rpm.
 - No up-and-back between operations: each operation ends at the safe
   position and the next starts from it, so consecutive rapids along Z at
   the same safe X, with only comments between them, are reduced to the
@@ -29,7 +32,7 @@ from Path.Post.scripts.linuxcnc_post import Linuxcnc
 translate = FreeCAD.Qt.translate
 
 LATHE_MODES = "G18 G8"
-EXTRA_COMMANDS = ("G7", "G8", "G18", "G33", "G76")
+EXTRA_COMMANDS = ("G7", "G8", "G18", "G33", "G76", "G96", "G97")
 
 
 class Linuxcnc_Lathe(Linuxcnc):
@@ -56,6 +59,17 @@ class Linuxcnc_Lathe(Linuxcnc):
                 return cam_q(values, command, param, value, parameters, location)
 
             functions["Q"] = q_parameter
+        # G96's S is a surface speed: m/min in the path, ft/min for G20
+        if isinstance(functions, dict) and "S" in functions:
+            cam_s = functions["S"]
+
+            def s_parameter(values, command, param, value, parameters, location):
+                if command == "G96":
+                    speed = float(value) / (0.3048 if values.get("UNITS") == "G20" else 1.0)
+                    return ("%.1f" % speed).rstrip("0").rstrip(".")
+                return cam_s(values, command, param, value, parameters, location)
+
+            functions["S"] = s_parameter
 
     def _lathe_preamble(self):
         """The lathe's plane and radius mode at the start of the preamble; a
@@ -85,6 +99,7 @@ class Linuxcnc_Lathe(Linuxcnc):
     @property
     def tooltip(self):
         return translate("CAM", "LinuxCNC lathe post processor: G18 G8 (radius mode), G33 and G76 threading, "
+                                "G96 constant surface speed, "
                                 "no up-and-back between operations")
 
 

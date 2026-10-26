@@ -12,7 +12,9 @@
     "BarDiameter": "10.00 mm",
     "Shank": false,
     "BoringBar": true,
-    "TipOffset": "8.00 mm"
+    "TipOffset": "8.00 mm",
+    "Material": "Carbide",
+    "Chipload": "0.08 mm"
   },
   "attribute": {}
 }

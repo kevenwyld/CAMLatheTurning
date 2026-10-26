@@ -13,7 +13,9 @@
     "HolderLength": "80.00 mm",
     "Shank": true,
     "BoringBar": false,
-    "TipOffset": "16.00 mm"
+    "TipOffset": "16.00 mm",
+    "Material": "Carbide",
+    "Chipload": "0.12 mm"
   },
   "attribute": {}
 }

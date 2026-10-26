@@ -15,6 +15,7 @@ import math
 import FreeCAD
 import Part
 import PathTurnScripts.PathTurnBase as PathTurnBase
+import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
 import liblathe.op.chamfer as LLC
 
 from PySide import QtCore
@@ -31,6 +32,8 @@ def translate(context, text, disambig=None):
 
 class ObjectTurnChamfer(PathTurnBase.ObjectOp):
     '''Proxy class for chamfering or filleting chosen corners.'''
+    # CAM's feeds & speeds op type (constant surface speed)
+    css_op_type = TurnFeedsSpeeds.OP_TYPE_FINISHING
 
     # the selection picks corners (circular edges), not a Z range
     selects_corners = True

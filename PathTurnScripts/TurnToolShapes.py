@@ -15,6 +15,19 @@ from typing import Any, Mapping, Optional, Tuple
 
 from Path.Tool.shape.models.base import ToolBitShape
 from Path.Tool.toolbit.models.base import ToolBit
+from Path.Tool.toolbit.mixins import CuttingToolMixin
+
+
+def init_turning_toolbit(toolbit, cutting=True):
+    '''Feeds & speeds for an insert, as CAM's end mills have them: Chipload
+    (one cutting edge, so the feed per revolution), and Carbide as the tool
+    material, which inserts nearly always are (a tool's saved Material, read
+    after this, still wins). The threading insert's feed is its pitch: no
+    Chipload.'''
+    if cutting:
+        toolbit._init_cutting_properties(toolbit.obj)
+    if getattr(toolbit.obj, "Material", None) == "HSS":
+        toolbit.obj.Material = "Carbide"
 
 
 def _mm(value) -> float:
@@ -85,7 +98,7 @@ class ToolBitShapeIso(ToolBitShape):
         return FreeCAD.Qt.translate("ToolBitShape", "ISO Turning Insert")
 
 
-class ToolBitIso(ToolBit):
+class ToolBitIso(ToolBit, CuttingToolMixin):
     SHAPE_CLASS = ToolBitShapeIso
 
     def __init__(
@@ -93,6 +106,7 @@ class ToolBitIso(ToolBit):
     ):
         Path.Log.track(f"ToolBitIso __init__ shape={shape} id={id}")
         super().__init__(shape, id=id, attrs=attrs)
+        init_turning_toolbit(self, cutting=True)
 
     @property
     def summary(self) -> str:
@@ -147,13 +161,14 @@ class ToolBitShapeGroove(ToolBitShape):
         return FreeCAD.Qt.translate("ToolBitShape", "Grooving")
 
 
-class ToolBitGroove(ToolBit):
+class ToolBitGroove(ToolBit, CuttingToolMixin):
     SHAPE_CLASS = ToolBitShapeGroove
 
     def __init__(
         self, shape: ToolBitShapeGroove, id: Optional[str] = None, attrs: Optional[Mapping] = None
     ):
         super().__init__(shape, id=id, attrs=attrs)
+        init_turning_toolbit(self, cutting=True)
 
     @property
     def summary(self) -> str:
@@ -221,13 +236,14 @@ class ToolBitShapeFullRadius(ToolBitShape):
         return FreeCAD.Qt.translate("ToolBitShape", "Full Radius")
 
 
-class ToolBitFullRadius(ToolBit):
+class ToolBitFullRadius(ToolBit, CuttingToolMixin):
     SHAPE_CLASS = ToolBitShapeFullRadius
 
     def __init__(
         self, shape: ToolBitShapeFullRadius, id: Optional[str] = None, attrs: Optional[Mapping] = None
     ):
         super().__init__(shape, id=id, attrs=attrs)
+        init_turning_toolbit(self, cutting=True)
 
     @property
     def summary(self) -> str:
@@ -277,6 +293,7 @@ class ToolBitThreading(ToolBit):
         self, shape: ToolBitShapeThreading, id: Optional[str] = None, attrs: Optional[Mapping] = None
     ):
         super().__init__(shape, id=id, attrs=attrs)
+        init_turning_toolbit(self, cutting=False)
 
     @property
     def summary(self) -> str:

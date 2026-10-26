@@ -159,6 +159,42 @@ the turning operations:
 Turn Thread is fed by the pitch. A tool controller with no horizontal feed
 gets CAM's own warning, and the operations still make their paths.
 
+## Constant surface speed
+
+Turn Rough, Face, Profile, Chamfer, Groove, Groove-Turn and Partoff have
+**Constant surface speed** (Spindle, at the bottom of the operation's page):
+the spindle speeds up as the tool moves toward the centre, keeping the
+surface speed, up to a maximum. The operation writes `G96 S<surface speed>
+D<max rpm>` before its moves and `G97 S<the tool controller's rpm>` after
+them. Turn Thread and Turn Drill stay at the tool controller's rpm.
+
+The values are not set on each operation: they come from CAM's feeds &
+speeds data, as CAM's Feeds & Speeds dialog finds them.
+
+* **Surface speed**: the tool's best-matching **Feeds & Speeds preset**
+  (the tool editor's Feeds & Speeds tab) for the Job's stock material and
+  the kind of operation, else the **stock material's** machinability for
+  the tool's material (HSS or Carbide; FreeCAD's Machining materials carry
+  both). The operation shows the value and where it came from. CAM's preset
+  op types are milling names: Rough, Face and Groove-Turn match
+  **adaptive** (roughing), Profile and Chamfer **profile** (finishing),
+  Groove and Partoff **slot**.
+* **Max spindle speed**: the Job's machine definition's spindle maximum.
+  Near the centre the spindle runs up to it, so on a mill used as a lathe
+  set it, or the operation's own, to what the workholding is safe at.
+
+Each has a **Set** switch to give a value by hand. Without a surface speed,
+a maximum spindle speed or the tool controller's rpm, the operation does
+not make a path, and says what to set.
+
+The turning tools carry a **Chipload**: with one cutting edge, the **feed
+per revolution**. With the tool controller's Feeds & Speeds button, the rpm
+is worked out at the stock's diameter (an insert has no cutting diameter)
+and the feed from it and the feed per revolution. New turning tools are
+**Carbide**; tools made before keep their saved material. Feeds stay in
+mm/min under constant surface speed for now (feed per revolution, G95, is
+to follow), so the feed per revolution falls as the spindle speeds up.
+
 ## Facing
 **Turn Face** faces from the stock's front down to Back (Z), at the Step
 over, radially from outside the stock in to Min Diameter. With nothing
@@ -467,6 +503,8 @@ program needs. Choose it in the Job or the machine setup.
   G17 in the machine's preamble becomes G18.
 * **G33 and G76** accepted, and G76's **Q** (infeed angle) kept; CAM's
   LinuxCNC post drops Q from G76, which makes it infeed radially.
+* **G96 and G97** accepted, G96's surface speed written in ft/min for an
+  inch program (G20), as G96 takes it there.
 * **No up-and-back between operations**: each operation ends at the safe
   position and the next starts from it; consecutive rapids along Z at the
   same safe X are reduced to the first and the last (the cutting moves are
