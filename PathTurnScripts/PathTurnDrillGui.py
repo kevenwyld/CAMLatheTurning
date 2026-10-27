@@ -35,6 +35,7 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
                 setattr(obj, prop, widget.isChecked())
 
     def setFields(self, obj):
+        self.refresh_checks(obj)
         self.form.cycle.blockSignals(True)
         self.form.cycle.clear()
         self.form.cycle.addItems(obj.getEnumerationsOfProperty("Cycle"))
@@ -63,6 +64,8 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
                                           "tick Back (Z) there and set where the hole ends.")
 
     def updateData(self, obj, prop):
+        if prop in ("LastRefusal", "IgnoredChecks"):
+            self.refresh_checks(obj)
         if prop in ("DrillReport", "Cycle") and hasattr(self, "form"):
             self.show_report(obj)
             self.show_fields(obj)

@@ -68,7 +68,7 @@ TURNING_OPS = ("TurnDrill", "TurnChamfer", "TurnGrooveTurn", "TurnFace", "TurnPr
 # a wrapper for freed memory, which it can then hand out for a new object at
 # the same address (seen as a widget of the wrong type, or a crash). Pages
 # drop these in cleanupPage, which CAM calls before the panel is destroyed.
-CACHED_WIDGETS = ("_limits", "_limit_buttons", "_cl_boxes", "_diagram", "_lead_box", "_gboxes", "_quantity_boxes", "_boxes",
+CACHED_WIDGETS = ("_checks", "_limits", "_limit_buttons", "_cl_boxes", "_diagram", "_lead_box", "_gboxes", "_quantity_boxes", "_boxes",
                   "rangeLabel")
 
 
@@ -762,6 +762,112 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
 
     def initPage(self, obj):
         self.updating = False  # pylint: disable=attribute-defined-outside-init
+        # the refusal / waived checks box: made only when there is something to show
+        self.refresh_checks(obj)
+
+    # --- refusals that can be waived (see liblathe.base.refusal) ------------
+    @staticmethod
+    def waivable_checks():
+        '''Every check that can be waived: name -> what the op does instead.'''
+        from liblathe.base.refusal import CHECKS
+        from PathTurnScripts.PathTurnBase import ObjectOp
+        return dict(CHECKS, **ObjectOp.CHECKS)
+
+    def add_checks_box(self, form):
+        '''At the top of the page: the check that refused the path, with
+        Generate anyway, and the checks waived, with Restore. Made only once
+        there is a refusal or a waived check (most pages never need it, and
+        every widget a page keeps is one more for PySide to trip on), then
+        hidden when there is nothing to show.'''
+        layout = form.layout() if form is not None else None
+        if layout is None or not hasattr(self.obj, "IgnoredChecks"):
+            return
+        tr = lambda text: FreeCAD.Qt.translate("PathTurn", text)
+        box = QtGui.QFrame()
+        box.setObjectName("turningChecks")
+        v = QtGui.QVBoxLayout(box)
+        v.setContentsMargins(0, 0, 0, 6)
+        refusal = QtGui.QLabel()
+        refusal.setWordWrap(True)
+        refusal.setStyleSheet("color: #d0453a;")
+        generate = QtGui.QPushButton(tr("Generate anyway"))
+        generate.setToolTip(tr("Waive this check for this operation: it warns instead of refusing, and makes the path"))
+        waived_label = QtGui.QLabel(tr("Checks waived for this operation (generated anyway):"))
+        waived = QtGui.QListWidget()
+        waived.setMaximumHeight(72)
+        waived.setWordWrap(True)
+        restore = QtGui.QPushButton(tr("Restore selected check"))
+        restore.setToolTip(tr("The operation checks this again, and refuses the path if it fails"))
+        for w in (refusal, generate, waived_label, waived, restore):
+            v.addWidget(w)
+        generate.clicked.connect(lambda _=False: self.generate_anyway())
+        restore.clicked.connect(lambda _=False: self.restore_check())
+        if isinstance(layout, QtGui.QGridLayout):
+            # the page is a grid with its fields in one widget: the box above it
+            item = layout.itemAtPosition(0, 0)
+            widget = item.widget() if item is not None else None
+            if widget is not None:
+                layout.removeWidget(widget)
+                layout.addWidget(box, 0, 0)
+                layout.addWidget(widget, 1, 0)
+            else:
+                layout.addWidget(box, layout.rowCount(), 0, 1, max(1, layout.columnCount()))
+        elif hasattr(layout, "insertWidget"):
+            layout.insertWidget(0, box)
+        else:
+            return
+        self._checks = {"box": box, "refusal": refusal, "generate": generate, "label": waived_label,
+                        "list": waived, "restore": restore}
+
+    def refresh_checks(self, obj):
+        if not hasattr(obj, "IgnoredChecks"):
+            return
+        waived = list(obj.IgnoredChecks or [])
+        last = list(getattr(obj, "LastRefusal", None) or [])
+        refused = len(last) == 2 and last[0] not in waived
+        c = getattr(self, "_checks", None)
+        if not c:
+            if not (refused or waived) or getattr(self, "form", None) is None:
+                return
+            self.add_checks_box(self.form)
+            c = getattr(self, "_checks", None)
+            if not c:
+                return
+        tr = lambda text: FreeCAD.Qt.translate("PathTurn", text)
+        c["refusal"].setText(tr("Refused ({}): {}").format(last[0], last[1]) if refused else "")
+        for w in (c["refusal"], c["generate"]):
+            w.setVisible(refused)
+        known = self.waivable_checks()
+        c["list"].clear()
+        for name in waived:
+            item = QtGui.QListWidgetItem("{}: {}".format(name, tr(known.get(name, "not a known check"))))
+            item.setData(QtCore.Qt.UserRole, name)
+            c["list"].addItem(item)
+        if waived:
+            c["list"].setCurrentRow(0)
+        for w in (c["label"], c["list"], c["restore"]):
+            w.setVisible(bool(waived))
+        c["box"].setVisible(refused or bool(waived))
+
+    def generate_anyway(self):
+        last = list(getattr(self.obj, "LastRefusal", None) or [])
+        if len(last) != 2:
+            return
+        waived = list(self.obj.IgnoredChecks or [])
+        if last[0] not in waived:
+            self.obj.IgnoredChecks = waived + [last[0]]
+        self.obj.recompute()
+        self.refresh_checks(self.obj)
+
+    def restore_check(self):
+        c = getattr(self, "_checks", None)
+        item = c["list"].currentItem() if c else None
+        if item is None:
+            return
+        name = item.data(QtCore.Qt.UserRole)
+        self.obj.IgnoredChecks = [n for n in (self.obj.IgnoredChecks or []) if n != name]
+        self.obj.recompute()
+        self.refresh_checks(self.obj)
 
     def getForm(self):
         '''getForm() ... return UI'''
@@ -780,6 +886,8 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
 
     def updateData(self, obj, prop):
         '''The worked-out (greyed) lead-in and step down follow the op as it recomputes.'''
+        if prop in ("LastRefusal", "IgnoredChecks"):
+            self.refresh_checks(obj)
         if prop in ("SurfaceSpeed", "SurfaceSpeedSource", "MaxSpindleSpeed") and hasattr(self, "form"):
             self._css_values(obj)
         if prop == "LeadIn" and hasattr(self, "form") and not getattr(obj, "SetLeadIn", True):
@@ -1026,6 +1134,7 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
             self.form.allowGrooving.setCheckState(QtCore.Qt.Unchecked)
 
         self.setOpFields(obj)
+        self.refresh_checks(obj)
 
     def getSignalsForUpdate(self, obj):
         '''getSignalsForUpdate(obj) ... return list of signals for updating obj'''

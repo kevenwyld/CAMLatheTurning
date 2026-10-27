@@ -197,6 +197,33 @@ and the feed from it and the feed per revolution. New turning tools are
 mm/min under constant surface speed for now (feed per revolution, G95, is
 to follow), so the feed per revolution falls as the spindle speeds up.
 
+## Refusals, and Generate anyway
+
+Some checks refuse a path the operation can make because they find it
+wrong: it would cut into the part, or the insert would hit it. Each can be
+waived for one operation: the op's page then shows the reason with a
+**Generate anyway** button, which waives that check and makes the path.
+Waived checks are listed on the page (each with **Restore**), are kept in
+the operation's **Ignored Checks** property (names can be added or removed
+there too), and are reported in the Report view at every recompute, so a
+program never goes past a check silently. Waiving one check leaves the
+others: the next one may then refuse.
+
+| Check | Refuses when | Waived, the op |
+|---|---|---|
+| `path-intersects-part` | Rough, Profile or Groove's path cuts into the model | uses the path as calculated |
+| `part-defeaturing-failed` | the outline the op can follow cuts into the part | uses that outline |
+| `face-cuts-part` | Turn Face would cut into the part in front of the plane | faces to the plane and diameter set |
+| `thread-front-clearance` | the part stands above the root right in front of the thread | uses the lead-in as set, or three pitches |
+| `thread-lead-in-too-long` | the lead-in set doesn't fit in front of the thread | uses the lead-in as set |
+| `thread-hits-behind-end` | the insert would hit the part behind the thread's end | ends the thread where it is set |
+| `groove-narrower-than-blade` | the Z range is narrower than the blade | cuts the blade's width |
+| `css-no-max-rpm` | constant surface speed has no maximum spindle speed | posts G96 without D (the machine's own limit) |
+
+Where there is no sensible path to make (a zero pitch or tool width, the
+wrong kind of tool, Min Diameter above Max, Front behind Back, constant
+surface speed with no surface speed), the operation still refuses.
+
 ## Facing
 **Turn Face** faces from the stock's front down to Back (Z), at the Step
 over, radially from outside the stock in to Min Diameter. With nothing

@@ -86,6 +86,7 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         self.refresh_thread_fields(obj)
 
     def setFields(self, obj):
+        self.refresh_checks(obj)
         self.refresh_thread_fields(obj)
 
     def refresh_thread_fields(self, obj):
@@ -119,6 +120,8 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         '''CAM calls this when a property is assigned: show what the op worked
         out (a new op has no diameter until it first recomputes, after the
         page opened). Only those fields, so values being edited are kept.'''
+        if prop in ("LastRefusal", "IgnoredChecks"):
+            self.refresh_checks(obj)
         if prop in self.RESULTS and hasattr(self, "form"):
             self.refresh_results(obj)
 

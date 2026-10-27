@@ -149,6 +149,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_peck_properties(obj)
         self.add_break_edges_properties(obj)
         self.add_css_properties(obj)
+        self.add_check_properties(obj)
         obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
                         translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
                                               "cutting angle allows"))
@@ -238,6 +239,32 @@ class ObjectOp(PathOp.ObjectOp):
             obj.addProperty("App::PropertyLength", "BreakEdgeSize", "Turn Path", translate("TurnPath", tip))
             obj.BreakEdgeSize = FreeCAD.Units.Quantity(0.2, FreeCAD.Units.Length)
 
+    def add_check_properties(self, obj):
+        '''The checks waived for this operation (its refusals become warnings:
+        see liblathe.base.refusal), and the last refusal, for the panel.'''
+        if not hasattr(obj, "IgnoredChecks"):
+            obj.addProperty("App::PropertyStringList", "IgnoredChecks", "Turn Path", translate("TurnPath",
+                "Checks waived for this operation: instead of refusing the path, it warns and generates it anyway. "
+                "Use the Generate anyway button on the operation's page, or add a check's name here; remove it to "
+                "restore the check"))
+        if not hasattr(obj, "LastRefusal"):
+            obj.addProperty("App::PropertyStringList", "LastRefusal", "Turn Path", translate("TurnPath",
+                "The check that refused the path at the last recompute, and why (empty: none)"))
+        obj.setEditorMode("LastRefusal", 2)
+
+    # the addon's own waivable checks, beside liblathe's (liblathe.base.refusal.CHECKS):
+    # name -> what the operation does when it is waived
+    CHECKS = {"css-no-max-rpm": "posts G96 without D (the machine's own limit)"}
+
+    def refuse(self, obj, check, message):
+        '''The addon's own waivable refusals, as liblathe's: raise a Refusal
+        naming the check, unless it is waived: then warn and return.'''
+        from liblathe.base.refusal import Refusal
+        if check not in (getattr(obj, "IgnoredChecks", None) or []):
+            raise Refusal(check, message)
+        FreeCAD.Console.PrintWarning("{}: {}\n".format(obj.Label, translate("TurnPath",
+            "Generated anyway (check {} waived): {}").format(check, message)))
+
     CSS_PROPERTIES = (
         ("App::PropertyBool", "ConstantSurfaceSpeed",
          "Constant surface speed (G96): vary the spindle speed with the cutting diameter to keep the surface speed, "
@@ -302,7 +329,7 @@ class ObjectOp(PathOp.ObjectOp):
                 "Feeds & Speeds tab, give the Job's stock a material (Job > Stock), or set Surface speed").format(
                     why or translate("TurnPath", "it is set to 0")))
         if obj.MaxSpindleSpeed <= 0:
-            raise RuntimeError(translate("TurnPath",
+            self.refuse(obj, "css-no-max-rpm", translate("TurnPath",
                 "Constant surface speed needs a maximum spindle speed, or the spindle runs away near the centre: set "
                 "the spindle's maximum rpm in the Job's machine definition, or set Max spindle speed"))
         rpm = float(tc.SpindleSpeed or 0.0)
@@ -317,7 +344,10 @@ class ObjectOp(PathOp.ObjectOp):
         first = 0
         while first < len(self.commandlist) and self.commandlist[first].Name.startswith("("):
             first += 1
-        self.commandlist.insert(first, Path.Command("G96", {"S": obj.SurfaceSpeed, "D": obj.MaxSpindleSpeed}))
+        g96 = {"S": obj.SurfaceSpeed}
+        if obj.MaxSpindleSpeed > 0:          # waived without one: G96 without D, the machine's own limit
+            g96["D"] = obj.MaxSpindleSpeed
+        self.commandlist.insert(first, Path.Command("G96", g96))
         self.commandlist.append(Path.Command("G97", {"S": rpm}))
 
     def report_broken_edges(self, obj, op):
@@ -417,6 +447,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_peck_properties(obj)
         self.add_break_edges_properties(obj)
         self.add_css_properties(obj)
+        self.add_check_properties(obj)
         for prop, tip in (("StockToLeaveX", STOCK_X_TIP), ("StockToLeaveZ", STOCK_Z_TIP)):
             if obj.getTypeIdOfProperty(prop) == "App::PropertyLength":
                 value = getattr(obj, prop).Value
@@ -463,6 +494,9 @@ class ObjectOp(PathOp.ObjectOp):
     def opExecute(self, obj):
         '''opExecute(obj) ... processes all Base features
         '''
+        # a refusal from an earlier recompute no longer applies
+        if getattr(obj, "LastRefusal", None):
+            obj.LastRefusal = []
         PathLog.track()
         self.tool = None
         # worked out unless set by hand: Max Diameter the stock's, Min
@@ -509,15 +543,23 @@ class ObjectOp(PathOp.ObjectOp):
             self.mirror_r = None
             self.part_outline = self.get_part_outline(self.turned_model(obj))
         self.show_clearance_values(obj)
-        self.generate_gcode(obj)
-        self.warn_if_nothing_cut(obj)
-        self.apply_css(obj)
+        from liblathe.base.refusal import Refusal
+        try:
+            self.generate_gcode(obj)
+            self.warn_if_nothing_cut(obj)
+            self.apply_css(obj)
+        except Refusal as refusal:
+            # for the panel's Generate anyway (and kept with the document)
+            if hasattr(obj, "LastRefusal") and list(obj.LastRefusal) != [refusal.check, str(refusal)]:
+                obj.LastRefusal = [refusal.check, str(refusal)]
+            raise
 
     def getProps(self, obj):
         parentJob = PathUtils.findParentJob(obj)
 
         props = {}
         props['min_dia'] = self.minDia
+        props['ignored_checks'] = tuple(getattr(obj, "IgnoredChecks", None) or ())
         props['extra_dia'] = self.maxDia - self.stock.Shape.BoundBox.XLength
         props['start_offset'] = self.startOffset
         props['end_offset'] = self.endOffset
