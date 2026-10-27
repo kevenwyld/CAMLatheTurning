@@ -11,6 +11,11 @@ CAM's LinuxCNC post, with what a lathe program needs:
 - G33 (spindle-synchronized motion) and G76 (threading cycle) accepted, and
   G76's Q word (the infeed angle) kept: CAM's LinuxCNC post writes Q only
   for G10, G64, G73 and G83, which made a G76 infeed radially.
+- G76: J (first pass depth) worked out from K as printed, with six
+  decimals, so LinuxCNC's pass loop makes exactly the passes the path
+  meant (a J rounded down added one a micron short of K); P (pitch)
+  converted for G20, R (degression) not.
+- G33's K and G76's P (pitches) with six decimals.
 - G96 / G97 (constant surface speed) accepted, G96's S (the surface speed,
   m/min in the path) written in ft/min for an inch program (G20), as G96
   takes it there, and its D (the maximum spindle speed) in rpm.
@@ -22,6 +27,7 @@ CAM's LinuxCNC post, with what a lathe program needs:
 Found by CAM through the <postprocessor> entry in the addon's package.xml.
 """
 
+import math
 import re
 
 import FreeCAD
@@ -59,6 +65,65 @@ class Linuxcnc_Lathe(Linuxcnc):
                 return cam_q(values, command, param, value, parameters, location)
 
             functions["Q"] = q_parameter
+        # Threading words that CAM's generic formatting gets wrong for G33/G76
+        if isinstance(functions, dict):
+            def unit(values):
+                return 25.4 if values.get("UNITS") == "G20" else 1.0
+
+            def fixed(number, places):
+                return format(number, ".%df" % places).rstrip("0").rstrip(".")
+
+            def wrap(word, handler):
+                cam = functions.get(word)
+
+                def parameter(values, command, param, value, parameters, location):
+                    done = handler(values, command, value, parameters, location, cam)
+                    if done is not None:
+                        return done
+                    if cam is not None:
+                        return cam(values, command, param, value, parameters, location)
+                    return format(float(value), ".%df" % int(values.get("AXIS_PRECISION", 3)))
+
+                functions[word] = parameter
+
+            # a pitch (G33's K, G76's P) is a length per turn: converted for G20,
+            # and with more decimals than a position, its error adding up over
+            # every turn of the thread
+            def g33_pitch(values, command, value, parameters, location, cam):
+                return fixed(float(value) / unit(values), 6) if command == "G33" else None
+
+            def g76_pitch(values, command, value, parameters, location, cam):
+                return fixed(float(value) / unit(values), 6) if command == "G76" else None
+
+            def g76_degression(values, command, value, parameters, location, cam):
+                return fixed(float(value), 4) if command == "G76" else None
+
+            wrap("K", g33_pitch)
+            wrap("P", g76_pitch)
+            # G76's R is the degression: a ratio, not a length (not converted)
+            wrap("R", g76_degression)
+
+            # G76's J (the first pass's depth): LinuxCNC cuts at J*k^(1/R) for
+            # k = 1, 2, ... while that is below K, then once at K. With J and K
+            # printed rounded, the pass count could change (J rounded down added
+            # a pass a micron short of K; rounded up at a coarse precision, or
+            # with K rounded down, it could lose one). So J is worked out from K
+            # as printed: the n-th pass (n the pass the path meant to reach K
+            # with) reaches it and the one before stays short, J printed with
+            # six decimals and rounded up.
+            def first_depth(values, command, value, parameters, location, cam_j):
+                if command != "G76" or "K" not in parameters:
+                    return None
+                j, k = float(value), float(parameters["K"])
+                r = max(float(parameters.get("R", 1.0)) or 1.0, 1.0)
+                if j <= 0 or k <= 0:
+                    return None
+                n = max(1, int(round((k / j) ** r)))
+                k_scale = 10 ** int(values.get("AXIS_PRECISION", 3))
+                k_printed = round(k / unit(values) * k_scale) / k_scale
+                return fixed(math.ceil(k_printed / n ** (1.0 / r) * 1e6 - 1e-6) / 1e6, 6)
+
+            wrap("J", first_depth)
         # G96's S is a surface speed: m/min in the path, ft/min for G20
         if isinstance(functions, dict) and "S" in functions:
             cam_s = functions["S"]
