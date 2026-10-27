@@ -41,6 +41,58 @@ LATHE_MODES = "G18 G8"
 EXTRA_COMMANDS = ("G7", "G8", "G18", "G33", "G76", "G96", "G97")
 
 
+# words this post formats itself (for the commands that need it)
+LATHE_WORDS = ("E", "J", "K", "P", "Q", "R", "S")
+
+
+def with_lathe_words(order):
+    """CAM's parameter order with E (G76's taper length) added after L: a
+    word not in the order is not written."""
+    order = order or "XYZABCUVWFSIJKTQRPDHL"
+    return order if "E" in order else order + "E"
+
+
+def _fixed(number, places):
+    return format(number, ".%df" % places).rstrip("0").rstrip(".")
+
+
+def lathe_word(word, value, command, params, imperial, axis_places):
+    """The text of a word (without its letter) this post writes its own way,
+    or None for CAM's formatting:
+
+    - G76: E (taper length) and J, K, I as lengths; J worked out from K as
+      printed so LinuxCNC's pass loop (a pass at J*k^(1/R) while below K,
+      then one at K) makes exactly the passes the path meant; P (pitch) a
+      length with six decimals; R (degression) and Q (infeed angle) not
+      converted.
+    - G33: K (pitch) a length with six decimals.
+    - G96: S (surface speed) m/min, ft/min for an inch program.
+    """
+    unit = 25.4 if imperial else 1.0
+    value = float(value)
+    if command == "G76":
+        if word in ("Q", "R"):
+            return _fixed(value, 4)
+        if word == "P":
+            return _fixed(value / unit, 6)
+        if word == "E":
+            return format(value / unit, ".%df" % axis_places)
+        if word == "J" and "K" in params:
+            k = float(params["K"])
+            r = max(float(params.get("R", 1.0)) or 1.0, 1.0)
+            if value > 0 and k > 0:
+                n = max(1, int(round((k / value) ** r)))
+                scale = 10 ** axis_places
+                k_printed = round(k / unit * scale) / scale
+                return _fixed(math.ceil(k_printed / n ** (1.0 / r) * 1e6 - 1e-6) / 1e6, 6)
+        return None
+    if command == "G33" and word == "K":
+        return _fixed(value / unit, 6)
+    if command == "G96" and word == "S":
+        return _fixed(value / (0.3048 if imperial else 1.0), 1)
+    return None
+
+
 class Linuxcnc_Lathe(Linuxcnc):
     def __init__(self, job, tooltip=None, tooltipargs=[], units="Metric") -> None:
         super().__init__(job=job, tooltip=tooltip or translate("CAM", "LinuxCNC lathe post processor"),
@@ -54,87 +106,52 @@ class Linuxcnc_Lathe(Linuxcnc):
         if isinstance(supported, str) and supported:
             names = supported.split("\n")
             values["SUPPORTED_COMMANDS"] = "\n".join(names + [c for c in EXTRA_COMMANDS if c not in names])
-        # keep G76's Q (the infeed angle, degrees)
+        # the words the lathe needs, in CAM's order: E (G76's taper length) is
+        # missing from it, and CAM drops any word not in the order
+        values["PARAMETER_ORDER"] = with_lathe_words(values.get("PARAMETER_ORDER"))
+        # the threading and CSS words, on the post's older path (UtilsParse);
+        # the machine-based path formats in format_parameter() below
         functions = values.get("PARAMETER_FUNCTIONS")
-        if isinstance(functions, dict) and "Q" in functions:
-            cam_q = functions["Q"]
-
-            def q_parameter(values, command, param, value, parameters, location):
-                if command == "G76":
-                    return ("%.4f" % float(value)).rstrip("0").rstrip(".")
-                return cam_q(values, command, param, value, parameters, location)
-
-            functions["Q"] = q_parameter
-        # Threading words that CAM's generic formatting gets wrong for G33/G76
         if isinstance(functions, dict):
-            def unit(values):
-                return 25.4 if values.get("UNITS") == "G20" else 1.0
-
-            def fixed(number, places):
-                return format(number, ".%df" % places).rstrip("0").rstrip(".")
-
-            def wrap(word, handler):
+            for word in LATHE_WORDS:
                 cam = functions.get(word)
 
-                def parameter(values, command, param, value, parameters, location):
-                    done = handler(values, command, value, parameters, location, cam)
-                    if done is not None:
-                        return done
+                def parameter(values, command, param, value, parameters, location, cam=cam):
+                    text = lathe_word(param, value, command, parameters,
+                                      values.get("UNITS") == "G20", int(values.get("AXIS_PRECISION", 3)))
+                    if text is not None:
+                        return text
                     if cam is not None:
                         return cam(values, command, param, value, parameters, location)
                     return format(float(value), ".%df" % int(values.get("AXIS_PRECISION", 3)))
 
                 functions[word] = parameter
 
-            # a pitch (G33's K, G76's P) is a length per turn: converted for G20,
-            # and with more decimals than a position, its error adding up over
-            # every turn of the thread
-            def g33_pitch(values, command, value, parameters, location, cam):
-                return fixed(float(value) / unit(values), 6) if command == "G33" else None
+    # --- the machine-based path (CAM's Processor) --------------------------
+    def _imperial(self):
+        units = self.values.get("OUTPUT_UNITS")
+        return self.values.get("UNITS") == "G20" or getattr(units, "name", str(units)).upper().endswith("IMPERIAL")
 
-            def g76_pitch(values, command, value, parameters, location, cam):
-                return fixed(float(value) / unit(values), 6) if command == "G76" else None
+    def _convert_move(self, command):
+        # the machine's configuration sets the parameter order after this
+        # post's own values: E (G76's taper length) put back where it is read
+        self.values["PARAMETER_ORDER"] = with_lathe_words(self.values.get("PARAMETER_ORDER"))
+        # the command's other words, for J (worked out from K and R)
+        self._lathe_command = command
+        try:
+            return super()._convert_move(command)
+        finally:
+            self._lathe_command = None
 
-            def g76_degression(values, command, value, parameters, location, cam):
-                return fixed(float(value), 4) if command == "G76" else None
-
-            wrap("K", g33_pitch)
-            wrap("P", g76_pitch)
-            # G76's R is the degression: a ratio, not a length (not converted)
-            wrap("R", g76_degression)
-
-            # G76's J (the first pass's depth): LinuxCNC cuts at J*k^(1/R) for
-            # k = 1, 2, ... while that is below K, then once at K. With J and K
-            # printed rounded, the pass count could change (J rounded down added
-            # a pass a micron short of K; rounded up at a coarse precision, or
-            # with K rounded down, it could lose one). So J is worked out from K
-            # as printed: the n-th pass (n the pass the path meant to reach K
-            # with) reaches it and the one before stays short, J printed with
-            # six decimals and rounded up.
-            def first_depth(values, command, value, parameters, location, cam_j):
-                if command != "G76" or "K" not in parameters:
-                    return None
-                j, k = float(value), float(parameters["K"])
-                r = max(float(parameters.get("R", 1.0)) or 1.0, 1.0)
-                if j <= 0 or k <= 0:
-                    return None
-                n = max(1, int(round((k / j) ** r)))
-                k_scale = 10 ** int(values.get("AXIS_PRECISION", 3))
-                k_printed = round(k / unit(values) * k_scale) / k_scale
-                return fixed(math.ceil(k_printed / n ** (1.0 / r) * 1e6 - 1e-6) / 1e6, 6)
-
-            wrap("J", first_depth)
-        # G96's S is a surface speed: m/min in the path, ft/min for G20
-        if isinstance(functions, dict) and "S" in functions:
-            cam_s = functions["S"]
-
-            def s_parameter(values, command, param, value, parameters, location):
-                if command == "G96":
-                    speed = float(value) / (0.3048 if values.get("UNITS") == "G20" else 1.0)
-                    return ("%.1f" % speed).rstrip("0").rstrip(".")
-                return cam_s(values, command, param, value, parameters, location)
-
-            functions["S"] = s_parameter
+    def format_parameter(self, param_name, value, command_name=None):
+        if param_name in LATHE_WORDS and command_name:
+            command = getattr(self, "_lathe_command", None)
+            params = dict(command.Parameters) if command is not None else {}
+            text = lathe_word(param_name, value, command_name, params, self._imperial(),
+                              int(self.values.get("AXIS_PRECISION", 3)))
+            if text is not None:
+                return text
+        return super().format_parameter(param_name, value, command_name)
 
     def _lathe_preamble(self):
         """The lathe's plane and radius mode at the start of the preamble; a
@@ -149,6 +166,8 @@ class Linuxcnc_Lathe(Linuxcnc):
     # the sections (UtilsExport) or the postables' prefix
     def process_postables(self):
         self._lathe_preamble()
+        # a machine's (or a job's) Generated Parameter Order may lack E
+        self.values["PARAMETER_ORDER"] = with_lathe_words(self.values.get("PARAMETER_ORDER"))
         return super().process_postables()
 
     def _expand_prefix(self, postables):
