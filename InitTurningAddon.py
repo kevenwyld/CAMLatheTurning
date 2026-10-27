@@ -42,6 +42,7 @@ from PathTurnScripts import PathTurnProfileGui  # noqa: F401
 from PathTurnScripts import PathTurnRoughGui  # noqa: F401
 from PathTurnScripts import PathTurnToolHelperGui  # noqa: F401
 from PathTurnScripts import TurnAssets  # noqa: F401
+from PathTurnScripts import TurnSpindleAxis  # noqa: F401
 
 __dir__ = os.path.dirname(__file__)
 iconPath = os.path.join(__dir__, 'Gui/Resources/Icons')
@@ -52,7 +53,7 @@ FreeCADGui.addIconPath(iconPath)
 
 # Turning commands, in menu order
 COMMANDS = ['CAM_TurnFace', 'CAM_TurnDrill', 'CAM_TurnRough', 'CAM_TurnProfile', 'CAM_TurnChamfer', 'CAM_TurnGroove', 'CAM_TurnGrooveTurn', 'CAM_TurnThread', 'CAM_TurnPartoff',
-            'CAM_TurnToolHelper',
+            'CAM_TurnSpindleAxis', 'CAM_TurnToolHelper',
             'CAM_TurnInstallTools']
 
 # Existing CAM command to insert after. It only exists in the CAM workbench's

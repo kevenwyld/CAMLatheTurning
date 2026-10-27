@@ -476,7 +476,17 @@ Rough and Profile only cut inside the operation's limits:
   outside the stock instead of along Z (this assumes the tool can plunge).
 * **Models.** All the Job's models are turned as one (their union), e.g. a
   shaft and a separate collar body, or two parts end to end on one bar. A
-  model off the spindle axis gets a warning.
+  model off the spindle axis is reported as an error by every
+  operation (by however little), naming **Turning > Put on Spindle Axis**.
+  That command moves the Job's models and stock in X and Y (never Z) so
+  they are exactly round about the axis: a model by its turned diameter's
+  circle, the stock by its exact bounding box. It is needed because CAM's
+  Job tools place things by bounding boxes (a new cylinder stock on the
+  model's, Center in XY in the stock's, Set Origin on a face in the
+  face's), and once a shape is drawn FreeCAD takes its bounding box from
+  the display mesh, a few microns lopsided for a revolved part. Stock made
+  from the model's box (Create from base) works its position out again on
+  every recompute and cannot be moved: use cylinder stock for turning.
 * **Z Range selection.** Selecting faces, edges or whole objects (for
   example a sketch or Draft wire drawn to mark the range) on the operation's
   Z Range page sets Start and Final Depth to the Z range they span.

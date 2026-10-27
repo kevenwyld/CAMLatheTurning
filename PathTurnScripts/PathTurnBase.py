@@ -40,6 +40,7 @@ from liblathe.base.segment import Segment
 from liblathe.base.boundbox import BoundBox
 import PathTurnScripts.PathTurnAddonHelpers as PathTurnAddonHelpers
 import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
+import PathTurnScripts.TurnSpindleAxis as TurnSpindleAxis
 from liblathe.base.tool import Tool
 
 __title__ = "Path Turn Base Operation"
@@ -502,6 +503,8 @@ class ObjectOp(PathOp.ObjectOp):
         # a refusal from an earlier recompute no longer applies
         if getattr(obj, "LastRefusal", None):
             obj.LastRefusal = []
+        # the Job's models and stock must be round about the spindle axis
+        TurnSpindleAxis.report_off_axis(obj, PathUtils.findParentJob(obj))
         PathLog.track()
         self.tool = None
         # worked out unless set by hand: Max Diameter the stock's, Min
@@ -711,14 +714,6 @@ class ObjectOp(PathOp.ObjectOp):
         shapes = [m.Shape for m in self.model if getattr(m, "Shape", None) is not None and not m.Shape.isNull()]
         if not shapes:
             return self.model[0].Shape
-        label = obj.Label if obj is not None else "Turning"
-        for m in self.model:
-            bb = getattr(m, "Shape", None) and m.Shape.BoundBox
-            if bb and (abs(bb.Center.x) > AXIS_TOLERANCE or abs(bb.Center.y) > AXIS_TOLERANCE):
-                FreeCAD.Console.PrintWarning(translate('PathTurn',
-                    "{}: the model {} is off the spindle axis ({:.3f}, {:.3f}): a turned part is round about "
-                    "the axis. Check its placement (e.g. Set Origin with a circular edge)\n").format(
-                        label, m.Label, bb.Center.x, bb.Center.y))
         if len(shapes) == 1:
             return shapes[0]
         fused = shapes[0].fuse(shapes[1:])
