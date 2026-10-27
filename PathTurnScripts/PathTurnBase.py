@@ -82,6 +82,11 @@ def is_grooving_tool(tool):
 
 SIDES = ["External", "Internal"]
 
+# how far off the spindle axis a model (or a circle on it) may be and still be
+# taken as round about it: a part placed with CAM's Set Origin can be a few
+# microns off (Set Origin uses the face's loose bounding box)
+AXIS_TOLERANCE = 0.01
+
 # Min / Max Diameter are worked out unless set by hand: (switch, value, tooltip)
 DIAMETER_SWITCHES = (
     ("SetMinDiameter", "MinDiameter",
@@ -709,7 +714,7 @@ class ObjectOp(PathOp.ObjectOp):
         label = obj.Label if obj is not None else "Turning"
         for m in self.model:
             bb = getattr(m, "Shape", None) and m.Shape.BoundBox
-            if bb and (abs(bb.Center.x) > 0.01 or abs(bb.Center.y) > 0.01):
+            if bb and (abs(bb.Center.x) > AXIS_TOLERANCE or abs(bb.Center.y) > AXIS_TOLERANCE):
                 FreeCAD.Console.PrintWarning(translate('PathTurn',
                     "{}: the model {} is off the spindle axis ({:.3f}, {:.3f}): a turned part is round about "
                     "the axis. Check its placement (e.g. Set Origin with a circular edge)\n").format(
@@ -828,7 +833,9 @@ class ObjectOp(PathOp.ObjectOp):
         message = translate('PathTurn', "{}: no path: nothing of the part to cut in the Z range and between the diameters").format(obj.Label)
         part_dia = 2 * max((-seg.start.X for seg in getattr(self, "part_outline", None) or []), default=0.0)
         max_dia = getattr(obj, "MaxDiameter", None)
-        if max_dia is not None and max_dia.Value > 0 and part_dia > max_dia.Value + 1e-6:
+        # (not for a part only a little off the axis: its outline's side is up to
+        # twice that much bigger)
+        if max_dia is not None and max_dia.Value > 0 and part_dia > max_dia.Value + 2 * AXIS_TOLERANCE:
             message += translate('PathTurn',
                 ". Max Diameter ({:.3f}) is below the part ({:.3f}): it is where the material starts (a surface already "
                 "turned smaller). To turn to a diameter, tick Min Diameter and set it; to take a fixed amount off, use "

@@ -79,9 +79,15 @@ class ObjectTurnChamfer(PathTurnBase.ObjectOp):
                     continue
                 edge = base.Shape.getElement(sub)
                 curve = edge.Curve
+                # round the spindle axis, within the tolerance the ops use for
+                # the model (a part a few microns off the axis is still turned)
                 if (isinstance(curve, Part.Circle) and abs(abs(curve.Axis.z) - 1) < 1e-6
-                        and math.hypot(curve.Center.x, curve.Center.y) < 1e-3):
-                    found.append((curve.Radius, curve.Center.z))
+                        and math.hypot(curve.Center.x, curve.Center.y) < PathTurnBase.AXIS_TOLERANCE):
+                    # the corner where the part's outline has it: the outline is
+                    # the section on the -X side, which a circle a little off the
+                    # axis crosses at sqrt(R^2 - cy^2) - cx, not at its radius
+                    c = curve.Center
+                    found.append((math.sqrt(max(curve.Radius ** 2 - c.y ** 2, 0.0)) - c.x, c.z))
                 else:
                     other += 1
         return found, other
