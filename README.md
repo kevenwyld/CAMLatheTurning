@@ -82,7 +82,9 @@ an internal thread (Type can also be set by hand).
   their programs do not change.
 * **Thread length** (the whole selected diameter), **Passes** (the
   recommended number for the pitch), **First pass depth** (from the passes
-  and the degression) and **Lead-in** (three pitches, so Z is at speed) are
+  and the degression) and **Lead-in** (three pitches, so Z is at speed;
+  shorter, with a note, where the part in front leaves less room, e.g. a
+  thread behind a neck, where the insert drops in in the neck) are
   worked out by the op and shown greyed out; tick one to set it by hand,
   starting from the value shown. Passes and First pass depth are
   alternatives: a first pass and the degression decide the number of

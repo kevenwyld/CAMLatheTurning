@@ -37,7 +37,7 @@ AUTO_VALUES = (
     ("SetThreadLength", "ThreadLength", "Set the thread length by hand; otherwise the whole selected diameter"),
     ("SetPasses", "Passes", "Set the number of infeed passes by hand; otherwise the recommended number for the pitch"),
     ("SetFirstPassDepth", "FirstPassDepth", "Set the first pass depth by hand; otherwise from the passes and the degression"),
-    ("SetLeadIn", "LeadIn", "Set the lead-in by hand; otherwise three pitches"),
+    ("SetLeadIn", "LeadIn", "Set the lead-in by hand; otherwise three pitches, or less where the part in front leaves less room (a neck)"),
     ("SetRunOut", "RunOut", "Set the run-out by hand (0: stop dead, into a relief groove); otherwise one pitch"),
 )
 RUN_OUT_TIP = ("Run-out: over this last length of the thread (along Z) each pass tapers out to the crest, still "
@@ -150,7 +150,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             translate("TurnPath", "How the insert feeds in: along the flank (29.5 or 30 degrees) or straight in"))
         add("App::PropertyInteger", "SpringPasses", group, translate("TurnPath", "Passes repeated at full depth"))
         add("App::PropertyLength", "LeadIn", group,
-            translate("TurnPath", "Distance in front of the thread each pass starts at, for Z to reach speed (three pitches unless Set Lead In)"))
+            translate("TurnPath", "Distance in front of the thread each pass starts at, for Z to reach speed (three pitches unless Set Lead In, or less where the part in front of the thread leaves less room, e.g. a thread behind a neck)"))
         add("App::PropertyLength", "ThreadLength", group,
             translate("TurnPath", "Length of the thread from the front of the selected diameter (its whole length unless Set Thread Length)"))
         add("App::PropertyString", "PassSchedule", group,
