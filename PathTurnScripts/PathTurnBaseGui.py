@@ -68,7 +68,7 @@ TURNING_OPS = ("TurnDrill", "TurnChamfer", "TurnGrooveTurn", "TurnFace", "TurnPr
 # a wrapper for freed memory, which it can then hand out for a new object at
 # the same address (seen as a widget of the wrong type, or a crash). Pages
 # drop these in cleanupPage, which CAM calls before the panel is destroyed.
-CACHED_WIDGETS = ("_limits", "_cl_boxes", "_diagram", "_lead_box", "_gboxes", "_quantity_boxes", "_boxes",
+CACHED_WIDGETS = ("_limits", "_limit_buttons", "_cl_boxes", "_diagram", "_lead_box", "_gboxes", "_quantity_boxes", "_boxes",
                   "rangeLabel")
 
 
@@ -79,14 +79,16 @@ def release_widgets(page):
 
 
 class TurningGate:
-    """Allow faces, edges and whole objects with a shape; not vertices."""
+    """Allow faces, edges, vertices and whole objects with a shape (a vertex
+    for the arrow buttons: its Z on the Z Range page, its diameter on the
+    Diameters page)."""
 
     def allow(self, doc, obj, sub):
         if not hasattr(obj, "Shape"):
             return False
         if not sub:
             return True
-        return sub.startswith("Face") or sub.startswith("Edge")
+        return sub.startswith("Face") or sub.startswith("Edge") or sub.startswith("Vertex")
 
 
 def turning_select():
@@ -180,6 +182,13 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
          "back), shown greyed out. Ticked: this value, whatever is selected"),
     )
 
+    ARROW_TIPS = {
+        "StartDepth": "Transfer the Z of the selected feature as the front: a vertex, a flat face or circular edge, "
+                      "or the front end of a cylinder, cone or object",
+        "FinalDepth": "Transfer the Z of the selected feature as the back: a vertex, a flat face or circular edge, "
+                      "or the back end of a cylinder, cone or object",
+    }
+
     def _limits_shown(self):
         '''The ends an op uses: none for Turn Thread (its own thread length),
         only the back for Turn Partoff (where it parts).'''
@@ -199,6 +208,7 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         grid.setContentsMargins(0, 4, 0, 0)
         loader = FreeCADGui.UiLoader()
         self._limits = {}
+        self._limit_buttons = {}
         for row, (prop, text, tip) in enumerate(l for l in self.LIMITS if l[0] in shown):
             check = QtGui.QCheckBox(FreeCAD.Qt.translate("PathTurn", text))
             check.setToolTip(FreeCAD.Qt.translate("PathTurn", tip))
@@ -206,12 +216,21 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
             spin.setToolTip(check.toolTip())
             spin.setProperty("minimum", -1.0e6)
             spin.setProperty("maximum", 1.0e6)
+            # the arrow, as on CAM's Depths page and the Diameters page:
+            # the selected feature's Z into the field (and ticked)
+            arrow = QtGui.QToolButton()
+            arrow.setIcon(QtGui.QIcon(":/icons/button_left.svg"))
+            arrow.setToolTip(FreeCAD.Qt.translate("PathTurn", self.ARROW_TIPS[prop]))
+            arrow.setEnabled(False)
             grid.addWidget(check, row, 0)
             grid.addWidget(spin, row, 1)
+            grid.addWidget(arrow, row, 2)
             bound = PathGuiUtil.QuantitySpinBox(spin, self.obj, prop)
             check.toggled.connect(lambda on, p=prop: self.set_limit(p, on))
             spin.editingFinished.connect(lambda p=prop: self.limit_edited(p))
+            arrow.clicked.connect(lambda _=False, p=prop: self.limit_from_selection(p))
             self._limits[prop] = (check, spin, bound)
+            self._limit_buttons[prop] = arrow
         self.refresh_limits()
         return box
 
@@ -233,6 +252,29 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
         # the change is the op's now: the panel's Apply (and OK) recompute it
         self.setDirty()
         self.refresh_limits()
+
+    @staticmethod
+    def _end(prop):
+        return "front" if prop == "StartDepth" else "back"
+
+    def limit_from_selection(self, prop):
+        '''The selected feature's Z as this end of the range: a value taken
+        from the model is set by hand, so the end is ticked.'''
+        z = selection_z(FreeCADGui.Selection.getSelectionEx(), self._end(prop))
+        if z is None or prop not in (getattr(self, "_limits", None) or {}):
+            return
+        check, spin, bound = self._limits[prop]
+        if not self._is_set(prop):
+            self.set_limit(prop, True)
+        bound.updateWidget(FreeCAD.Units.Quantity(z, FreeCAD.Units.Length))
+        if bound.updateProperty():
+            self.setDirty()
+        self.refresh_limits()
+
+    def updateSelection(self, obj, sel):
+        super().updateSelection(obj, sel)
+        for prop, arrow in (getattr(self, "_limit_buttons", None) or {}).items():
+            arrow.setEnabled(selection_z(sel, self._end(prop)) is not None)
 
     def limit_edited(self, prop):
         check, spin, bound = self._limits[prop]
@@ -353,6 +395,28 @@ class SvgDiagram(QtGui.QLabel):
         painter.end()
         pixmap.setDevicePixelRatio(ratio)
         self.setPixmap(pixmap)
+
+
+def selection_z(selection, end):
+    """
+    The Z named by a selection (one feature, or one whole object): a
+    vertex's Z; otherwise the feature's front for the front of the Z range
+    (end == "front") and its back for the back. A flat face square to the
+    axis or a circular edge has one Z; a cylindrical or conical face, or a
+    whole object, gives its front or back end. None for anything else.
+    """
+    if len(selection) != 1:
+        return None
+    subs = selection[0].SubObjects
+    if len(subs) > 1:
+        return None
+    shape = subs[0] if subs else getattr(selection[0].Object, "Shape", None)
+    if shape is None or shape.isNull():
+        return None
+    if shape.ShapeType == "Vertex":
+        return shape.Point.z
+    bb = shape.BoundBox
+    return bb.ZMax if end == "front" else bb.ZMin
 
 
 def selection_diameter(selection, which):

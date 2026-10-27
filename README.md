@@ -457,8 +457,12 @@ Rough and Profile only cut inside the operation's limits:
   uses, greyed: the selection's, or without one the op's own (the stock's
   front, the part's back). Tick either end to set it by hand, whatever is
   selected (e.g. "from the selection's front, but stop at Z -15"); untick
-  to go back. Turn Partoff has only Back (where it parts off); Turn Thread
-  and Turn Drill have their own length and depth instead.
+  to go back. The arrow beside each takes the Z of the feature selected
+  in the 3D view (without adding it to the selection list) and ticks the
+  end: a vertex's Z, a flat face's or circular edge's, or the front (for
+  Front) or back (for Back) of a cylinder, cone or whole object. Turn
+  Partoff has only Back (where it parts off); Turn Thread and Turn Drill
+  have their own length and depth instead.
 * **Min Diameter**, when set (see Diameters): Rough, Profile and Turn
   Groove turn to it across the Z range; no op cuts below it.
 * **Max Diameter.** The outer diameter cutting starts from (default: the
