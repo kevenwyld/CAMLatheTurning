@@ -38,6 +38,9 @@ from Path.Post.scripts.linuxcnc_post import Linuxcnc
 translate = FreeCAD.Qt.translate
 
 LATHE_MODES = "G18 G8"
+# a machine post (CAM's machine editor lists only these; older CAM ignores it)
+POST_TYPE = "machine"
+
 EXTRA_COMMANDS = ("G7", "G8", "G18", "G33", "G76", "G96", "G97")
 
 

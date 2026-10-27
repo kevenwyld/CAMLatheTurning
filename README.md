@@ -538,7 +538,10 @@ and TipAngle less than 90 degrees.
 ## Post processor
 The addon brings a **linuxcnc_lathe** post (in `Posts/`, found by CAM
 through the addon's package.xml): CAM's LinuxCNC post, with what a lathe
-program needs. Choose it in the Job or the machine setup.
+program needs. Choose it in the Job or, with a machine definition, as the
+machine's post processor in CAM's machine editor (it is a machine post, as
+the editor lists only those). A copy left in your macro folder is found
+first and hides the addon's own: delete it once CAM finds the addon's.
 
 * **G18 G8** at the start: the XZ plane and radius mode. The turning
   operations program X as a radius, and many LinuxCNC lathe

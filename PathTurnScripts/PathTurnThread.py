@@ -355,11 +355,18 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                         setattr(obj, prop, used[prop])
                 elif abs(current.Value - used[prop]) > 1e-7:
                     setattr(obj, prop, FreeCAD.Units.Quantity(used[prop], FreeCAD.Units.Length))
-        if obj.UseG76 and dict(INFEEDS).get(obj.Infeed, 29.5) > 0:
+        flank = dict(INFEEDS).get(obj.Infeed, 29.5) > 0
+        run_out = (obj.RunOut.Value if getattr(obj, "SetRunOut", False) else obj.Pitch.Value) > 0
+        if obj.UseG76 and (flank or run_out):
+            lost = []
+            if flank:
+                lost.append("Q word (the infeed angle: the control then feeds in radially)")
+            if run_out:
+                lost.append("E word through a machine definition (the run-out: the control then pulls "
+                            "straight out at the thread's end)")
             FreeCAD.Console.PrintWarning(
-                "{}: CAM's own posts drop G76's Q word (the infeed angle): the control then feeds in "
-                "radially. Post with the addon's linuxcnc_lathe post, which keeps it, or use the explicit passes "
-                "(Use G76 cycle off)\n".format(obj.Label))
+                "{}: CAM's own posts drop G76's {}. Post with the addon's linuxcnc_lathe post, which keeps them, "
+                "or use the explicit passes (Use G76 cycle off)\n".format(obj.Label, "; and ".join(lost)))
 
     def report(self, obj, internal, radius, major, pitch, tol, depth, n, cuts, lead, z_front, z_back, run_out=0.0):
         '''What the thread needs and how it is cut, for the page: one item a
