@@ -219,3 +219,18 @@ def best_wire(pitch):
     the pitch diameter for the measurement over three wires: M = d2 + 3w - 0.866025 P."""
     w = 0.57735 * pitch
     return w, 3 * w - 0.866025 * pitch
+
+
+# Turn Thread's structured results, in mm (see CONTRACT.md): property, tolerance key
+DIMENSIONS = (("ThreadPitchDiaMin", "pitch_min"), ("ThreadPitchDiaMax", "pitch_max"),
+              ("ThreadMajorDiaMin", "major_min"), ("ThreadMajorDiaMax", "major_max"),
+              ("ThreadMinorDiaMin", "minor_min"), ("ThreadMinorDiaMax", "minor_max"))
+ROOT = "ThreadRootDia"
+
+
+def dimensions(tol, internal, radius, depth):
+    """{property: mm}: the class's diameter ranges (0 without class data) and ThreadRootDia,
+    the diameter the deepest pass reaches from the selected radius."""
+    values = {prop: float(tol[key]) if tol else 0.0 for prop, key in DIMENSIONS}
+    values[ROOT] = 2 * (radius + depth) if internal else 2 * (radius - depth)
+    return values

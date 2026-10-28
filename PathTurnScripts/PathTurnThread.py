@@ -37,6 +37,17 @@ ALLOW_UNSUPPORTED = "allow_unsupported"   # CAM's Constants.ANNOT_ALLOW_UNSUPPOR
 INFEEDS = (("Modified flank (29.5\u00b0)", 29.5), ("Flank (30\u00b0)", 30.0), ("Radial", 0.0))
 THREAD_TYPES = ("From the selection", "External", "Internal")
 
+# the structured thread data, read only, in mm (see CONTRACT.md)
+DIMENSION_TIPS = {
+    "ThreadPitchDiaMin": "Smallest pitch diameter of the tolerance class (0: no class data)",
+    "ThreadPitchDiaMax": "Largest pitch diameter of the tolerance class (0: no class data)",
+    "ThreadMajorDiaMin": "Smallest major diameter of the tolerance class (0: no class data)",
+    "ThreadMajorDiaMax": "Largest major diameter of the tolerance class (0: no class data)",
+    "ThreadMinorDiaMin": "Smallest minor diameter of the tolerance class (0: no class data)",
+    "ThreadMinorDiaMax": "Largest minor diameter of the tolerance class (0: no class data)",
+    ThreadData.ROOT: "The diameter the deepest pass reaches",
+}
+
 
 class ObjectTurnThread(PathTurnBase.ObjectOp):
     '''Proxy class for turning thread operations.'''
@@ -59,6 +70,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             self.add_thread_properties(obj)
         self.add_auto_switches(obj, migrate=True)
         self.add_tolerance_class(obj)
+        self.add_dimension_properties(obj)
         for prop, tip in (("PassSchedule", "The passes the thread is cut in (read only)"),
                           ("SizeWarning", "Why the selected diameter does not fit the thread size (read only)")):
             if not hasattr(obj, prop):
@@ -80,6 +92,18 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             obj.addProperty("App::PropertyString", "ThreadReport", "Thread", translate(
                 "TurnPath", "What the thread needs and how it is cut (read only)"))
             obj.setEditorMode("ThreadReport", 1)
+
+    def add_dimension_properties(self, obj):
+        '''The structured thread data (ThreadData.dimensions), read only.'''
+        for prop, tip in DIMENSION_TIPS.items():
+            if not hasattr(obj, prop):
+                obj.addProperty("App::PropertyLength", prop, "Thread dimensions", translate("TurnPath", tip))
+                obj.setEditorMode(prop, 1)
+
+    def show_dimensions(self, obj, values):
+        for prop, value in values.items():
+            if hasattr(obj, prop) and abs(getattr(obj, prop).Value - value) > 1e-9:
+                setattr(obj, prop, FreeCAD.Units.Quantity(value, FreeCAD.Units.Length))
 
     def update_classes(self, obj):
         '''The classes on offer follow the standard and whether the thread is internal.'''
@@ -171,6 +195,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         obj.setEditorMode("ThreadDepth", 1)
         self.add_auto_switches(obj)
         self.add_tolerance_class(obj)
+        self.add_dimension_properties(obj)
 
     def update_sizes(self, obj):
         names = ThreadData.sizes(obj.ThreadStandard) or ["-"]
@@ -236,6 +261,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         except Exception as e:
             if getattr(obj, "ThreadReport", None) is not None and obj.ThreadReport:
                 obj.ThreadReport = ""
+            self.show_dimensions(obj, ThreadData.dimensions(None, False, 0.0, 0.0))
             if obj.SizeWarning != str(e):
                 obj.SizeWarning = str(e)
             raise
@@ -325,6 +351,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                                  abs(op.z_drive - op.z_front), op.z_front, op.z_back, op.run_out)
             if getattr(obj, "ThreadReport", None) is not None and obj.ThreadReport != report:
                 obj.ThreadReport = report
+            self.show_dimensions(obj, ThreadData.dimensions(tol, internal, radius, depths[-1]))
             used = {"Passes": n, "FirstPassDepth": cuts[0], "LeadIn": abs(op.z_drive - op.z_front),
                     "ThreadLength": abs(op.z_front - op.z_back), "RunOut": op.run_out}
             for switch, prop, _ in AUTO_VALUES:
