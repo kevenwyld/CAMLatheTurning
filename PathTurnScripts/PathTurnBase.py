@@ -36,7 +36,6 @@ import PathTurnScripts.PathTurnAddonHelpers as PathTurnAddonHelpers  # puts libl
 from liblathe.base.point import Point
 from liblathe.base.segment import Segment
 from liblathe.base.boundbox import BoundBox
-import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
 import PathTurnScripts.TurnSpindleAxis as TurnSpindleAxis
 from liblathe.base.tool import Tool
 
@@ -299,6 +298,9 @@ class ObjectOp(PathOp.ObjectOp):
         with constant surface speed off), and with it on, wrap the path in G96
         ... G97.'''
         if self.css_op_type is None or not hasattr(obj, "ConstantSurfaceSpeed"):
+            return
+        import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
+        if not TurnFeedsSpeeds.check_css(obj.ConstantSurfaceSpeed):
             return
         job = PathUtils.findParentJob(obj)
         tc = obj.ToolController

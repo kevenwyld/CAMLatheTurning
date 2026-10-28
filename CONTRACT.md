@@ -62,3 +62,11 @@ Turn Drill takes CAM's own Drill shape, programmed to its tip on the axis.
 * Threading is `G33` (K the pitch) or one `G76` cycle (LinuxCNC's words); both carry the
   `allow_unsupported` annotation so CAM's posts pass them through.
 * Constant surface speed wraps an operation in `G96 S<m/min> D<max rpm>` ... `G97 S<rpm>`.
+
+## Private CAM API used
+
+`Path.Tool.FeedsSpeeds.providers._score_preset` names the Feeds & Speeds preset a surface
+speed came from (`SurfaceSpeedSource`). FreeCAD main has no public equivalent; without it the
+preset's name is left out. Without `Path.Tool.FeedsSpeeds` at all, constant surface speed is
+unavailable and an operation with it switched on reports why. The patches made to CAM's own
+code are listed in `PathTurnScripts/cam_patches.py`.

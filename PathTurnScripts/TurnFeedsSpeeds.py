@@ -4,10 +4,20 @@ preset, else the stock material), the max rpm from the Job's machine. No GUI nee
 
 import FreeCAD
 
-from Path.Tool.FeedsSpeeds import MaterialContext, OpContext, ToolContext, derive_preset_label, get_presets
-from Path.Tool.FeedsSpeeds.providers import MachinabilityProvider, ToolPresetProvider, _score_preset
-
 translate = FreeCAD.Qt.translate
+
+# CAM's Feeds & Speeds (FreeCAD 1.1): without it there is no constant surface speed
+try:
+    from Path.Tool.FeedsSpeeds import MaterialContext, OpContext, ToolContext, derive_preset_label, get_presets
+    from Path.Tool.FeedsSpeeds.providers import MachinabilityProvider, ToolPresetProvider
+    available, missing = True, ""
+except ImportError as e:
+    available, missing = False, str(e)
+try:
+    # private, only to name the preset a speed came from (no public equivalent; see CONTRACT.md)
+    from Path.Tool.FeedsSpeeds.providers import _score_preset
+except ImportError:
+    _score_preset = None
 
 # CAM's preset op types are milling names; the turning operations use the
 # nearest (roughing, finishing, grooving)
@@ -17,6 +27,17 @@ OP_TYPE_GROOVING = "slot"
 
 # the addon's turning shapes (CAM's shape ids)
 TURNING_SHAPES = ("isoshape", "grooving", "fullradius", "threading")
+
+
+def check_css(enabled):
+    """True when the surface speed can be worked out. Without CAM's Feeds & Speeds: False,
+    or with constant surface speed switched on, a RuntimeError that says so."""
+    if available:
+        return True
+    if enabled:
+        raise RuntimeError(translate("TurnPath", "Constant surface speed needs CAM's Feeds & Speeds, which this "
+                                                 "FreeCAD does not have ({}). Turn Constant surface speed off").format(missing))
+    return False
 
 
 def is_turning_tool(tool):
@@ -68,9 +89,11 @@ def surface_speed(tool, job, op_type):
     tool_ctx, material, op = tool_context(tool), material_context(job), OpContext(op_type=op_type)
     found = ToolPresetProvider().suggest(tool_ctx, material, op)
     if found is not None and found.surface_speed:
-        scored = [(_score_preset(p, material, op), p) for p in tool_ctx.presets]
-        best = max((s for s in scored if s[0] is not None), key=lambda s: s[0], default=(None, None))[1]
-        label = derive_preset_label(best, translate("TurnPath", "unnamed")) if best else ""
+        label = ""
+        if _score_preset is not None:
+            scored = [(_score_preset(p, material, op), p) for p in tool_ctx.presets]
+            best = max((s for s in scored if s[0] is not None), key=lambda s: s[0], default=(None, None))[1]
+            label = derive_preset_label(best, translate("TurnPath", "unnamed")) if best else ""
         return found.surface_speed, translate("TurnPath", "tool preset {}").format(label).strip()
     found = MachinabilityProvider().suggest(tool_ctx, material, op)
     if found is not None and found.surface_speed:

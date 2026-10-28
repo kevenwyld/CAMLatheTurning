@@ -119,11 +119,7 @@ def install():
     features["FeatureBaseGeometry"] = (features["FeatureBaseVertexes"] | features["FeatureBaseEdges"]
                                        | features["FeatureBaseFaces"] | features["FeatureBasePanels"])
     module("Path.Op.Base", ObjectOp=ObjectOp, **features)
-    module("Path.Tool")
-    module("Path.Tool.FeedsSpeeds", MaterialContext=object, OpContext=object, ToolContext=object,
-           derive_preset_label=_noop, get_presets=lambda tool: [])
-    module("Path.Tool.FeedsSpeeds.providers", MachinabilityProvider=object, ToolPresetProvider=object,
-           _score_preset=_noop)
+    module("Path.Tool")       # no FeedsSpeeds: the addon must load without it
     module("PathScripts")
     module("PathScripts.PathUtils", findParentJob=lambda obj: None)
 

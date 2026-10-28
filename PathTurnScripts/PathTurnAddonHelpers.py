@@ -22,14 +22,35 @@
 # *                                                                         *
 # ***************************************************************************
 
+import importlib.util
 import os
 import sys
 
-# add path to liblath to the python path
+
+def needs_path(path, sys_path, liblathe_origin):
+    """Whether the vendored LibLathe at path must be put first on sys_path: not when it is
+    already there or liblathe is already importable from it. The fork's API differs from
+    upstream liblathe, so an installed one must not shadow it."""
+    norm = os.path.normcase(os.path.abspath(path))
+    if liblathe_origin and os.path.normcase(os.path.abspath(liblathe_origin)).startswith(norm + os.sep):
+        return False
+    return norm not in [os.path.normcase(os.path.abspath(p)) for p in sys_path]
+
+
+def _liblathe_origin():
+    try:
+        spec = importlib.util.find_spec("liblathe")
+    except (ImportError, ValueError):
+        return None
+    return spec.origin if spec is not None else None
+
+
+# the vendored LibLathe (a submodule), ahead of any liblathe installed elsewhere
 pathScripts = os.path.dirname(__file__)
 __dir__ = os.path.dirname(pathScripts)
 liblathePath = os.path.join(__dir__, 'LibLathe')
-sys.path.insert(0, liblathePath)
+if needs_path(liblathePath, sys.path, _liblathe_origin()):
+    sys.path.insert(0, liblathePath)
 
 from liblathe.base.boundbox import BoundBox
 from liblathe.base.point import Point
