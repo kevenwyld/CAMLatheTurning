@@ -118,7 +118,8 @@ toolbar) to add them to your CAM tool assets, then add the bits to a tool
 library or make your own from the shapes. Running it again after an update
 adds new example bits; bits you already have are never changed. The shapes
 themselves are brought up to date in your store whenever the CAM workbench
-loads.
+loads; a copy of yours that differs is kept in
+`Backup/CAMLatheTurning` in your CAM asset folder (the Report view says where).
 
 * **ISO turning insert**: TipAngle, EdgeLength, TipRadius (the nose radius),
   Rotation. Rotation must be greater than 0 and TipAngle less than 90 degrees.
