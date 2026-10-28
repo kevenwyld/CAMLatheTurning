@@ -13,9 +13,16 @@ translate = FreeCAD.Qt.translate
 EXACT = 1e-6
 
 
+def exact_bound_box(shape):
+    """A shape's exact bounding box, not the display mesh's (its BoundBox on a FreeCAD
+    without optimalBoundingBox)."""
+    optimal = getattr(shape, "optimalBoundingBox", None)
+    return shape.BoundBox if optimal is None else optimal(False, False)
+
+
 def exact_centre(shape):
-    """The centre (x, y) of a shape's exact bounding box (not the display mesh's)."""
-    bb = shape.optimalBoundingBox(False, False)
+    """The centre (x, y) of a shape's exact bounding box."""
+    bb = exact_bound_box(shape)
     return bb.Center.x, bb.Center.y
 
 

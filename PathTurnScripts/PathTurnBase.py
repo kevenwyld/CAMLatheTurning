@@ -406,9 +406,10 @@ class ObjectOp(PathOp.ObjectOp):
 
     @staticmethod
     def stock_diameter(obj):
+        '''The stock's diameter (X extent) from its exact bounding box, or None.'''
         try:
             job = PathUtils.findParentJob(obj)
-            return job.Stock.Shape.BoundBox.XLength
+            return TurnSpindleAxis.exact_bound_box(job.Stock.Shape).XLength
         except Exception:
             return None
 
