@@ -3,12 +3,29 @@
 their words formatted for a lathe (see lathe_word), and no up-and-back between operations
 (see drop_redundant_rapids). Found by CAM through package.xml."""
 
-import math
+import importlib.util
+import os
 import re
 
 import FreeCAD
 
 from Path.Post.scripts.linuxcnc_post import Linuxcnc
+
+
+def _load_words():
+    """lathe_post_words.py beside this file: CAM loads posts by path, so their folder is not on sys.path."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lathe_post_words.py")
+    spec = importlib.util.spec_from_file_location("lathe_post_words", path)
+    words = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(words)
+    return words
+
+
+_words = _load_words()
+LATHE_WORDS = _words.LATHE_WORDS
+drop_redundant_rapids = _words.drop_redundant_rapids
+lathe_word = _words.lathe_word
+with_lathe_words = _words.with_lathe_words
 
 translate = FreeCAD.Qt.translate
 
@@ -17,50 +34,6 @@ LATHE_MODES = "G18 G8"
 POST_TYPE = "machine"
 
 EXTRA_COMMANDS = ("G7", "G8", "G18", "G33", "G76", "G96", "G97")
-
-
-# words this post formats itself (for the commands that need it)
-LATHE_WORDS = ("E", "J", "K", "P", "Q", "R", "S")
-
-
-def with_lathe_words(order):
-    """CAM's parameter order with E (G76's taper length) added after L: a
-    word not in the order is not written."""
-    order = order or "XYZABCUVWFSIJKTQRPDHL"
-    return order if "E" in order else order + "E"
-
-
-def _fixed(number, places):
-    return format(number, ".%df" % places).rstrip("0").rstrip(".")
-
-
-def lathe_word(word, value, command, params, imperial, axis_places):
-    """A word's text as this post writes it, or None for CAM's formatting: G76's E/P as lengths
-    (P six decimals), J from K as printed so LinuxCNC makes exactly the passes meant, Q/R not
-    converted; G33's K six decimals; G96's S in ft/min for an inch program."""
-    unit = 25.4 if imperial else 1.0
-    value = float(value)
-    if command == "G76":
-        if word in ("Q", "R"):
-            return _fixed(value, 4)
-        if word == "P":
-            return _fixed(value / unit, 6)
-        if word == "E":
-            return format(value / unit, ".%df" % axis_places)
-        if word == "J" and "K" in params:
-            k = float(params["K"])
-            r = max(float(params.get("R", 1.0)) or 1.0, 1.0)
-            if value > 0 and k > 0:
-                n = max(1, int(round((k / value) ** r)))
-                scale = 10 ** axis_places
-                k_printed = round(k / unit * scale) / scale
-                return _fixed(math.ceil(k_printed / n ** (1.0 / r) * 1e6 - 1e-6) / 1e6, 6)
-        return None
-    if command == "G33" and word == "K":
-        return _fixed(value / unit, 6)
-    if command == "G96" and word == "S":
-        return _fixed(value / (0.3048 if imperial else 1.0), 1)
-    return None
 
 
 class Linuxcnc_Lathe(Linuxcnc):
@@ -155,58 +128,3 @@ class Linuxcnc_Lathe(Linuxcnc):
         return translate("CAM", "LinuxCNC lathe post: G18 G8 radius mode, G33 and G76 threading, "
                                 "G96 constant surface speed, no up-and-back between operations")
 
-
-_MODAL_ONLY = re.compile(r"^(?:N\d+\s+)?G1[789]$")
-_RAPID = re.compile(r"^\s*(?:N\d+\s+)?G0?0\b(?P<words>[^(;]*)$")
-_WORD = re.compile(r"([XYZ])\s*(-?\d+(?:\.\d*)?)")
-
-
-def _rapid_words(line):
-    m = _RAPID.match(line)
-    if not m:
-        return None
-    words = dict(_WORD.findall(m.group("words")))
-    other = re.sub(r"[XYZ]\s*-?\d+(?:\.\d*)?|F\s*-?\d+(?:\.\d*)?", "", m.group("words")).strip()
-    return None if other else words
-
-
-def drop_redundant_rapids(text):
-    """In a run of rapids at the same X (only comments and G17-G19 between them), keep the
-    first and the last: the tool only travels along Z between them. Anything else ends the run."""
-    lines = text.split("\n")
-    keep = [True] * len(lines)
-    run = []           # indexes of the rapids in the current run
-    run_x = None
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        # comments, and the plane each operation selects, move nothing
-        if not stripped or stripped.startswith("(") or stripped.startswith(";") or _MODAL_ONLY.match(stripped):
-            continue
-        words = _rapid_words(line)
-        x = words.get("X") if words else None
-        if words is not None and x is not None and (run_x is None or float(x) == float(run_x)) and "Y" not in words:
-            run.append(i)
-            run_x = x
-            continue
-        if words is not None and x is None and run and "Y" not in words:
-            run.append(i)          # a Z-only rapid at the run's X
-            continue
-        _close(run, lines, keep)
-        run, run_x = ([i], x) if (words is not None and x is not None and "Y" not in words) else ([], None)
-    _close(run, lines, keep)
-    return "\n".join(line for line, k in zip(lines, keep) if k)
-
-
-def _close(run, lines, keep):
-    """Keep the run's first rapid (out to its X) and its last; drop the moves between."""
-    if len(run) < 3:
-        return
-    z = None
-    for i in run[1:]:
-        z = _rapid_words(lines[i]).get("Z", z)
-    for i in run[1:-1]:
-        keep[i] = False
-    last = run[-1]
-    x = _rapid_words(lines[run[0]]).get("X")
-    prefix = re.match(r"^(\s*(?:N\d+\s+)?G0?0)", lines[last]).group(1)
-    lines[last] = prefix + " X" + x + ((" Z" + z) if z is not None else "")
