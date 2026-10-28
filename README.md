@@ -3,211 +3,158 @@
 | :warning: WARNING: CAM Lathe Turning is experimental. Check every program in a simulator, and with care on the machine, before cutting. |
 
 A FreeCAD CAM addon for CNC turning: facing, drilling, roughing, profiling
-and boring, grooving and groove turning, threading and parting, with a
-LinuxCNC lathe post processor.
+and boring, chamfering, grooving and groove turning, threading and parting,
+with a LinuxCNC lathe post processor.
 
 This is a fork of [FreeCAD_Turning_Addon](https://github.com/dubstar-04/FreeCAD_Turning_Addon)
 by **Daniel Wood** ([dubstar-04](https://github.com/dubstar-04)), who created
 the addon and its geometry library, [LibLathe](https://github.com/dubstar-04/LibLathe).
-This fork builds on that work with new operations, boring, threading to
-standard tolerance classes, collision checking and a reworked user
-interface; see Features below. It uses its own fork of LibLathe
-([kevenwyld/LibLathe](https://github.com/kevenwyld/LibLathe)) as a submodule.
-It uses the same Python module names as the original, so the two cannot be
-installed side by side. This repository was previously named TurningAddon.
+It uses its own fork of LibLathe ([kevenwyld/LibLathe](https://github.com/kevenwyld/LibLathe))
+as a submodule, and the same Python module names as the original, so the two
+cannot be installed side by side. This repository was previously named TurningAddon.
 
 <img width="1954" height="1048" alt="Screenshot_2026-10-21_17-16-55" src="https://github.com/user-attachments/assets/551bcb13-87cb-45fe-8ed0-61427d220ebd" />
 
-## Description
-Once installed, the addon adds its operations to the CAM workbench, in a
-Turning toolbar and menu, for creating turning paths for a CNC lathe (or a
-mill used as one).
-
-A proof of concept simulator to help visualize these new operations is available [here](https://github.com/kevenwyld/CAMRotarySim)
+The addon adds its operations to the CAM workbench, in the CAM menu and on a
+**Turning** toolbar. A proof of concept simulator for them is
+[CAM Rotary Simulator](https://github.com/kevenwyld/CAMRotarySim).
 
 ## Features
-* Turning operations: Face, Drill, Rough, Profile (both outside and boring),
-  Chamfer, Groove, Groove-Turn, Thread (G33 passes or a G76 cycle) and
-  Partoff
-* Turning tool shapes: ISO turning insert, grooving / parting insert, full
-  radius insert, threading insert, with example bits
+* Turning operations: Face, Drill, Rough, Profile (outside and boring),
+  Chamfer, Groove, Groove-Turn, Thread (G33 passes or a G76 cycle) and Partoff
+* Tool shapes: ISO turning insert, grooving / parting insert, full radius
+  insert, threading insert, with example bits and optional holders
+* Constant surface speed (G96) from CAM's feeds and speeds data
+* Collision checks of the insert's outline, and refusals that can be waived
 * A LinuxCNC lathe post processor
-* The commands in the CAM menu and on a **Turning** toolbar in the CAM
-  workbench
 
 ## Requirements
-* FreeCAD 1.1 or later; developed and tested on FreeCAD 27 development builds
-  (the post processor is found automatically only on builds whose CAM scans
-  addons for posts; on others, copy `Posts/linuxcnc_lathe_post.py` into your
-  macro folder)
+* FreeCAD 1.1 or later; developed on FreeCAD 27 development builds (the post
+  processor is found automatically only on builds whose CAM scans addons for
+  posts; on others, copy `Posts/linuxcnc_lathe_post.py` into your macro folder)
 * CAM tool bits (legacy tools are not supported)
-* Python3
-* Qt6
+* Python 3, Qt 6
 
 ## Installation
-1. Use `git clone --recurse` or download the `.zip` file of this repo directly in to your [FreeCAD `Mod/` directory](https://wiki.freecad.org/Installing_more_workbenches).
-2. Restart FreeCAD
+1. `git clone --recurse-submodules` this repository, or download its `.zip`,
+   into your [FreeCAD `Mod/` directory](https://wiki.freecad.org/Installing_more_workbenches).
+2. Restart FreeCAD.
 
-Note: If the LibLathe folder inside the addon is empty or missing you may need to add the submodule manually: `git submodule update --init --recursive`
+If the `LibLathe` folder inside the addon is empty, run
+`git submodule update --init --recursive` in the addon's folder.
+
+## Operations
+Every operation works between **Front (Z)** and **Back (Z)** (the Z range, set
+on its Z Range page from the selection or by hand) and between **Min** and
+**Max Diameter** (the Diameters page: worked out unless ticked). It starts and
+ends at a safe position outside the stock. Each option has a tooltip.
+
+| Operation | Tool | What it does |
+|---|---|---|
+| Turn Face | ISO insert | Faces from the stock's front down to Back, in to Min Diameter; a selected flat face is the plane faced to |
+| Turn Drill | CAM drill | Drills the selected hole on the spindle axis: peck (G83), chip break (G73), drill (G81) or dwell (G82), canned or written out |
+| Turn Rough | ISO insert | Roughing passes at the step over, then a cleanup pass along the part at the stock to leave |
+| Turn Profile | ISO insert | Finish passes along the part's outline, with a spring pass; leaves the front face to Turn Face unless asked |
+| Turn Chamfer | ISO insert | A chamfer or fillet at the selected circular edges (sharp outside corners) |
+| Turn Groove | Grooving / full radius insert | Plunges (or side-turns, level by level), then finishes down one wall, across and up the other |
+| Turn Groove-Turn | Grooving / full radius insert | Groove (plunge) turning along the whole profile in both directions |
+| Turn Thread | Threading insert | A single-point thread on the selected cylindrical face, external or internal |
+| Turn Partoff | Grooving / full radius insert | One plunge at the part's back face, past the centreline (or Min Diameter) by the overtravel |
+
+Notes on particular options:
+
+* **Side = Internal** (Rough, Profile) bores: tick Min Diameter and set it to
+  the hole bored from (boring from solid is not possible); Max Diameter
+  defaults to the bore's largest diameter. The insert is programmed to the
+  mirror of its turning reference point (largest radius, chuck-side flank).
+* **Min Diameter**, ticked: Rough, Profile and Turn Groove turn to it across
+  the Z range (into the model where it is bigger, left at it where smaller);
+  Face and Partoff stop at it (a tube's bore).
+* **Stock to leave X / Z**: radial (per side) and axial. Negative values cut
+  under the model's size, e.g. -0.075 turns a 12 mm model to 11.85.
+* **Break edges** (Rough, Profile, Face): chamfer every sharp outside corner
+  the finishing pass goes over; inside corners, modelled chamfers and fillets,
+  corners on the axis and the part's back end are left alone.
+* **Lead-in** (Rough, Profile), **Retract** and **Radial clearance**: worked
+  out and shown greyed unless ticked.
+* **Peck** (Groove, Groove-Turn, Partoff): plunges feed in by the peck depth,
+  backing off or retracting fully between pecks.
+* **Feeds**: the tool controller's horizontal feed is the cutting feed; the
+  vertical feed is for plunges and entries (with none set, the horizontal
+  feed is used and CAM Sanity says so). Turn Thread is fed by the pitch.
+* **Constant surface speed** (Spindle group): G96 with the surface speed from
+  the tool's Feeds & Speeds preset for the stock material, else the material's
+  machinability, and the Job's machine's maximum rpm; G97 after the operation.
+  Tick Set to give either by hand. The turning tools carry a Chipload, which
+  with one cutting edge is the feed per revolution.
 
 ## Threading
-**Turn Thread** cuts a single-point thread with a **Threading** insert
-(ProfileAngle, TipRadius, Width; programmed to the profile's theoretical
-sharp point). Select the cylindrical face to thread on the Z Range page: it
-gives the thread's Z range and the diameter it is cut from, and a bore is
-an internal thread (Type can also be set by hand).
+**Turn Thread** selects the cylindrical face to thread on its Z Range page; a
+bore is an internal thread. Standards: ISO metric coarse and fine, UNC, UNF,
+or Custom (pitch and depth as entered). Tolerance classes (6g, 4g6g, 6H, 2A,
+3A, 2B, 3B, or Basic) come from the thread tables CAM ships for Thread
+Milling; a standard thread is cut so its pitch diameter is in the middle of
+the class's range. The report on the page gives the diameter to turn or bore
+first, the pitch diameter and measurement over wires, the root, the passes
+and the Z range. Passes, first pass depth, lead-in, thread length and run-out
+are worked out unless ticked. Output is explicit **G33** passes, or one
+**G76** cycle with Use G76 cycle (CAM's own posts drop G76's Q word; the
+addon's post keeps it).
 
-* **Thread standard / Size:** ISO metric coarse and fine, UNC, UNF, or
-  Custom (enter pitch and depth).
-* **Tolerance class:** 6g or 4g6g (metric external), 6H (metric internal),
-  2A or 3A / 2B or 3B (Unified), or Basic, from the thread tables CAM ships
-  for Thread Milling (Mod/CAM/Data/Threads). A standard thread is cut so its
-  pitch diameter is in the middle of the class's range (for M12x1.75 6g:
-  10.754, the root at 9.744), whatever the surface was turned or bored to;
-  Basic, or a size not in the tables, cuts the basic profile (root
-  d - 1.22687 P external, major D internal).
-* **The report** at the bottom of the page gives what the thread needs and
-  how it is cut: the diameter to turn (external, the major) or bore
-  (internal, the minor) first, against the selected diameter; the pitch
-  diameter range and the one cut to; the measurement over three best-size
-  wires (external); the root or major diameter and the depth; the passes;
-  the Z range and lead-in. It warns in red when the selected diameter does
-  not fit the size at all (e.g. M10 chosen for a 12 mm bar).
-* **Run-out**: over this last length of the thread each pass tapers out to
-  the crest, still synchronised with the spindle, instead of stopping dead
-  at full depth: a tapered G33, or G76's E with L2. One pitch by default
-  (shown greyed); tick it and set 0 to stop dead, for a thread that ends in
-  a relief groove. The report says where full depth ends. Thread operations
-  made before the run-out keep stopping dead (Run-out ticked, at 0), so
-  their programs do not change.
-* **Thread length** (the whole selected diameter), **Passes** (the
-  recommended number for the pitch), **First pass depth** (from the passes
-  and the degression) and **Lead-in** (three pitches, so Z is at speed;
-  shorter, with a note, where the part in front leaves less room, e.g. a
-  thread behind a neck, where the insert drops in in the neck) are
-  worked out by the op and shown greyed out; tick one to set it by hand,
-  starting from the value shown. Passes and First pass depth are
-  alternatives: a first pass and the degression decide the number of
-  passes. **Min pass depth**, **Degression** (1.5 by default: a gentle
-  schedule with a light first pass; 2 removes the same area each pass, the
-  first deepest), **Infeed** (modified flank 29.5 degrees by default, flank
-  30, or radial), **Spring passes**.
-* Output: explicit passes using **G33** (spindle-synchronized motion; works
-  on a mill with a spindle encoder, such as PathPilot in mill mode), or one
-  **G76** cycle with **Use G76 cycle** on controls that have it. Both are
-  marked for CAM's posts to pass through. CAM's own posts drop G76's Q word
-  (the infeed angle); the addon's linuxcnc_lathe post keeps it (see Post
-  processor).
-* The insert is kept clear of the part: nothing in front of the thread may
-  stand above its root (every pass starts in front at depth, so the part
-  there needs a chamfer or a relief groove), and a shoulder behind it must
-  clear the insert's flank; the op says where the thread must end. Where the
-  part is held (chuck, collet, fixture) is not assumed from the stock: keep
-  the insert clear of it.
+The insert is kept clear of the part: nothing in front of the thread may
+stand above its root (a chamfer or a relief groove), and a shoulder behind
+it must clear the insert's flank. Where the part is held is not assumed from
+the stock.
 
-### Thread data, and a TODO
-The sizes and pitches come from the addon's own tables (ISO 261/262 metric
-coarse and fine, ASME B1.1 UNC and UNF); the tolerance ranges from the
-tables CAM ships for Thread Milling. **TODO:** take the sizes from CAM's
-tables too, so the data is shared with Thread Milling and grows with CAM.
-Not yet, because CAM's metric internal (6H) table has few fine pitches
-(most fine internal threads would need Custom), its internal Unified files
-misname the large sizes ("11/2-12" for 1-1/2-12), and a few of its metric
-pitches are not ISO ones (e.g. M10 x 1.12).
+TODO: take the thread sizes from CAM's tables as well. Not yet: CAM's metric
+internal table has few fine pitches, its internal Unified files misname the
+large sizes, and a few metric pitches are not ISO ones.
 
-## Tool holders
-The turning shapes (ISO insert, grooving, full radius, threading) can be
-drawn with a holder, so a simulation shows the whole tool, not just the
-insert. It is visual only: paths and collision checks use the insert.
+## Tools
+FreeCAD's tool library has no turning shapes, so the addon provides four
+(ISO turning insert, Grooving, Full Radius, Threading) and example bits.
+In the CAM workbench run **Install Turning Tools** (CAM menu or Turning
+toolbar) to add them to your CAM tool assets, then add the bits to a tool
+library or make your own from the shapes. Running it again after an update
+adds new example bits; bits you already have are never changed. The shapes
+themselves are brought up to date in your store whenever the CAM workbench
+loads.
 
-* **Shank**: a turning shank under the insert's seat, running from just
-  behind the cutting point out to **Holder length** (ISO LF), **Shank
-  width** x **Shank height** (ISO B x H), its back side **Tip offset** (ISO
-  WF) from the cutting point. Its end is cut back at an angle behind the
-  insert, so the insert's tip is the furthest point, as on a real holder.
-  On a turning holder WF is more than the shank's width (the insert
-  overhangs its front side, e.g. WF 16 for a 12 mm shank): a Tip offset
-  less than the shank's width is taken as the width plus a standard 4 mm
-  overhang, so the shank always has its full width.
-- A boring bar's head is round like the bar below the insert's seat, so
-  the bar fits the smallest bore a real one would (13 mm for a 10 mm bar
-  with Tip offset 8).
-* **Boring bar**: a round bar of **Bar diameter** (ISO DCON), running at
-  right angles to a shank (out of the bore when boring, as a simulation
-  turns boring tools), **Holder length** (LF) long, its centre line **Tip
-  offset** (WF) across from the cutting point and level with the insert's
-  rake face. Its head tapers from just behind the insert's side corners to
-  the full bar one bar diameter back, so the insert's tip is the furthest
-  point, and the insert sits on a platform 0.2 mm under its rake face, so
-  all of it shows.
+* **ISO turning insert**: TipAngle, EdgeLength, TipRadius (the nose radius),
+  Rotation. Rotation must be greater than 0 and TipAngle less than 90 degrees.
+  Programmed to the imaginary tip.
+* **Grooving**: Width, CornerRadius (at most half the width), GroovingDepth
+  (La max), TurningDepth (T). **Full Radius**: Width (the end is a radius of
+  half of it), NeckWidth (less than Width: a lollipop groove-turn insert),
+  SideRelief. Both are programmed to the cutting edge's point closest to the
+  axis and the chuck-side flank.
+* **Threading**: ProfileAngle, TipRadius, Width; programmed to the profile's
+  theoretical sharp point.
+* Shanks and boring bars can be drawn with the insert, for a simulation to
+  show the whole tool (visual only): ISO B x H, DCON, LF and WF parameters.
 
-The examples have a 12 x 12 shank (WF 16), and a 10 mm boring bar (WF 8)
-on the new Boring bar 10 mm (CCMT06) example. Tools made before this keep
-their old model: make them again to see their holders.
+Every shape also has a Diameter, which CAM requires but turning does not use.
 
-## Feeds
-The tool controller's two feeds, whose names come from milling, mean for
-the turning operations:
+## Post processor
+The **linuxcnc_lathe** post (in `Posts/`, found through package.xml) is CAM's
+LinuxCNC post with what a lathe program needs. Choose it in the Job or as the
+machine's post in CAM's machine editor. A copy in your macro folder hides the
+addon's own.
 
-* **Horizontal feed**: the cutting feed, for turning, facing, profiling and
-  finishing, in any direction.
-* **Vertical feed**: plunges and moves into the material: Turn Rough's and
-  Turn Profile's entries, Turn Groove's, Groove-Turn's and Partoff's plunges
-  and step downs, and Turn Drill's drilling feed. With none set the
-  horizontal feed is used, and CAM Sanity (the post dialog's warnings and
-  the Sanity report) says so: a caution for a turning insert, a warning for
-  a drill or a grooving or parting blade, which plunge with it.
+* **G18 G8** at the start: the XZ plane and radius mode (X is a radius).
+* **G33 and G76** accepted, with G76's Q (infeed angle) and E (run-out) kept.
+* **G96 and G97** accepted; G96's surface speed in ft/min for an inch program.
+* **No up-and-back between operations**: consecutive rapids at the same safe
+  X are reduced to the first and the last.
 
-Turn Thread is fed by the pitch. A tool controller with no horizontal feed
-gets CAM's own warning, and the operations still make their paths.
-
-## Constant surface speed
-
-Turn Rough, Face, Profile, Chamfer, Groove, Groove-Turn and Partoff have
-**Constant surface speed** (Spindle, at the bottom of the operation's page):
-the spindle speeds up as the tool moves toward the centre, keeping the
-surface speed, up to a maximum. The operation writes `G96 S<surface speed>
-D<max rpm>` before its moves and `G97 S<the tool controller's rpm>` after
-them. Turn Thread and Turn Drill stay at the tool controller's rpm.
-
-The values are not set on each operation: they come from CAM's feeds &
-speeds data, as CAM's Feeds & Speeds dialog finds them.
-
-* **Surface speed**: the tool's best-matching **Feeds & Speeds preset**
-  (the tool editor's Feeds & Speeds tab) for the Job's stock material and
-  the kind of operation, else the **stock material's** machinability for
-  the tool's material (HSS or Carbide; FreeCAD's Machining materials carry
-  both). The operation shows the value and where it came from. CAM's preset
-  op types are milling names: Rough, Face and Groove-Turn match
-  **adaptive** (roughing), Profile and Chamfer **profile** (finishing),
-  Groove and Partoff **slot**.
-* **Max spindle speed**: the Job's machine definition's spindle maximum.
-  Near the centre the spindle runs up to it, so on a mill used as a lathe
-  set it, or the operation's own, to what the workholding is safe at.
-
-Each has a **Set** switch to give a value by hand. Without a surface speed,
-a maximum spindle speed or the tool controller's rpm, the operation does
-not make a path, and says what to set.
-
-The turning tools carry a **Chipload**: with one cutting edge, the **feed
-per revolution**. With the tool controller's Feeds & Speeds button, the rpm
-is worked out at the stock's diameter (an insert has no cutting diameter)
-and the feed from it and the feed per revolution. New turning tools are
-**Carbide**; tools made before keep their saved material. Feeds stay in
-mm/min under constant surface speed for now (feed per revolution, G95, is
-to follow), so the feed per revolution falls as the spindle speeds up.
+On a mill used as a lathe, CAM's LinuxCNC post is the one to use.
+Diameter-mode output (G7) is not offered yet.
 
 ## Refusals, and Generate anyway
-
-Some checks refuse a path the operation can make because they find it
-wrong: it would cut into the part, or the insert would hit it. Each can be
-waived for one operation: the op's page then shows the reason with a
-**Generate anyway** button, which waives that check and makes the path.
-Waived checks are listed on the page (each with **Restore**), are kept in
-the operation's **Ignored Checks** property (names can be added or removed
-there too), and are reported in the Report view at every recompute, so a
-program never goes past a check silently. Waiving one check leaves the
-others: the next one may then refuse.
+Some checks refuse a path the operation can make because they find it wrong.
+Each can be waived per operation: the op's page shows the reason with a
+**Generate anyway** button; waived checks are listed there (with **Restore**),
+kept in the **Ignored Checks** property and reported at every recompute.
 
 | Check | Refuses when | Waived, the op |
 |---|---|---|
@@ -220,357 +167,33 @@ others: the next one may then refuse.
 | `groove-narrower-than-blade` | the Z range is narrower than the blade | cuts the blade's width |
 | `css-no-max-rpm` | constant surface speed has no maximum spindle speed | posts G96 without D (the machine's own limit) |
 
-Where there is no sensible path to make (a zero pitch or tool width, the
-wrong kind of tool, Min Diameter above Max, Front behind Back, constant
-surface speed with no surface speed), the operation still refuses.
-
-## Facing
-**Turn Face** faces from the stock's front down to Back (Z), at the Step
-over, radially from outside the stock in to Min Diameter. With nothing
-selected Back is the part's front. Select a flat face (square to the axis)
-on its Z Range page to face down to that face instead, e.g. a shoulder.
-
-* **Min Diameter** is worked out (shown greyed; tick to set): the selected
-  face's inner edge when the part is there just in front of it (a shoulder
-  behind a smaller diameter, so the passes stop at that diameter), the
-  centre otherwise (a front face, including one round a hole that is not
-  drilled yet).
-* A facing pass that would cut into the part is refused, with the Min
-  Diameter it needs (e.g. a shoulder faced with Min Diameter set too small).
-
-## Edge breaking and chamfers
-* **Break edges** (Turn Rough, Turn Profile, Turn Face): tick it and give a
-  size (0.2 mm by default) to chamfer every sharp outside corner of the part
-  the finishing pass goes over: the front corner, the outer edges of
-  shoulders and grooves (45 degrees at a square corner). Inside corners are
-  left alone (breaking them would add material), and so are corners already
-  modelled with a chamfer or fillet, corners on the axis and the part's
-  back end. Turn Rough breaks them in its cleanup pass; Turn Face with a
-  short pass round the front corner. The Report view lists the corners
-  broken.
-* **Turn Chamfer**: a chamfer or a fillet at chosen corners only. Select the
-  corners' circular edges on its Edges page, and set **Corner** (Chamfer, or
-  Fillet: an arc tangent to both edges) and **Size** (the chamfer's leg along
-  each edge, or the fillet's radius). Each is cut by a short contour pass
-  round it with nose radius compensation. Only sharp outside corners between
-  two straight edges can be; the others (inside corners, corners next to a
-  curve, edges too short for the size) are reported and left alone.
-
-## Drilling
-**Turn Drill** drills on the spindle axis with a CAM drill bit (the Drill
-shape: Diameter and TipAngle). It has only the settings drilling uses.
-
-* The hole is the Z range, as for every operation: on the Z Range page
-  **Front (Z)** is where it starts and **Back (Z)** where the drill's full
-  diameter (or its tip, with Depth to the drill's tip) ends. Select the hole
-  (its cylindrical face) and both come from it, shown greyed; tick either
-  to set it. With nothing selected the hole starts at the part's front, and
-  you set Back. Back is the same plane in every operation, so a hole
-  drilled to Back -15 and bored to Back -15 end together.
-
-* **Cycle:** Peck (G83, backing out of the hole after each peck), Chip
-  break (G73, backing off a little), Drill (G81, straight to depth) or
-  Dwell (G82, a dwell at the bottom); **Peck depth**, **Dwell**, and the
-  **Retract height** in front of the hole (the R plane).
-* **Depth to the drill's tip:** off (the default), the drill's full
-  diameter reaches the bottom of the selected hole, so its point goes
-  deeper by the point's length; on, the point reaches it.
-* **Use a canned cycle:** the cycle as G81/G82/G83/G73 (canned cycles drill
-  along the active plane's axis, so the program switches to G17 for the
-  cycle and back to G18 after: drilling along Z on a lathe and on a mill
-  used as a lathe alike); off, the same moves written out.
-* The page reports the drill, the depths and the cycle, and warns when the
-  drill is not the hole's size. The drill approaches along Z on the axis
-  and leaves the hole along Z before moving away from it.
-
-## Boring (internal)
-Turn Rough and Turn Profile can bore: set **Side** to **Internal** on the
-operation page.
-
-* **Min Diameter** is the hole you are boring from (e.g. the drill size):
-  tick it and set it; boring from solid is not possible. **Max Diameter**
-  defaults to the bore's largest diameter, so nothing beyond the bore (such
-  as the part's front face) is cut; tick it to set a limit of your own.
-* The bore is the model's: the part of it open to the spindle axis
-  (through or blind, stepped, with tapers and radii). The operation works
-  between the hole and the bore: a blind bore's bottom is faced in to the
-  hole's edge, not to the axis, and Stock to leave X / Z is left on the
-  bore's wall and bottom.
-* The tool is an ISO turning insert used as a boring tool, so its
-  reference is the mirror of the turning one: the imaginary tip at the
-  cutting edge's outermost point (largest radius) and its chuck-side
-  flank. Set the tool offsets to that point.
-* **Radial clearance** and **Retract** (see Diameters) default
-  to 0.5 mm, or a quarter of the hole's radius if less: the safe position
-  is that far inside the hole wall, and each pass lifts off that much, so
-  the bar stays near the wall it cuts. A larger back-off moves the bar's
-  back toward the opposite wall; in a small bore, set them smaller still.
-* The insert's outline is checked as for turning (see Collision checks);
-  the boring bar itself (its diameter and reach) is not checked yet.
-
-Internally the operation is the external one in a mirror: radius r maps to
-R - r (R the stock's radius), which turns the bore into an outer profile
-and the hole into the stock's top; the paths are mapped back, arcs
-reversed.
-
-## Collision checks
-The operations place the insert's imaginary tip on the path, keep its nose
-off the part, and do not follow the part where it is steeper than the
-insert's cutting angle. Turn Rough, Profile and Face also check the rest of
-the insert: its outline (from TipAngle, Rotation, EdgeLength and TipRadius)
-is swept along the path, and where an edge or the body (not the cutting
-nose) would enter the part, the Report view says where and how deep, e.g.
-an insert whose leading edge is swept back past 90 degrees reaching into a
-square shoulder. The path is still made, as given: change the insert or the
-operation's range there.
-
-## Diameters
-As with milling's depths, Min and Max Diameter are worked out to start with
-and used as given when set. Each has a checkbox: unticked, the field is
-greyed out and shows what the op uses (Min: none, the op follows the part;
-Max: the stock's diameter); ticked, the op uses the value, however it
-compares with the part.
-
-* **Min Diameter**, set: Rough, Profile and Turn Groove turn to it across
-  the Z range, cutting into the model where it is bigger and leaving it at
-  Min Diameter where it is smaller (as a milling op leaves a floor at its
-  final depth). For example, select a 12 mm diameter on the Z Range page
-  and set 11.85 to turn it to the major diameter of an M12x1.75 6g thread.
-  Face and Partoff stop at it (e.g. the bore of a tube: Face finishes the
-  face to its edge, Partoff goes just past it).
-* **Max Diameter**, set: where the material starts (e.g. a surface already
-  turned smaller).
-
-The Diameters page also has the radial distances, with a diagram of them
-all (the boring diagram when Side is Internal), drawn as seen standing in
-front of a manual lathe: the axis at the top, radii growing toward you.
-
-* **Retract** (Rough, Profile, Face): the radial lift-off at the end of each
-  pass, beyond the furthest the tool reached.
-* **Radial clearance** (all but Turn Thread): the safe position's radial
-  distance from the stock (or from the hole, boring), also used for radial
-  approaches.
-
-Each is worked out unless ticked, and shown greyed: outside, Retract is
-step over x finish passes and Radial clearance the Setup Sheet's safe
-height offset; boring, both are 0.5 mm or a quarter of the hole's radius.
-The clearance along Z (lead-ins in front of the cut) stays the Setup
-Sheet's.
-
-The arrow buttons take the diameter of the selected circular edge,
-cylindrical face or vertex (a flat ring-shaped face, such as the end of a
-tube, gives its inner diameter for Min and its outer for Max), and tick the
-box.
-
-## Operation settings
-* **Lead-in** (Rough, Profile): how far in front of the Z range's start the
-  passes begin, along Z; 0 enters them radially. Unticked it is worked out
-  and shown greyed: a clearance in front; when the range starts inside the
-  stock with only stock in front (e.g. a diameter selected up to the part's
-  front, the stock longer), a clearance in front of the stock, cutting
-  through that stock; radially when part of the model is in front.
-* **Step over**: Rough, the depth of cut per pass (per side); Profile, the
-  spacing of the finish passes; Face, the step along Z; Turn Groove, the
-  spacing of the plunges. Turn Groove's defaults to 0.7 x the insert width
-  (Sandvik recommends 0.5 to 0.8 x for the cuts after the first), as an
-  expression that follows the tool; clear the expression (the fx button) to
-  set it by hand.
-* **Stock to leave X / Z**: material left radially (per side, on diameters)
-  and axially (on faces and shoulders). With equal values the offset is exact;
-  with different values corners stay sharp instead of being rounded by the
-  stock. Documents with the older single Stock to leave are converted when
-  opened.
-  A negative value takes that much off every diameter (and face) of the
-  model, like a negative offset in CAM's milling ops: for example -0.075
-  turns a bar modelled at 12 mm to 11.85. To turn to a given diameter, set
-  Min Diameter instead (see Diameters).
-* **Finish passes**, **Finish step over** (their spacing) and **Spring
-  pass** (repeat the last one once more, with no step over): Profile and
-  Turn Groove.
-* **Profile** follows the part's outline but leaves the front face to Turn
-  Face; turn on **Finish front face** to include it.
-* **Turn Groove** plunges across each stretch the blade can reach, then
-  finishes. **Finish direction**: *In, across and out* (default: down one
-  wall, along the bottom and up the other, for the best finish) or *From
-  each wall to the middle*. It never takes a cut more than the insert's
-  Turning Depth deep over more than the Turning Depth of length: where the
-  plunges leave more (e.g. a flat blade over a fillet, or a groove no plunge
-  fits), it adds short side-turning passes, and says so in the Report view.
-
-## Groove roughing strategies, pecking, groove turning
-* **Strategy** (Turn Groove): **Plunge** roughs with full-depth plunges
-  side by side; **Side-turn** plunges one **Step down**, turns along Z at
-  that depth, steps down and turns back, level by level, for less tool
-  pressure in wide grooves. Step down defaults to 90% of the insert's
-  Turning depth (shown greyed; tick to set). Stretches too short to
-  traverse (grooves under about 1.5 blade widths) are plunged.
-* **Peck** (Turn Groove, Groove-Turn, Partoff): plunges feed in **Peck
-  depth** at a time, backing off by **Back-off** between pecks to break the
-  chip, or out of the cut with **Retract fully between pecks**.
-* **Turn Groove-Turn**: groove turning (plunge turning) along the whole
-  profile with a grooving or full radius insert, in both directions: Turn
-  Groove with Side-turn roughing, the whole part as its range by default,
-  and the finish passes down walls, across and up walls.
-* The Full Radius insert has a **Neck width** (ISO BW): its width gives
-  tangent flanks; less is a lollipop groove-turn insert, a full circle on a
-  narrower neck, straight behind the head (only the head cuts). **Side
-  relief** (α) leans tangent flanks inward from the head, as on
-  tangent-relieved inserts. The tool's 3D model follows both (and so
-  does a simulation that cuts with it). The turning operations see the part
-  from outside (its largest radius at each Z), so neither changes paths yet;
-  they will once undercut geometry is modelled.
-
-## Grooving, parting and full radius inserts
-Two tool shapes cover these inserts:
-
-* **Grooving**: a flat-bottomed blade with a radius on each corner. Width
-  (S in most catalogs), CornerRadius (R, at most half the width),
-  GroovingDepth (La max: the deepest the blade can go before the holder
-  would touch), TurningDepth (T: the largest sideways depth of cut).
-* **Full Radius**: a blade ending in a semicircle of half its width. Width,
-  GroovingDepth and TurningDepth.
-
-Both also have a Diameter, which CAM requires but turning does not use; it
-follows the width and is not shown in the tool editor. The tool
-is programmed to its reference point: X at the cutting edge's point closest
-to the axis, Z at the chuck-side flank. Touch it off the same way: X on a
-turned diameter, Z on a faced end with the chuck-side flank.
-
-**Turn Groove** cuts with these inserts in both directions. It plunges
-straight in to rough (at most Step Over apart along Z), leaving Finish
-Allowance, then follows the profile front to back with the finish passes.
-The whole blade stays inside the Z Range, so it never touches the part
-outside it; to finish a wall right up to its top, include a little of the
-part beyond the wall in the range. The grooving depth is measured from Max
-Diameter (default: the stock), which is also where plunges start; if the
-surface has already been turned smaller, set Max Diameter to that diameter.
-
-**Turn Partoff** parts off with a Grooving or Full Radius insert: one plunge
-with the blade's part-side flank on the part's back face (the model's, or
-the back of a selection on the Z Range page), Overtravel (default 0.2 mm)
-past the centreline so no pip is left, or past Min Diameter if one is set
-(the bore of a tube). It warns when the insert's grooving depth cannot
-reach. Where the part is held is not assumed from the stock: the blade may
-reach past the stock's end, so keep it clear of the fixture.
-
-Rough, Profile and Face need a turning insert, and Turn Groove and Turn
-Partoff a grooving
-or full radius insert; each refuses the other kind with a message.
-
-## Roughing
-Rough finishes with a cleanup pass: a contour along the part at the stock to
-leave, so the finishing pass meets an even amount of material instead of the
-staircase the roughing passes leave on tapers and curves. Turn it off with the
-operation's CleanupPass property.
-
-Every operation starts and ends at a safe position outside the stock diameter
-and a clearance in front of the stock, and only moves straight in X or along
-Z outside the stock to get there.
+Where there is no sensible path (a zero pitch, the wrong kind of tool, Min
+Diameter above Max, Front behind Back), the operation still refuses.
 
 ## Limits
-Rough and Profile only cut inside the operation's limits:
-
-* **Start Depth / Final Depth** (Z). Final Depth is a hard stop toward the
-  chuck: no tool move goes past it, so set it short of the jaws. If Start
-  Depth is behind the front of the stock, passes are entered radially from
-  outside the stock instead of along Z (this assumes the tool can plunge).
-* **Models.** All the Job's models are turned as one (their union), e.g. a
-  shaft and a separate collar body, or two parts end to end on one bar. A
-  model off the spindle axis is reported as an error by every
-  operation (by however little), naming **Turning > Put on Spindle Axis**.
-  That command moves the Job's models and stock in X and Y (never Z) so
-  they are exactly round about the axis: a model by its turned diameter's
-  circle, the stock by its exact bounding box. It is needed because CAM's
-  Job tools place things by bounding boxes (a new cylinder stock on the
-  model's, Center in XY in the stock's, Set Origin on a face in the
-  face's), and once a shape is drawn FreeCAD takes its bounding box from
-  the display mesh, a few microns lopsided for a revolved part. Stock made
-  from the model's box (Create from base) works its position out again on
-  every recompute and cannot be moved: use cylinder stock for turning.
-* **Z Range selection.** Selecting faces, edges or whole objects (for
-  example a sketch or Draft wire drawn to mark the range) on the operation's
-  Z Range page sets Start and Final Depth to the Z range they span.
-  Everything in that range is turned. A selection with no length along Z,
-  such as a single shoulder face or circular edge, is rejected.
-  Under the selection, **Front (Z)** and **Back (Z)** show the range the op
-  uses, greyed: the selection's, or without one the op's own (the stock's
-  front, the part's back). Tick either end to set it by hand, whatever is
-  selected (e.g. "from the selection's front, but stop at Z -15"); untick
-  to go back. The arrow beside each takes the Z of the feature selected
-  in the 3D view (without adding it to the selection list) and ticks the
-  end: a vertex's Z, a flat face's or circular edge's, or the front (for
-  Front) or back (for Back) of a cylinder, cone or whole object. Turn
-  Partoff has only Back (where it parts off); Turn Thread and Turn Drill
-  have their own length and depth instead.
-* **Min Diameter**, when set (see Diameters): Rough, Profile and Turn
-  Groove turn to it across the Z range; no op cuts below it.
-* **Max Diameter.** The outer diameter cutting starts from (default: the
-  stock diameter).
-
-The limits apply to the tool tip. At Start Depth the round nose of the insert
-can reach up to one nose diameter past the limit; at Final Depth and Min
-Diameter the whole nose stays inside.
-
-## Turning tools
-The turning operations need a turning tool bit. FreeCAD's tool library has no
-turning shape, so the addon provides an ISO turning insert shape and an
-example bit, plus the Grooving, Full Radius and Threading shapes with an
-example insert each. The Full Radius shape has two: a tangent-flank insert
-(Full radius 4 mm) and a lollipop groove-turn insert (Groove-turn 4 mm, a
-4 mm head on a 2.8 mm neck), and the ISO insert a boring one (Boring bar 10 mm,
-on a 10 mm bar). To add them to your CAM tool assets, switch to
-the CAM workbench and run **Install Turning Tools** from the CAM menu or the
-Turning toolbar. Running it again after an update adds any new example
-bits; tool bits you already have are never changed. The shapes themselves
-are brought up to date automatically whenever the CAM workbench loads, so
-tools are always built from the addon's current shapes (a parameter a tool
-does not have yet, e.g. a holder size, takes the shape's default). Then add
-the example bits to a tool library, or create your own bits from the shapes.
-
-To install them by hand instead, copy the shapes in `Assets/Shape` (each
-`.fcstd` with its `.svg`: isoshape, grooving, fullradius, threading) into the
-`Tools/Shape` folder of your CAM asset directory, and import the example bits
-in `Assets/Bit` from the tool library.
-
-Set TipRadius to your insert's nose radius. Rotation must be greater than 0
-and TipAngle less than 90 degrees.
-
-## Post processor
-The addon brings a **linuxcnc_lathe** post (in `Posts/`, found by CAM
-through the addon's package.xml): CAM's LinuxCNC post, with what a lathe
-program needs. Choose it in the Job or, with a machine definition, as the
-machine's post processor in CAM's machine editor (it is a machine post, as
-the editor lists only those). A copy left in your macro folder is found
-first and hides the addon's own: delete it once CAM finds the addon's.
-
-* **G18 G8** at the start: the XZ plane and radius mode. The turning
-  operations program X as a radius, and many LinuxCNC lathe
-  configurations start in diameter mode (G7), so the program says so. A
-  G17 in the machine's preamble becomes G18.
-* **G33 and G76** accepted, and G76's **Q** (infeed angle) kept; CAM's
-  LinuxCNC post drops Q from G76, which makes it infeed radially.
-* **G96 and G97** accepted, G96's surface speed written in ft/min for an
-  inch program (G20), as G96 takes it there.
-* **No up-and-back between operations**: each operation ends at the safe
-  position and the next starts from it; consecutive rapids along Z at the
-  same safe X are reduced to the first and the last (the cutting moves are
-  unchanged). A tool change, spindle or coolant command between them stops
-  this.
-
-On a mill used as a lathe (e.g. PathPilot in mill mode), CAM's LinuxCNC post
-is the one to use: the program is already in the XZ plane (G18) and needs no
-lathe modes. Diameter-mode output (G7, X words doubled) is not offered yet.
+* **Z range selection**: faces, edges or whole objects selected on the Z
+  Range page set Front and Back to the range they span; everything in that
+  range is turned. Tick either end to set it by hand; the arrow buttons take
+  the Z of the feature selected in the 3D view. Back is a hard stop toward
+  the chuck: set it short of the jaws.
+* **Models**: all the Job's models are turned as one. A model or stock off
+  the spindle axis is reported as an error by every operation; **Turning >
+  Put on Spindle Axis** moves them (X and Y only) exactly onto it. Stock made
+  from the model's bounding box (Create from base) cannot be moved: use
+  cylinder stock.
+* **Boring**: the boring bar's diameter and reach are not checked, only the
+  insert's outline; Radial clearance and Retract default to 0.5 mm there.
+* **Collision checks**: Rough, Profile and Face sweep the insert's outline
+  along the path and report where an edge or the body would enter the part;
+  the path is still made. Holders and the chuck are not checked.
+* The limits apply to the tool tip: at Front the nose may reach one nose
+  diameter past the limit; at Back and Min Diameter the whole nose stays inside.
 
 ## CAM integration
-The turning operations are CAM operations, but CAM recognises operations by
-the module their code is in, so an addon's are left out of the context
-menu (Active toggle, dressups, Array / Copy, Inspect, Post Selected). The
-addon extends CAM's check at start-up to include them. **TODO** (upstream):
-CAM's `Path.Dressup.Utils.isOp()` should check the class
-(`Path.Op.Base.ObjectOp`) instead; then the addon can drop this. For
-turning operations the menu offers only the dressups that make sense on a
-lathe path: Axis Map (which can help on a mill used as a lathe) and Path
-Boundary.
+CAM recognises operations by their module name, so the addon extends CAM's
+check at start-up to include its own (context menu, dressups, Array / Copy,
+Inspect, Post Selected); a lathe path is offered only the Axis Map and Path
+Boundary dressups.
 
 ## Credits
 * **Daniel Wood** ([dubstar-04](https://github.com/dubstar-04)): original
