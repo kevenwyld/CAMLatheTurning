@@ -822,36 +822,37 @@ class ObjectOp(PathOp.ObjectOp):
 
         # a turning insert has these; anything else (e.g. CAM's default end
         # mill on a new Job) cannot turn, and would fail obscurely later
-        missing = [p for p in ("TipAngle", "EdgeLength", "TipRadius", "Rotation") if not hasattr(opTool, p)]
+        label = getattr(opTool, "Label", "?")
+        missing = [p for p, _ in TOOL_SETTERS if not hasattr(opTool, p)]
         if missing:
             raise RuntimeError(translate('PathTurn',
                 "This operation needs a turning insert (ISO Turning Insert shape). "
-                "The tool {} has no {}").format(getattr(opTool, "Label", "?"), ", ".join(missing)))
-
-        # create a liblathe tool and assign the toolbit parameters
-        turnTool = Tool()
-
-        # TODO: set some sensible default values or raise error if attribute not available
-
-        if hasattr(opTool, "TipAngle"):
-            turnTool.set_tip_angle(opTool.TipAngle.Value)
-
-        if hasattr(opTool, "EdgeLength"):
-            turnTool.set_edge_length(opTool.EdgeLength.Value)
-
-        if hasattr(opTool, "TipRadius"):
-            turnTool.set_nose_radius(opTool.TipRadius.Value)
-
-        if hasattr(opTool, "Rotation"):
-            turnTool.set_rotation(opTool.Rotation.Value)
-
-        self.op_generate_gcode(obj, turnTool)
+                "The tool {} has no {}").format(label, ", ".join(missing)))
+        values = {p: getattr(opTool, p).Value for p, _ in TOOL_SETTERS}
+        self.op_generate_gcode(obj, lathe_tool(Tool(), label, values))
 
     def op_generate_gcode(self, obj, turnTool):
         '''op_generate_gcode(obj) ... overwrite to set initial default values.
         Called after the receiver has been fully created with all properties.
         Should be overwritten by subclasses.'''
         pass  # pylint: disable=unnecessary-pass
+
+
+# a turning insert's parameters and the liblathe Tool setters that take them
+TOOL_SETTERS = (("TipAngle", "set_tip_angle"), ("EdgeLength", "set_edge_length"),
+                ("TipRadius", "set_nose_radius"), ("Rotation", "set_rotation"))
+
+
+def lathe_tool(tool, label, values):
+    """Give a liblathe Tool the bit's values unchanged; a value liblathe refuses is a
+    RuntimeError naming the tool and the parameter."""
+    for prop, setter in TOOL_SETTERS:
+        try:
+            getattr(tool, setter)(values[prop])
+        except (ValueError, Warning) as e:   # Warning: liblathe before its validators raised ValueError
+            raise RuntimeError(translate('PathTurn', "The tool {}: its {} cannot be used: {}").format(
+                label, prop, e)) from e
+    return tool
 
 
 def chain_profile(items, tol=1e-4):

@@ -122,8 +122,7 @@ loads; a copy of yours that differs is kept in
 `Backup/CAMLatheTurning` in your CAM asset folder (the Report view says where).
 
 * **ISO turning insert**: TipAngle, EdgeLength, TipRadius (the nose radius),
-  Rotation. Rotation must be greater than 0 and TipAngle less than 90 degrees.
-  Programmed to the imaginary tip.
+  Rotation. Programmed to the imaginary tip.
 * **Grooving**: Width, CornerRadius (at most half the width), GroovingDepth
   (La max), TurningDepth (T). **Full Radius**: Width (the end is a radius of
   half of it), NeckWidth (less than Width: a lollipop groove-turn insert),
