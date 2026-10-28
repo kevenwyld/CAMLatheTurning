@@ -26,7 +26,6 @@ import FreeCAD
 import FreeCADGui
 import Path.Log as PathLog
 import Path.Op.Gui.Base as PathOpGui
-import Path.Op.Gui.Selection as PathSelection
 import Path.Preferences
 #import PathGui
 
@@ -50,8 +49,7 @@ else:
     PathLog.setLevel(PathLog.Level.NOTICE, PathLog.thisModule())
 
 
-# Selection gate: CAM's Path.Op.Gui.Selection.select() sends the turning ops to
-# TURNGate (holes only) or fails on unknown names; give them a gate of their own.
+# Selection gate: cam_patches sends these ops' selection to turning_select().
 
 TURNING_OPS = ("TurnDrill", "TurnChamfer", "TurnGrooveTurn", "TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove", "TurnThread")
 
@@ -86,17 +84,6 @@ def turning_select():
     if not Path.Preferences.suppressSelectionModeWarning():
         FreeCAD.Console.PrintWarning("Turning Select Mode\n")
 
-
-if not getattr(PathSelection.select, "_turning", False):
-    _cam_select = PathSelection.select
-
-    def _select(op):
-        if op in TURNING_OPS:
-            return turning_select
-        return _cam_select(op)
-
-    _select._turning = True
-    PathSelection.select = _select
 
 
 class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):

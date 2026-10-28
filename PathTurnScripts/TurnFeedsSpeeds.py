@@ -105,26 +105,3 @@ def stock_diameter(job):
     bb = shape.BoundBox
     return 2.0 * max(abs(bb.XMin), abs(bb.XMax), abs(bb.YMin), abs(bb.YMax))
 
-
-def install_dialog_hook():
-    '''Patch Path.Tool.Gui.FeedsSpeedsDialog.adapt_toolbit so a turning tool's rpm is
-    worked out at the stock's diameter with one cutting edge, not at the insert's.'''
-    try:
-        import dataclasses
-        import Path.Tool.Gui.FeedsSpeedsDialog as dialog
-    except Exception:
-        return
-    if getattr(dialog.adapt_toolbit, "_turning", False):
-        return
-    cam_adapt = dialog.adapt_toolbit
-
-    def adapt_toolbit(tc):
-        ctx = cam_adapt(tc)
-        tool = getattr(tc, "Tool", None)
-        if tool is None or not is_turning_tool(tool):
-            return ctx
-        diameter = stock_diameter(dialog.find_job_for_tc(tc))
-        return dataclasses.replace(ctx, diameter=diameter if diameter > 0 else ctx.diameter, flutes=1)
-
-    adapt_toolbit._turning = True
-    dialog.adapt_toolbit = adapt_toolbit
