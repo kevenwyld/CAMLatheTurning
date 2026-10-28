@@ -8,6 +8,7 @@ import Path
 import PathTurnScripts.PathTurnBase as PathTurnBase
 import PathTurnScripts.PathTurnAddonHelpers as PathTurnHelpers
 import PathTurnScripts.ThreadData as ThreadData
+from PathTurnScripts.PathTurnBase import show_values
 from PySide import QtCore
 
 import liblathe.op.thread as LLT
@@ -99,11 +100,6 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             if not hasattr(obj, prop):
                 obj.addProperty("App::PropertyLength", prop, "Thread dimensions", translate("TurnPath", tip))
                 obj.setEditorMode(prop, 1)
-
-    def show_dimensions(self, obj, values):
-        for prop, value in values.items():
-            if hasattr(obj, prop) and abs(getattr(obj, prop).Value - value) > 1e-9:
-                setattr(obj, prop, FreeCAD.Units.Quantity(value, FreeCAD.Units.Length))
 
     def update_classes(self, obj):
         '''The classes on offer follow the standard and whether the thread is internal.'''
@@ -259,11 +255,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         try:
             self.generate_thread(obj, tool)
         except Exception as e:
-            if getattr(obj, "ThreadReport", None) is not None and obj.ThreadReport:
-                obj.ThreadReport = ""
-            self.show_dimensions(obj, ThreadData.dimensions(None, False, 0.0, 0.0))
-            if obj.SizeWarning != str(e):
-                obj.SizeWarning = str(e)
+            show_values(obj, dict(ThreadData.dimensions(None, False, 0.0, 0.0), ThreadReport="", SizeWarning=str(e)))
             raise
 
     def generate_thread(self, obj, tool):
@@ -274,7 +266,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         # external: the radius from the part's outline (where the clearance checks
         # look); internal: the bore face's, as the outline has no bores
         radius = face.Surface.Radius if internal else self.outline_radius(face) or face.Surface.Radius
-        obj.ThreadDiameter = FreeCAD.Units.Quantity(2 * radius, FreeCAD.Units.Length)
+        show_values(obj, {"ThreadDiameter": 2 * radius})
         self.apply_standard(obj)
         found = ThreadData.lookup(obj.ThreadStandard, obj.ThreadSize)
         if found is not None:
@@ -291,7 +283,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                 raise RuntimeError(translate('PathTurn',
                     "The selected diameter ({:.3f}) is already at or past the thread's {} diameter ({:.3f})").format(
                         2 * radius, "major" if internal else "root", 2 * target))
-            obj.ThreadDepth = FreeCAD.Units.Quantity(depth, FreeCAD.Units.Length)
+            show_values(obj, {"ThreadDepth": depth})
             problem = ThreadData.size_problem(major, pitch, internal, 2 * radius)
         else:
             problem, tol, major, pitch, target = None, None, None, obj.Pitch.Value, None
@@ -300,8 +292,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             warning = "The selected diameter ({:.3f}) is {} of {} {}".format(
                 2 * radius, problem, obj.ThreadStandard, obj.ThreadSize)
             FreeCAD.Console.PrintWarning("{}: {}\n".format(obj.Label, warning))
-        if obj.SizeWarning != warning:
-            obj.SizeWarning = warning
+        show_values(obj, {"SizeWarning": warning})
 
         op = LLT.ThreadOP()
         op.set_params(self.getProps(obj))
@@ -345,24 +336,13 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
                 n, " + {} spring".format(obj.SpringPasses) if obj.SpringPasses else "", cuts[0], cuts[-1],
                 "diameter" if internal else "root diameter",
                 2 * (radius + depths[-1]) if internal else 2 * (radius - depths[-1]))
-            if obj.PassSchedule != schedule:
-                obj.PassSchedule = schedule
             report = self.report(obj, internal, radius, major, pitch, tol, depths[-1], n, cuts,
                                  abs(op.z_drive - op.z_front), op.z_front, op.z_back, op.run_out)
-            if getattr(obj, "ThreadReport", None) is not None and obj.ThreadReport != report:
-                obj.ThreadReport = report
-            self.show_dimensions(obj, ThreadData.dimensions(tol, internal, radius, depths[-1]))
+            show_values(obj, dict(ThreadData.dimensions(tol, internal, radius, depths[-1]),
+                                  PassSchedule=schedule, ThreadReport=report))
             used = {"Passes": n, "FirstPassDepth": cuts[0], "LeadIn": abs(op.z_drive - op.z_front),
                     "ThreadLength": abs(op.z_front - op.z_back), "RunOut": op.run_out}
-            for switch, prop, _ in AUTO_VALUES:
-                if getattr(obj, switch):
-                    continue
-                current = getattr(obj, prop)
-                if prop == "Passes":
-                    if current != used[prop]:
-                        setattr(obj, prop, used[prop])
-                elif abs(current.Value - used[prop]) > 1e-7:
-                    setattr(obj, prop, FreeCAD.Units.Quantity(used[prop], FreeCAD.Units.Length))
+            show_values(obj, {prop: used[prop] for switch, prop, _ in AUTO_VALUES if not getattr(obj, switch)}, tol=1e-7)
         flank = dict(INFEEDS).get(obj.Infeed, 29.5) > 0
         run_out = (obj.RunOut.Value if getattr(obj, "SetRunOut", False) else obj.Pitch.Value) > 0
         if obj.UseG76 and (flank or run_out):

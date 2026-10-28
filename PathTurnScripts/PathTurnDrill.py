@@ -188,8 +188,7 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
                       "The tip" if obj.DepthToTip else "The full diameter", back, depth, front)]
         report += ["Note: " + n for n in notes]
         text = "\n".join(report)
-        if obj.DrillReport != text:
-            obj.DrillReport = text
+        PathTurnBase.show_values(obj, {"DrillReport": text})
 
 
     @staticmethod

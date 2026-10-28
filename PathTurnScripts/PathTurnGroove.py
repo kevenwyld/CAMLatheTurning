@@ -104,8 +104,7 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
             return getattr(tool, name).Value if hasattr(tool, name) else default
 
         width = tool.Width.Value
-        if abs(obj.OpToolWidth.Value - width) > 1e-9:
-            obj.OpToolWidth = width
+        PathTurnBase.show_values(obj, {"OpToolWidth": width})
         # Step Over defaults to an expression of the insert width (see
         # opSetDefaultValues). Expressions are evaluated before execute, so
         # evaluate it here with the width just set, in case the tool changed.
@@ -133,8 +132,8 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
         turning = length("TurningDepth")
         auto_step = 0.9 * turning if turning > 0 else 0.5 * width
         step_down = obj.StepDown.Value if getattr(obj, "SetStepDown", False) else auto_step
-        if not getattr(obj, "SetStepDown", False) and abs(obj.StepDown.Value - auto_step) > 1e-9:
-            obj.StepDown = FreeCAD.Units.Quantity(auto_step, FreeCAD.Units.Length)
+        if not getattr(obj, "SetStepDown", False):
+            PathTurnBase.show_values(obj, {"StepDown": auto_step})
         op.set_params(dict({'strategy': "side_turn" if getattr(obj, "Strategy", "Plunge") == "Side-turn" else "plunge",
                             'step_down': step_down}, **self.peck_params(obj)))
         op.add_stock(PathTurnHelpers.getliblatheBoundBox(self.stock_silhoutte.BoundBox))

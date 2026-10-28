@@ -192,9 +192,8 @@ class ObjectOp(PathOp.ObjectOp):
     def show_lead_in(self, obj, op):
         '''The lead-in liblathe worked out, in the (greyed) field.'''
         used = getattr(op, "lead_in_used", None)
-        if used is not None and hasattr(obj, "LeadIn") and not getattr(obj, "SetLeadIn", False) \
-                and abs(obj.LeadIn.Value - used) > 1e-9:
-            obj.LeadIn = FreeCAD.Units.Quantity(used, FreeCAD.Units.Length)
+        if used is not None and not getattr(obj, "SetLeadIn", False):
+            show_values(obj, {"LeadIn": used})
 
     def clearance_values(self, obj):
         '''(retract, radial clearance) the op uses: as set, or worked out.'''
@@ -211,9 +210,9 @@ class ObjectOp(PathOp.ObjectOp):
     def show_clearance_values(self, obj):
         '''The worked-out values in the (greyed) fields.'''
         retract, clearance = self.clearance_values(obj)
-        for switch, prop, value in (("SetRetract", "Retract", retract), ("SetRadialClearance", "RadialClearance", clearance)):
-            if hasattr(obj, prop) and not getattr(obj, switch) and abs(getattr(obj, prop).Value - value) > 1e-9:
-                setattr(obj, prop, FreeCAD.Units.Quantity(value, FreeCAD.Units.Length))
+        show_values(obj, {prop: value for switch, prop, value in (
+            ("SetRetract", "Retract", retract), ("SetRadialClearance", "RadialClearance", clearance))
+            if hasattr(obj, prop) and not getattr(obj, switch)})
 
     # pecking on plunges (Turn Groove, Turn Groove-Turn, Turn Partoff)
     uses_pecking = False
@@ -311,13 +310,11 @@ class ObjectOp(PathOp.ObjectOp):
             vc, source = TurnFeedsSpeeds.surface_speed(tc.Tool, job, self.css_op_type)
             if vc is None:
                 why, source, vc = source, translate("TurnPath", "none found"), 0.0
-            if abs(obj.SurfaceSpeed - vc) > 1e-9:
-                obj.SurfaceSpeed = vc
-        if obj.SurfaceSpeedSource != source:
-            obj.SurfaceSpeedSource = source
+            show_values(obj, {"SurfaceSpeed": vc})
+        show_values(obj, {"SurfaceSpeedSource": source})
         machine_max = TurnFeedsSpeeds.machine_max_rpm(job)
-        if not obj.SetMaxSpindleSpeed and abs(obj.MaxSpindleSpeed - machine_max) > 1e-9:
-            obj.MaxSpindleSpeed = machine_max
+        if not obj.SetMaxSpindleSpeed:
+            show_values(obj, {"MaxSpindleSpeed": machine_max})
         self.show_css_modes(obj)
         if not obj.ConstantSurfaceSpeed:
             return
@@ -489,22 +486,21 @@ class ObjectOp(PathOp.ObjectOp):
         '''opExecute(obj) ... processes all Base features
         '''
         # a refusal from an earlier recompute no longer applies
-        if getattr(obj, "LastRefusal", None):
-            obj.LastRefusal = []
+        show_values(obj, {"LastRefusal": []})
         # the Job's models and stock must be round about the spindle axis
         TurnSpindleAxis.report_off_axis(obj, PathUtils.findParentJob(obj))
         PathLog.track()
         self.tool = None
         # worked out unless set by hand: Max Diameter the stock's, Min
         # Diameter none (0: the op follows the part); shown in the fields
+        shown = {}
         if not getattr(obj, "SetMaxDiameter", True):
             stock = self.stock_diameter(obj)
-            if stock is not None and abs(obj.MaxDiameter.Value - stock) > 1e-9:
-                obj.MaxDiameter = FreeCAD.Units.Quantity(stock, FreeCAD.Units.Length)
+            if stock is not None:
+                shown["MaxDiameter"] = stock
         if not getattr(obj, "SetMinDiameter", True):
-            auto = self.auto_min_diameter(obj)
-            if abs(obj.MinDiameter.Value - auto) > 1e-9:
-                obj.MinDiameter = FreeCAD.Units.Quantity(auto, FreeCAD.Units.Length)
+            shown["MinDiameter"] = self.auto_min_diameter(obj)
+        show_values(obj, shown)
         self.minDia = obj.MinDiameter.Value
         self.maxDia = obj.MaxDiameter.Value
 
@@ -545,8 +541,7 @@ class ObjectOp(PathOp.ObjectOp):
             self.apply_css(obj)
         except Refusal as refusal:
             # for the panel's Generate anyway (and kept with the document)
-            if hasattr(obj, "LastRefusal") and list(obj.LastRefusal) != [refusal.check, str(refusal)]:
-                obj.LastRefusal = [refusal.check, str(refusal)]
+            show_values(obj, {"LastRefusal": [refusal.check, str(refusal)]})
             raise
 
     def getProps(self, obj):
@@ -629,8 +624,7 @@ class ObjectOp(PathOp.ObjectOp):
         # field), so nothing beyond the bore (e.g. the part's front face) is cut
         self.bore_r = void.BoundBox.XMax
         if not getattr(obj, "SetMaxDiameter", False):
-            if abs(obj.MaxDiameter.Value - 2 * self.bore_r) > 1e-9:
-                obj.MaxDiameter = FreeCAD.Units.Quantity(2 * self.bore_r, FreeCAD.Units.Length)
+            show_values(obj, {"MaxDiameter": 2 * self.bore_r})
             self.maxDia = 2 * self.bore_r
         mirrored = void.mirror(V(R / 2, 0, 0), V(1, 0, 0))
         part2d = rect.cut(mirrored)
@@ -837,6 +831,34 @@ class ObjectOp(PathOp.ObjectOp):
         Called after the receiver has been fully created with all properties.
         Should be overwritten by subclasses.'''
         pass  # pylint: disable=unnecessary-pass
+
+
+def show_values(obj, values, tol=1e-9):
+    """Write the worked-out values that changed ({property: value}, lengths in mm). An object
+    not touched before is purged after, so showing them does not ask for another recompute."""
+    touched = "Touched" in (getattr(obj, "State", None) or ())
+    wrote = False
+    for prop, value in values.items():
+        if not hasattr(obj, prop):
+            continue
+        current = getattr(obj, prop)
+        if hasattr(current, "Value"):
+            if abs(current.Value - value) <= tol:
+                continue
+            value = FreeCAD.Units.Quantity(value, FreeCAD.Units.Length)
+        elif isinstance(current, float):
+            if abs(current - value) <= tol:
+                continue
+        elif isinstance(current, (list, tuple)):
+            if list(current) == list(value):
+                continue
+        elif current == value:
+            continue
+        setattr(obj, prop, value)
+        wrote = True
+    if wrote and not touched and hasattr(obj, "purgeTouched"):
+        obj.purgeTouched()
+    return wrote
 
 
 # a turning insert's parameters and the liblathe Tool setters that take them
