@@ -23,12 +23,9 @@
 # ***************************************************************************
 
 import FreeCAD
-import Path
 import PathTurnScripts.PathTurnBase as PathTurnBase
 import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
 from PySide import QtCore
-
-import PathTurnScripts.PathTurnAddonHelpers as PathTurnHelpers
 
 import liblathe.op.profile as LLP
 
@@ -97,7 +94,6 @@ class ObjectTurnProfile(PathTurnBase.ObjectOp):
     def opSetDefaultValues(self, obj, job):
         obj.OpStartDepth = job.Stock.Shape.BoundBox.ZMax
         obj.OpFinalDepth = job.Stock.Shape.BoundBox.ZMin
-        print('opSetDefaultValues:', obj.OpStartDepth.Value, obj.OpFinalDepth.Value)
 
     def opUpdateDepths(self, obj):
         # the selected geometry sets the Z range, otherwise the whole stock

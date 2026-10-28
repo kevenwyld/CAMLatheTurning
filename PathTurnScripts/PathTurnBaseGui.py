@@ -703,10 +703,6 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
     '''Page controller class for turning operations '''
 
     def taskPanelDiametersPage(self, obj, features):
-        '''The Diameters page with its from-selection buttons working.'''
-        return TaskPanelTurnDiametersPage(obj, features)
-
-    def taskPanelDiametersPage(self, obj, features):
         '''The Diameters page, with its from-selection buttons and diagram.'''
         return TaskPanelTurnDiametersPage(obj, features)
 

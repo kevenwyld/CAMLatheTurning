@@ -58,15 +58,16 @@ _UNF_INCH = (
 )
 
 
-def _unified(table):
+def _inch_to_mm(table):
+    """A Unified table (major diameter in inches, threads per inch) in mm."""
     return tuple((name, d * INCH, INCH / tpi) for name, d, tpi in table)
 
 
 TABLES = {
     "Metric coarse": _METRIC_COARSE,
     "Metric fine": _METRIC_FINE,
-    "UNC": _unified(_UNC_INCH),
-    "UNF": _unified(_UNF_INCH),
+    "UNC": _inch_to_mm(_UNC_INCH),
+    "UNF": _inch_to_mm(_UNF_INCH),
 }
 
 

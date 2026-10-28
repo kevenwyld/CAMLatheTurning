@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""GUI for the Turn Groove operation."""
+"""GUI for the Turn Chamfer operation."""
 
 import FreeCAD
 import PathTurnScripts.PathTurnBaseGui as PathTurnBaseGui
@@ -11,7 +11,7 @@ from PySide import QtCore
 
 
 class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
-    '''Page controller class for the Turn Groove operation.'''
+    '''Page controller class for the Turn Chamfer operation.'''
 
     def setOpFields(self, obj):
         '''setFields(obj) ... transfers obj's property values to UI'''

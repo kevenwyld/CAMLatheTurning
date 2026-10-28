@@ -1,5 +1,4 @@
-from PySide import QtGui, QtCore
-from PySide.QtGui import QApplication, QDialog, QMainWindow
+from PySide import QtCore
 
 import FreeCAD, FreeCADGui
 

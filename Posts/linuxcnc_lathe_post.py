@@ -7,7 +7,6 @@ import math
 import re
 
 import FreeCAD
-import Path
 
 from Path.Post.scripts.linuxcnc_post import Linuxcnc
 
@@ -65,9 +64,9 @@ def lathe_word(word, value, command, params, imperial, axis_places):
 
 
 class Linuxcnc_Lathe(Linuxcnc):
-    def __init__(self, job, tooltip=None, tooltipargs=[], units="Metric") -> None:
+    def __init__(self, job, tooltip=None, tooltipargs=None, units="Metric") -> None:
         super().__init__(job=job, tooltip=tooltip or translate("CAM", "LinuxCNC lathe post processor"),
-                         tooltipargs=tooltipargs, units=units)
+                         tooltipargs=[] if tooltipargs is None else tooltipargs, units=units)
 
     def init_values(self, values) -> None:
         super().init_values(values)

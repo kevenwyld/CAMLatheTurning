@@ -3,8 +3,6 @@
 """Turn Thread: single-point threading of the selected cylindrical face (its Z range and
 diameter; a bore is internal) with liblathe's ThreadOP, as G33 passes or one G76 cycle."""
 
-import math
-
 import FreeCAD
 import Path
 import PathTurnScripts.PathTurnBase as PathTurnBase

@@ -32,13 +32,10 @@ import PathScripts.PathUtils as PathUtils
 
 from PySide import QtCore
 
-if FreeCAD.GuiUp:
-    import FreeCADGui
-
+import PathTurnScripts.PathTurnAddonHelpers as PathTurnAddonHelpers  # puts liblathe on sys.path
 from liblathe.base.point import Point
 from liblathe.base.segment import Segment
 from liblathe.base.boundbox import BoundBox
-import PathTurnScripts.PathTurnAddonHelpers as PathTurnAddonHelpers
 import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
 import PathTurnScripts.TurnSpindleAxis as TurnSpindleAxis
 from liblathe.base.tool import Tool
@@ -531,7 +528,6 @@ class ObjectOp(PathOp.ObjectOp):
         # Clear any existing gcode
         obj.Path.Commands = []
 
-        print("Process Geometry")
         self.stock_silhoutte = self.get_stock_silhoutte(obj)
         if self.is_internal(obj):
             self.setup_internal(obj)

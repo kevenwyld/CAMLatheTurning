@@ -24,6 +24,7 @@
 
 import FreeCAD
 import Path
+import PathScripts.PathUtils as PathUtils
 import PathTurnScripts.PathTurnBase as PathTurnBase
 import PathTurnScripts.TurnFeedsSpeeds as TurnFeedsSpeeds
 from PySide import QtCore
@@ -109,16 +110,11 @@ class ObjectTurnPart(PathTurnBase.ObjectOp):
         obj.OpFinalDepth = selected[1] if selected else self.part_back_face(obj)
 
     def part_back_face(self, obj, job=None):
-        job = job or PathUtils_findParentJob(obj)
+        job = job or PathUtils.findParentJob(obj)
         models = job.Model.Group if job is not None and hasattr(job, "Model") else []
         if models:
             return min(m.Shape.BoundBox.ZMin for m in models if hasattr(m, "Shape"))
         return obj.OpStockZMin
-
-
-def PathUtils_findParentJob(obj):
-    import PathScripts.PathUtils as PathUtils
-    return PathUtils.findParentJob(obj)
 
 
 def SetupProperties():
