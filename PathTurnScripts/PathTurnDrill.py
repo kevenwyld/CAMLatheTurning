@@ -1,14 +1,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-Turn Drill: drilling on the spindle axis.
-
-The hole is the selected cylindrical face (Z Range page): its front and back
-give the depth, the drill runs on the axis (X 0). The cycle is a canned one
-(G81 drill, G82 drill with a dwell, G83 peck with full retract, G73 chip
-break), or the same moves written out. Canned cycles drill along the active
-plane's axis, so the program switches to G17 for the cycle and back to G18
-after it: drilling along Z, on a lathe and on a mill used as a lathe alike.
-"""
+"""Turn Drill: drilling on the spindle axis (X 0) with a canned cycle (G81/G82/G83/G73,
+switched to G17 so it drills along Z) or the same moves written out."""
 import math
 
 import FreeCAD
@@ -120,10 +112,8 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
                         return face
         return None
 
-    # The Z range is the hole: Front where it starts, Back where the drill's
-    # full diameter (or its tip, Depth to tip) ends, as Back is for every
-    # operation. Worked out from the selected hole; with nothing selected the
-    # hole starts at the part's front and Back is to be set.
+    # The Z range is the hole: Front where it starts, Back where the drill's full
+    # diameter (or its tip) ends; from the selected hole, else the part's front.
     def opSetDefaultValues(self, obj, job):
         obj.OpStartDepth = obj.OpFinalDepth = self.part_front(obj, job)
 
@@ -205,11 +195,8 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
 
     @staticmethod
     def explicit_moves(code, front, bottom, r_plane, peck, feed, dwell):
-        '''The cycle written out, from the R plane (the drill is there):
-        G83 pecks, backing out to the R plane after each and returning at
-        rapid to just short of where it reached; G73 pecks, backing off a
-        little to break the chip; G81 straight to depth; G82 the same, then a
-        dwell. Back to the R plane at the end.'''
+        '''The cycle as explicit moves from the R plane and back to it: G83 pecks with
+        full retract, G73 pecks backing off CHIP_BREAK, G81 straight in, G82 with a dwell.'''
         out = []
         if code in ("G83", "G73"):
             reached = front                   # the hole starts here

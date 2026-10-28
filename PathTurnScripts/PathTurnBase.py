@@ -429,10 +429,8 @@ class ObjectOp(PathOp.ObjectOp):
         obj.StockToLeaveZ = FreeCAD.Units.Quantity(value, FreeCAD.Units.Length)
 
     def onDocumentRestored(self, obj):
-        # an operation that selects geometry now (Turn Face, since 0.8.0) but
-        # was made before: CAM's restore reads Base's type first, which fails
-        # when there is none (and the rest of the restore with it); it never
-        # adds a missing one
+        # CAM's restore reads Base's type first and fails without one: add it
+        # for ops saved before they selected geometry
         if PathOp.FeatureBaseGeometry & self.opFeatures(obj) and not hasattr(obj, "Base"):
             self.addBaseProperty(obj)
         super().onDocumentRestored(obj)
@@ -465,12 +463,8 @@ class ObjectOp(PathOp.ObjectOp):
                     obj.setExpression(prop, expression)
 
     def depths_from_base(self, obj):
-        '''
-        Z extent of the selected base geometry as (start depth, final depth),
-        or None when nothing is selected. Selecting faces, edges or whole
-        objects (e.g. a sketch or wire) confines Rough and Profile to the Z
-        range they span.
-        '''
+        '''Z extent of the selected base geometry as (start depth, final depth), or
+        None when nothing is selected.'''
         base = getattr(obj, "Base", None)
         if not base:
             return None
@@ -584,10 +578,8 @@ class ObjectOp(PathOp.ObjectOp):
         props['vfeed'] = obj.ToolController.VertFeed.Value or obj.ToolController.HorizFeed.Value
         props['clearance'] = parentJob.SetupSheet.SafeHeightOffset.Value
         if getattr(self, "mirror_r", None) is not None:
-            # boring, in the mirrored space (see setup_internal): the stock's
-            # top is the hole and the inner limit the max diameter (the bore's
-            # largest unless set); the radial clearance and retract are small
-            # (see clearance_values), so the bar stays near the wall it cuts
+            # boring, in the mirrored space (see setup_internal): the stock's top
+            # is the hole and the inner limit the max diameter
             R = self.mirror_r
             props['extra_dia'] = 0.0
             props['min_dia'] = 2 * max(0.0, R - self.maxDia / 2)
@@ -606,15 +598,8 @@ class ObjectOp(PathOp.ObjectOp):
         return props
 
     def get_stock_silhoutte(self, obj):
-        '''
-        Get Stock Silhoutte
-
-        The plane covers the whole stock. The operation's Z limits are passed
-        to liblathe separately, as offsets from the stock ends:
-            start_offset = StartDepth - stock ZMax  (negative: inside the stock)
-            end_offset   = stock ZMin - FinalDepth  (negative: short of the stock end)
-        so liblathe's window runs from StartDepth to FinalDepth.
-        '''
+        '''A plane over the whole stock's XZ section. Also sets startOffset / endOffset,
+        the op's Z limits as offsets from the stock ends (negative: inside the stock).'''
         stockBB = self.stock.Shape.BoundBox
         stock_z_pos = stockBB.ZMax
 
@@ -628,19 +613,8 @@ class ObjectOp(PathOp.ObjectOp):
         return stock_plane
 
     def setup_internal(self, obj):
-        '''
-        Boring is external turning seen in a mirror: the radius r maps to
-        R - r (R the stock's radius), so the bore's surface becomes an outer
-        profile, the hole bored from becomes the stock's top, and the tool
-        comes from outside. liblathe's operations then run unchanged, and
-        lathe_commands() maps their output back.
-
-        The mirrored part is built exactly in the XZ section: a rectangle
-        over the stock's radius and the model's length, minus the model,
-        gives the voids; the one touching the axis is the bore. Reflected
-        about r = R / 2 and taken from the rectangle, it is the mirrored
-        part, revolved into a solid for the outline.
-        '''
+        '''Boring as external turning in a mirror: radius r maps to R - r (R the stock
+        radius), so the bore becomes an outer profile; lathe_commands() maps the output back.'''
         if not getattr(obj, "SetMinDiameter", False) or obj.MinDiameter.Value <= 0:
             raise RuntimeError(translate('PathTurn',
                 "Internal: tick Min Diameter and set it to the hole you are boring from (e.g. the drill size)"))
@@ -704,13 +678,7 @@ class ObjectOp(PathOp.ObjectOp):
         return out
 
     def job_model_shape(self, obj):
-        '''
-        All the Job's models as one shape: on a lathe they share the spindle
-        axis, so their union is what is turned (two bodies making one part,
-        or two parts end to end on one bar). Using only the first, as before,
-        turned straight through the others. A model off the axis cannot be a
-        turned part; the op warns rather than cutting it as if it were round.
-        '''
+        '''All the Job's models fused into one shape: on a lathe their union is what is turned.'''
         shapes = [m.Shape for m in self.model if getattr(m, "Shape", None) is not None and not m.Shape.isNull()]
         if not shapes:
             return self.model[0].Shape
@@ -724,14 +692,8 @@ class ObjectOp(PathOp.ObjectOp):
         return fused
 
     def turned_model(self, obj):
-        '''
-        The model as the operation is to leave it. With Min Diameter set by
-        hand, Rough, Profile and Turn Groove turn to it across the Z range:
-        one diameter there, cut into the model where it is bigger, left at
-        Min Diameter where the model is smaller (as a milling op leaves a
-        floor at its final depth). The outline they follow, and check their
-        paths against, is then the target, arcs and all outside the range.
-        '''
+        '''The model as the op leaves it: with Min Diameter set by hand, the model cut to
+        that diameter across the Z range (and filled up to it where smaller).'''
         model = self.job_model_shape(obj)
         if not (self.turns_to_min_diameter and getattr(obj, "SetMinDiameter", False) and self.minDia > 0):
             return model
@@ -745,10 +707,7 @@ class ObjectOp(PathOp.ObjectOp):
         base = FreeCAD.Vector(0, 0, z_lo)
         tube = Part.makeCylinder(r_out, z_hi - z_lo, base).cut(Part.makeCylinder(r_in, z_hi - z_lo, base))
         turned = model.cut(tube)
-        # where the model is smaller than Min Diameter the op leaves it at Min
-        # Diameter (as a milling op leaves a floor at its final depth): one
-        # diameter across the range, within the model's own length (nothing
-        # is built in front of or behind it)
+        # fill up to Min Diameter where the model is smaller, within its own length
         f_lo, f_hi = max(z_lo, model.BoundBox.ZMin), min(z_hi, model.BoundBox.ZMax)
         if f_hi - f_lo > 1e-6:
             turned = turned.fuse(Part.makeCylinder(r_in, f_hi - f_lo, FreeCAD.Vector(0, 0, f_lo))).removeSplitter()
@@ -905,18 +864,9 @@ class ObjectOp(PathOp.ObjectOp):
 
 
 def chain_profile(items, tol=1e-4):
-    """
-    Order and orient outline edges into one continuous chain for liblathe.
-
-    items: list of dicts with keys
-        p0, p1 : (x, z) end points, in the edge's own (arbitrary) direction
-        mid    : (x, z) point at the middle of the edge, or None for lines
-        angle  : included angle in radians for arcs (positive), 0 for lines
-    Returns a list of (start, end, signed_angle) running from the front of
-    the part (X=0, max Z) to the back, with arc angles signed in liblathe's
-    convention (positive = anticlockwise in the Z-horizontal / X-vertical view).
-    Also returns the number of edges that couldn't be chained.
-    """
+    """Chain edge dicts (p0, p1, mid, angle) into [(start, end, signed_angle)] from the
+    front (X=0, max Z) to the back, arc angles in liblathe's sign (positive anticlockwise).
+    Also returns the number of edges that could not be chained."""
     def close(a, b):
         return abs(a[0] - b[0]) < tol and abs(a[1] - b[1]) < tol
 

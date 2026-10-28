@@ -1,33 +1,7 @@
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-"Install Turning Tools" command: copies the addon's turning tool assets into
-the user's CAM asset store.
-
-The CAM tool library only reads its own stores (the user's CamAssets
-directory and FreeCAD's built-in assets), not files inside an addon, and the
-addon metadata has no content type for tool assets. So, like other addons
-that add tools to the user's library, this runs only when the user asks for
-it. It adds:
-
-    Assets/Shape/isoshape.fcstd   ISO turning insert shape
-    Assets/Shape/isoshape.svg     its icon
-    Assets/Bit/CCMT060204R.fctb   example turning insert
-    Assets/Shape/grooving.fcstd   grooving / parting insert shape (+ .svg drawing)
-    Assets/Shape/fullradius.fcstd full radius insert shape (+ .svg drawing)
-    Assets/Shape/threading.fcstd  threading insert shape (+ .svg drawing)
-    Assets/Bit/Threading_60_partial.fctb  example 60 degree threading insert
-    Assets/Bit/Groove_4mm_full_radius.fctb, ZTFD0303.fctb
-                                  example full radius and parting inserts
-    Assets/Bit/GrooveTurn_4mm_lollipop.fctb
-                                  example groove-turn (lollipop) insert
-
-No tool library is written; add the bit to a library of your choice.
-The shapes and their drawings belong to the addon: an installed copy that
-differs from the addon's is replaced, so running the command again after an
-update brings them up to date. Tool bits are the user's and are never
-overwritten.
-"""
+"""Install Turning Tools: copies the addon's tool shapes and example bits (ASSETS) into the
+user's local CAM asset store, which is the only place the tool library reads."""
 
 import pathlib
 
@@ -66,13 +40,8 @@ ADDON_OWNED = ("toolbitshape", "toolbitshapesvg")
 
 
 def refresh_installed_shapes():
-    """
-    Bring the shapes and drawings already in the local CAM store up to date
-    with the addon's (they belong to the addon), adding nothing new and
-    leaving tool bits alone. Run as the CAM workbench loads, so that after an
-    update of the addon its tools are built from its current shapes without
-    running Install Turning Tools again. Returns the relative paths updated.
-    """
+    """Replace installed shapes and drawings that differ from the addon's (run as the CAM
+    workbench loads); adds nothing and leaves tool bits alone. Returns the paths updated."""
     from Path.Tool.assets import AssetUri
     from Path.Tool.camassets import cam_assets
 
@@ -96,13 +65,8 @@ def refresh_installed_shapes():
 
 
 def install_assets():
-    """
-    Add the addon's assets to the local CAM store. Missing assets are added;
-    shapes and drawings that differ from the addon's are replaced (they belong
-    to the addon); tool bits that already exist are left alone.
-    Returns four lists of relative paths: installed, updated, already present,
-    failed.
-    """
+    """Add the addon's assets to the local CAM store: missing ones added, differing shapes
+    replaced, existing bits left alone. Returns (installed, updated, present, failed) paths."""
     from Path.Tool.assets import AssetUri
     from Path.Tool.camassets import cam_assets
 

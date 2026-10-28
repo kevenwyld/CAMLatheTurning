@@ -63,15 +63,8 @@ TOOLBAR = 'Turning'
 
 
 class TurningMenuManipulator:
-    """
-    Adds the turning commands to the CAM menu.
-
-    FreeCAD rebuilds a workbench's menus every time it is activated and
-    removes anything it didn't put there itself, which is why the old
-    Qt-level submenu disappeared after switching workbenches. A workbench
-    manipulator is applied by FreeCAD during every rebuild, so the entries
-    persist.
-    """
+    """Adds the turning commands to the CAM menu. FreeCAD rebuilds menus on every
+    workbench switch; a manipulator is re-applied each time, so the entries persist."""
 
     def modifyMenuBar(self):
         # Result: ... CAM_Pocket3D, Separator, <turning commands>, Separator ...
@@ -90,20 +83,9 @@ FreeCADGui.addWorkbenchManipulator(TurningMenuManipulator())
 
 
 def accept_turning_ops_as_ops():
-    """
-    Let CAM treat the turning operations as operations everywhere it asks.
-
-    CAM's Path.Dressup.Utils.isOp() decides by the module of an object's
-    proxy ("Path.Op..." or "Path.Dressup..."), not by its class, so an
-    addon's operations, though they derive from CAM's ObjectOp, are left
-    out: the context menu's Active toggle, Dressup, Array / Copy, Inspect
-    and Post Selected entries, and dressups and Simple Copy refuse them.
-    Extend it to accept the turning operations too. CAM always calls it
-    through the module, so replacing the function there reaches every use.
-
-    TODO: upstream, isOp() should check isinstance(obj.Proxy,
-    Path.Op.Base.ObjectOp) (and the dressup base); then drop this.
-    """
+    """Patch Path.Dressup.Utils.isOp() to accept the turning operations: it tests the
+    proxy's module name, which leaves addon ops out of CAM's context menu and dressups.
+    TODO: drop once upstream isOp() checks isinstance(obj.Proxy, Path.Op.Base.ObjectOp)."""
     try:
         import Path.Dressup.Utils as DressupUtils
         from PathTurnScripts import PathTurnBase
@@ -132,12 +114,8 @@ TURNING_DRESSUPS = ("CAM_DressupAxisMap", "CAM_DressupPathBoundary", "CAM_Dressu
 
 
 def offer_turning_dressups():
-    """
-    For a selection of turning operations, CAM's context menu offers only
-    the dressups that make sense on a lathe path. CAM's workbench builds
-    the Dressup submenu from its dressupcmds list; while it builds the menu
-    for turning operations, that list is the shorter one.
-    """
+    """Patch CAMWorkbench.ContextMenu so a selection of turning operations is offered
+    only TURNING_DRESSUPS (its dressupcmds list is shortened while the menu is built)."""
     try:
         workbench = FreeCADGui.getWorkbench("CAMWorkbench")
         from PathTurnScripts import PathTurnBase
@@ -168,14 +146,8 @@ offer_turning_dressups()
 
 
 def turning_feed_squawks(sanity):
-    """
-    The turning operations' feed checks, as CAM Sanity squawks: a tool
-    controller with no vertical feed, used by a turning operation. The
-    operations then plunge and enter the cut at the horizontal feed: a
-    CAUTION for a turning insert; a WARNING for a drill or a grooving or
-    parting blade, which plunge with it (as near an error as CAM's squawks
-    go). Turn Thread is fed by the pitch and is not checked.
-    """
+    """CAM Sanity squawks for turning tool controllers with no vertical feed: CAUTION for
+    a turning insert, WARNING for a drill or grooving blade (they plunge with it)."""
     import PathTurnScripts.PathTurnBase as PathTurnBase
     job = getattr(sanity, "job", None)
     if job is None or not hasattr(job, "Operations"):
@@ -237,14 +209,8 @@ add_turning_feed_checks()
 
 
 def release_closed_button_boxes():
-    """
-    CAM's operation task panel keeps the dialog's button box (given to it by
-    modifyStandardButtons) after the dialog and its widgets are deleted.
-    PySide can then hand that dead wrapper out for a new widget at the same
-    address: "QDialogButtonBox has no attribute ..." errors on other
-    widgets, at random. The panel drops its reference as it closes, while
-    the box still exists.
-    """
+    """Patch Path.Op.Gui.Base.TaskPanel.cleanup to drop its reference to the dialog's
+    button box before the widgets are deleted (a stale PySide wrapper otherwise)."""
     try:
         import Path.Op.Gui.Base as PathOpGui
     except Exception:
@@ -283,12 +249,8 @@ feeds_speeds_for_inserts()
 
 
 def add_turning_toolbar():
-    """
-    A Turning toolbar in the CAM workbench, with the same commands as the
-    menu. A workbench declares its toolbars in Initialize(), which FreeCAD
-    runs once, the first time it is activated: CAM's is extended to add this
-    one too, so the toolbar belongs to the CAM workbench and only shows there.
-    """
+    """Patch CAMWorkbench.Initialize to add a Turning toolbar with the menu's commands,
+    so the toolbar belongs to the CAM workbench and only shows there."""
     try:
         workbench = FreeCADGui.getWorkbench("CAMWorkbench")
     except Exception:

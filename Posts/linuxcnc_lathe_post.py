@@ -1,31 +1,7 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-LinuxCNC lathe post processor for the Turning Addon.
-
-CAM's LinuxCNC post, with what a lathe program needs:
-
-- G18 G8 at the start (the XZ plane, radius mode): the turning operations
-  program X as a radius, and many LinuxCNC lathe configurations start in
-  diameter mode (G7), so the program states it rather than relying on the
-  machine's startup code.
-- G33 (spindle-synchronized motion) and G76 (threading cycle) accepted, and
-  G76's Q word (the infeed angle) kept: CAM's LinuxCNC post writes Q only
-  for G10, G64, G73 and G83, which made a G76 infeed radially.
-- G76: J (first pass depth) worked out from K as printed, with six
-  decimals, so LinuxCNC's pass loop makes exactly the passes the path
-  meant (a J rounded down added one a micron short of K); P (pitch)
-  converted for G20, R (degression) not.
-- G33's K and G76's P (pitches) with six decimals.
-- G96 / G97 (constant surface speed) accepted, G96's S (the surface speed,
-  m/min in the path) written in ft/min for an inch program (G20), as G96
-  takes it there, and its D (the maximum spindle speed) in rpm.
-- No up-and-back between operations: each operation ends at the safe
-  position and the next starts from it, so consecutive rapids along Z at
-  the same safe X, with only comments between them, are reduced to the
-  first and the last.
-
-Found by CAM through the <postprocessor> entry in the addon's package.xml.
-"""
+"""LinuxCNC lathe post: CAM's LinuxCNC post plus G18 G8 at the start, G33/G76/G96/G97 with
+their words formatted for a lathe (see lathe_word), and no up-and-back between operations
+(see drop_redundant_rapids). Found by CAM through package.xml."""
 
 import math
 import re
@@ -60,17 +36,9 @@ def _fixed(number, places):
 
 
 def lathe_word(word, value, command, params, imperial, axis_places):
-    """The text of a word (without its letter) this post writes its own way,
-    or None for CAM's formatting:
-
-    - G76: E (taper length) and J, K, I as lengths; J worked out from K as
-      printed so LinuxCNC's pass loop (a pass at J*k^(1/R) while below K,
-      then one at K) makes exactly the passes the path meant; P (pitch) a
-      length with six decimals; R (degression) and Q (infeed angle) not
-      converted.
-    - G33: K (pitch) a length with six decimals.
-    - G96: S (surface speed) m/min, ft/min for an inch program.
-    """
+    """A word's text as this post writes it, or None for CAM's formatting: G76's E/P as lengths
+    (P six decimals), J from K as printed so LinuxCNC makes exactly the passes meant, Q/R not
+    converted; G33's K six decimals; G96's S in ft/min for an inch program."""
     unit = 25.4 if imperial else 1.0
     value = float(value)
     if command == "G76":
@@ -205,15 +173,8 @@ def _rapid_words(line):
 
 
 def drop_redundant_rapids(text):
-    """
-    Within a run of rapids (G0) at the same X, with only comments and blank
-    lines between them, keep the first (out to that X where the tool is) and
-    the last: between them the tool only travels along Z at that X, so going
-    straight from the first to the last drops the detours (an operation's
-    exit to the safe Z and the next operation's return from it). Comments
-    and plane selections (G17-G19) between them move nothing; anything else
-    (a feed move, a tool change, spindle or coolant) ends the run.
-    """
+    """In a run of rapids at the same X (only comments and G17-G19 between them), keep the
+    first and the last: the tool only travels along Z between them. Anything else ends the run."""
     lines = text.split("\n")
     keep = [True] * len(lines)
     run = []           # indexes of the rapids in the current run
@@ -239,12 +200,7 @@ def drop_redundant_rapids(text):
 
 
 def _close(run, lines, keep):
-    """
-    Keep the run's first rapid (it takes the tool out to the run's X at the
-    Z it was at, e.g. out of the cut) and its last; the moves between are
-    along Z at that X, so going from the first straight to the last covers
-    no ground they did not.
-    """
+    """Keep the run's first rapid (out to its X) and its last; drop the moves between."""
     if len(run) < 3:
         return
     z = None

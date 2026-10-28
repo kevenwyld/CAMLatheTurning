@@ -1,17 +1,7 @@
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-Turn Thread: single-point threading with a threading insert (Threading
-shape), external or internal, on the cylindrical face selected on the Z
-Range page. The selection gives the thread's length (its Z range) and the
-diameter it is cut from; whether it is internal or external follows from
-the face (a bore is internal) unless set by hand.
-
-Standard threads (ISO metric coarse and fine, UNC, UNF) fill in the pitch
-and depth; Custom takes them as entered. The passes are made by liblathe's
-ThreadOP: explicit G33 passes by default, which only need
-spindle-synchronized motion, or one G76 cycle on controls that have it.
-"""
+"""Turn Thread: single-point threading of the selected cylindrical face (its Z range and
+diameter; a bore is internal) with liblathe's ThreadOP, as G33 passes or one G76 cycle."""
 
 import math
 
@@ -29,10 +19,8 @@ def translate(context, text, disambig=None):
     return QtCore.QCoreApplication.translate(context, text, disambig)
 
 
-# Values the op works out unless they are set by hand: (switch, value, tooltip).
-# Not set, the value shows what the op uses (read only); set, the op uses it.
-# Passes and First pass depth are alternatives: a first pass and the
-# degression decide the number of passes, so setting one clears the other.
+# Values the op works out unless set by hand: (switch, value, tooltip). Passes and
+# First pass depth are alternatives (see EXCLUSIVE).
 AUTO_VALUES = (
     ("SetThreadLength", "ThreadLength", "Set the thread length by hand; otherwise the whole selected diameter"),
     ("SetPasses", "Passes", "Set the number of infeed passes by hand; otherwise the recommended number for the pitch"),
@@ -243,10 +231,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         return None
 
     def op_generate_gcode(self, obj, tool):
-        '''Thread the selected cylindrical face with liblathe's ThreadOP. When
-        it cannot, the error replaces the report on the page (in red), as
-        well as going to the Report view, so the page never shows a stale
-        report.'''
+        '''Thread the selected face; on failure the error replaces the page's report.'''
         try:
             self.generate_thread(obj, tool)
         except Exception as e:
@@ -261,11 +246,8 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         if face is None:
             raise RuntimeError(translate('PathTurn', "Select the diameter to thread (its cylindrical face) on the Z Range page"))
         internal = self.internal(obj)
-        # an external thread is cut from the surface as the turning
-        # operations see it: the part's outline (a section on +X), which also
-        # places the thread's radius exactly where the clearance checks look,
-        # even for a model a hair off the axis. The outline has no bores, so an
-        # internal thread keeps the bore face's radius.
+        # external: the radius from the part's outline (where the clearance checks
+        # look); internal: the bore face's, as the outline has no bores
         radius = face.Surface.Radius if internal else self.outline_radius(face) or face.Surface.Radius
         obj.ThreadDiameter = FreeCAD.Units.Quantity(2 * radius, FreeCAD.Units.Length)
         self.apply_standard(obj)

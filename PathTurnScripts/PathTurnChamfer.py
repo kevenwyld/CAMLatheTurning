@@ -1,15 +1,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-Turn Chamfer: a chamfer or a fillet at chosen corners of the part.
-
-Select the corners' circular edges (circles round the spindle axis) on the
-Edges page; each gets a chamfer (equal legs: 45 degrees at a square corner)
-or a fillet (an arc tangent to both edges) of the given size, cut by a short
-contour pass round it with nose radius compensation. Only sharp outside
-corners between two straight edges can be chamfered or filleted; others are
-reported and left alone. For every sharp corner at once, use Break edges on
-Turn Rough, Turn Profile or Turn Face instead.
-"""
+"""Turn Chamfer: a chamfer or fillet at the selected circular edges (sharp outside corners
+between straight edges), each cut by a short contour pass with nose radius compensation."""
 import math
 
 import FreeCAD

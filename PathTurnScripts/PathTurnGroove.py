@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-Turn Groove: grooving, parting-off style plunging and both-direction
-finishing with a grooving or parting insert (Grooving shape). The path comes from liblathe's GrooveOP, which drop-cuts the blade's
-actual cutting edge (flat bottom, corner radii, straight flanks) against the
-part, so it can follow a groove's walls in both directions.
-"""
+"""Turn Groove: plunging and both-direction finishing with a grooving or parting insert,
+from liblathe's GrooveOP (a drop cutter of the blade's edge against the part)."""
 
 import FreeCAD
 import Path

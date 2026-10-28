@@ -1,22 +1,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-Constant surface speed (CSS) for the turning operations.
-
-The surface speed comes from CAM's own feeds & speeds data, as CAM's Feeds &
-Speeds dialog finds it, rather than being set on each operation:
-
-1. the best-matching preset on the tool bit (its Feeds & Speeds tab), by the
-   Job's stock material and the operation's type;
-2. else the stock material's Machinability surface speed for the tool's
-   material (HSS or Carbide).
-
-The maximum spindle speed is the first spindle's in the Job's machine
-definition. For a single-point insert, CAM's chipload (per tooth, one
-cutting edge) is the feed per revolution.
-
-Works without the GUI: CAM's adapters are in a Qt dialog module, so the two
-small ones needed here are mirrored.
-"""
+"""Constant surface speed: the surface speed from CAM's feeds & speeds data (the tool's
+preset, else the stock material), the max rpm from the Job's machine. No GUI needed."""
 
 import FreeCAD
 
@@ -123,11 +107,8 @@ def stock_diameter(job):
 
 
 def install_dialog_hook():
-    '''CAM's Feeds & Speeds dialog (the Tool Controller's button) works the
-    rpm out from the tool's Diameter, which for an insert is not a cutting
-    diameter: for the turning tools it uses the stock's diameter, with one
-    cutting edge, so the controller gets the rpm at the stock and a feed of
-    rpm x feed per revolution.'''
+    '''Patch Path.Tool.Gui.FeedsSpeedsDialog.adapt_toolbit so a turning tool's rpm is
+    worked out at the stock's diameter with one cutting edge, not at the insert's.'''
     try:
         import dataclasses
         import Path.Tool.Gui.FeedsSpeedsDialog as dialog

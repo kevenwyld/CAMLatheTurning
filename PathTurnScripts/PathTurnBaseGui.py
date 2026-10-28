@@ -50,24 +50,14 @@ else:
     PathLog.setLevel(PathLog.Level.NOTICE, PathLog.thisModule())
 
 
-# --- selection gate -------------------------------------------------------
-# CAM picks the selection gate for an operation from a fixed table of names
-# (Path.Op.Gui.Selection.select). It lists the original turning operations,
-# but sends them to TURNGate, which only accepts what CAM's drilling test
-# considers a hole, and raises "expected a Face or Edge. Got a Vertex" for
-# every vertex under the pointer; TurnGroove is not listed at all (KeyError).
-# The turning operations use the selection for its Z extent, and accept
-# faces, edges and whole objects, so give them a gate that allows exactly
-# that.
+# Selection gate: CAM's Path.Op.Gui.Selection.select() sends the turning ops to
+# TURNGate (holes only) or fails on unknown names; give them a gate of their own.
 
 TURNING_OPS = ("TurnDrill", "TurnChamfer", "TurnGrooveTurn", "TurnFace", "TurnProfile", "TurnPartoff", "TurnRough", "TurnGroove", "TurnThread")
 
 
-# Everything a page caches that refers to its widgets. Qt deletes the widgets
-# when the panel closes; a Python reference kept past that leaves PySide with
-# a wrapper for freed memory, which it can then hand out for a new object at
-# the same address (seen as a widget of the wrong type, or a crash). Pages
-# drop these in cleanupPage, which CAM calls before the panel is destroyed.
+# Page attributes that refer to widgets: dropped in cleanupPage, before Qt deletes
+# the widgets, so PySide keeps no wrapper for freed memory.
 CACHED_WIDGETS = ("_checks", "_limits", "_limit_buttons", "_cl_boxes", "_diagram", "_lead_box", "_gboxes", "_quantity_boxes", "_boxes",
                   "rangeLabel")
 
@@ -110,12 +100,8 @@ if not getattr(PathSelection.select, "_turning", False):
 
 
 class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
-    '''
-    CAM's Base Geometry page, titled "Z Range", with a note explaining how
-    the turning operations use the selection (only for its extent along Z)
-    and a line showing the resulting front and back and which faces set
-    them.
-    '''
+    '''CAM's Base Geometry page as "Z Range": a note on how the selection is used, the
+    resulting front and back, and the two ends settable by hand.'''
 
     def cleanupPage(self, obj):
         release_widgets(self)
@@ -168,10 +154,8 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
             if limits is not None:
                 layout.addWidget(limits, layout.rowCount(), 0, 1, columns)
 
-    # The Z range's two ends, worked out unless set, as the diameters are:
-    # CAM ties StartDepth / FinalDepth to OpStartDepth / OpFinalDepth (the
-    # selection's extent, or the op's defaults) by an expression; ticking
-    # an end removes it and the value is the user's, unticking restores it.
+    # The Z range's ends: CAM ties StartDepth / FinalDepth to OpStartDepth / OpFinalDepth
+    # by an expression; ticking an end removes it, unticking restores it.
     # (property, checkbox text, tooltip)
     LIMITS = (
         ("StartDepth", "Front (Z)",
@@ -398,13 +382,8 @@ class SvgDiagram(QtGui.QLabel):
 
 
 def selection_z(selection, end):
-    """
-    The Z named by a selection (one feature, or one whole object): a
-    vertex's Z; otherwise the feature's front for the front of the Z range
-    (end == "front") and its back for the back. A flat face square to the
-    axis or a circular edge has one Z; a cylindrical or conical face, or a
-    whole object, gives its front or back end. None for anything else.
-    """
+    """The Z of a single selected feature or object: a vertex's Z, else its bounding
+    box's front (end == "front") or back. None for anything else."""
     if len(selection) != 1:
         return None
     subs = selection[0].SubObjects
@@ -420,13 +399,8 @@ def selection_z(selection, end):
 
 
 def selection_diameter(selection, which):
-    """
-    The diameter named by a selection (one sub-element), measured about the
-    spindle axis (Z): a circular edge or a cylindrical face gives its
-    diameter; a vertex twice its distance from the axis; a flat face with
-    circular edges (e.g. the end of a tube) its inner circle for the minimum
-    (which == "min") and its outer circle for the maximum. None otherwise.
-    """
+    """The diameter about Z of one selected sub-element: a circular edge, cylindrical face,
+    vertex, or a flat face's inner (which == "min") or outer circle. None otherwise."""
     import math
     import Part
     if len(selection) != 1 or len(selection[0].SubObjects) != 1:
@@ -446,14 +420,8 @@ def selection_diameter(selection, which):
 
 
 class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
-    """
-    CAM's Diameters page with its arrow buttons working, as on the Depths
-    page: they transfer the diameter of the selected feature (a circular
-    edge, a cylindrical face, a vertex, or a flat face such as the end of a
-    tube, whose inner circle is the minimum and outer circle the maximum),
-    and a diagram of what the two limits are, in the style of the Heights
-    diagram.
-    """
+    """CAM's Diameters page with working arrow buttons (the selected feature's diameter),
+    Set switches, the radial clearances and a diagram of the limits."""
 
     def cleanupPage(self, obj):
         release_widgets(self)
@@ -482,12 +450,8 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
             "outer circle of a flat face) as the maximum diameter"))
         self.add_switches(form)
         self.add_clearance_rows(form)
-        # The diagram goes in a new row at the bottom of CAM's grid: added, not
-        # moved (moving CAM's widgets, or walking its layout items, gave PySide
-        # wrappers of the wrong type). No container of our own either: one
-        # that carried CAM's widgets by name kept their wrappers alive after
-        # the panel closed, and PySide then handed one out, dead and of the
-        # wrong type, for a new widget at the same address.
+        # a new row at the bottom of CAM's grid: CAM's widgets are not moved or
+        # re-parented (that left PySide with dead wrappers)
         diagram = self.make_diagram()
         layout = form.layout()
         if diagram is not None and layout is not None:
@@ -774,11 +738,8 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         return dict(CHECKS, **ObjectOp.CHECKS)
 
     def add_checks_box(self, form):
-        '''At the top of the page: the check that refused the path, with
-        Generate anyway, and the checks waived, with Restore. Made only once
-        there is a refusal or a waived check (most pages never need it, and
-        every widget a page keeps is one more for PySide to trip on), then
-        hidden when there is nothing to show.'''
+        '''The refusal / waived-checks box at the top of the page (Generate anyway,
+        Restore), made only once there is something to show.'''
         layout = form.layout() if form is not None else None
         if layout is None or not hasattr(self.obj, "IgnoredChecks"):
             return

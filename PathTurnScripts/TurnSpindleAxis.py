@@ -1,17 +1,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-Put a Job's models and stock exactly on the spindle axis (Z).
-
-A turned part must be round about the spindle axis. CAM's Job tools place
-things by bounding boxes (a new cylinder stock on the model's, Center in XY
-in the stock's, Set Origin on a face in the face's), and once a shape has
-been drawn in the 3D view FreeCAD takes its bounding box from the display
-mesh: a revolved surface is meshed from its seam, so the box comes out a few
-microns lopsided in X, and so does whatever is placed by it. Here the axis
-is found exactly instead: a model's from its circles round Z (the largest,
-its turned diameter), else its exact bounding box; the stock's from its
-exact bounding box. Only X and Y are moved, never Z.
-"""
+"""Put a Job's models and stock exactly on the spindle axis (X and Y only): CAM places them
+by display-mesh bounding boxes, a few microns off; the axis is found from circles or exact boxes."""
 
 import math
 

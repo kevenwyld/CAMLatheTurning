@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-Registers an ISO turning-insert toolbit shape with the CAM tool library.
-
-Adapted from FreeCAD PR #22335 (dubstar-04 / knipknap). CAM discovers shape and
-toolbit classes through __subclasses__(), so importing this module is enough to
-register them. The class name must match the Body label in isoshape.fcstd
-("Isoshape"), because that's how CAM resolves a shape file to its class.
-"""
+"""The turning tool shapes (ISO insert, grooving, full radius, threading) for CAM's tool
+library; importing registers them (CAM finds subclasses). Class names match the shape files'
+Body labels. Adapted from FreeCAD PR #22335."""
 
 import FreeCAD
 import Path
@@ -19,11 +14,8 @@ from Path.Tool.toolbit.mixins import CuttingToolMixin
 
 
 def init_turning_toolbit(toolbit, cutting=True):
-    '''Feeds & speeds for an insert, as CAM's end mills have them: Chipload
-    (one cutting edge, so the feed per revolution), and Carbide as the tool
-    material, which inserts nearly always are (a tool's saved Material, read
-    after this, still wins). The threading insert's feed is its pitch: no
-    Chipload.'''
+    '''Cutting properties for an insert: Chipload (one edge: the feed per revolution) and
+    Carbide by default; a threading insert gets no Chipload.'''
     if cutting:
         toolbit._init_cutting_properties(toolbit.obj)
     if getattr(toolbit.obj, "Material", None) == "HSS":
@@ -117,13 +109,8 @@ class ToolBitIso(ToolBit, CuttingToolMixin):
 
 
 class ToolBitShapeGroove(ToolBitShape):
-    """
-    Grooving / parting insert: a blade of width Width whose cutting edge is a
-    flat bottom with CornerRadius at each end (at most half the width), with
-    straight flanks. The shape file draws it from its reference point at the
-    origin: X at the edge's point closest to the axis, Z at the chuck-side
-    flank, the blade extending toward +X and +Z.
-    """
+    """Grooving / parting insert: a blade of Width with CornerRadius at each end, drawn
+    from its reference point (X the edge's point nearest the axis, Z the chuck-side flank)."""
     name = "Grooving"
     aliases = ("grooving", "parting")
 
@@ -178,18 +165,9 @@ class ToolBitGroove(ToolBit, CuttingToolMixin):
 
 
 class ToolBitShapeFullRadius(ToolBitShape):
-    """
-    Full radius insert: a blade of width Width (ISO 13399 CW) ending in a
-    radius of half the width (RE = CW / 2). Behind the head the body is
-    NeckWidth (BW) wide: the width itself gives tangent flanks (with their
-    side relief); less gives a "lollipop" groove-turn insert, a full circle
-    on a narrower neck that clears the cut both ways. SideRelief leans tangent
-    flanks inward from the head (tangent-relieved inserts); a lollipop's neck is
-    straight, as it does not cut. Drawn from the same
-    reference point as the grooving insert (X at the bottom of the radius,
-    Z at the chuck-side flank). GroovingDepth is ISO's CDX, TurningDepth
-    its APMX.
-    """
+    """Full radius insert: a blade of Width ending in a radius of half the width, on a neck
+    of NeckWidth (less than Width: a lollipop) with SideRelief on tangent flanks. Same reference
+    point as the grooving insert; GroovingDepth is ISO CDX, TurningDepth APMX."""
     name = "FullRadius"
     aliases = ("fullradius", "full_radius")
 
@@ -252,12 +230,8 @@ class ToolBitFullRadius(ToolBit, CuttingToolMixin):
 
 
 class ToolBitShapeThreading(ToolBitShape):
-    """
-    Threading insert: a profile of ProfileAngle with TipRadius at its tip.
-    The shape file draws it from its reference point at the origin: the
-    theoretical sharp point of the profile, which thread depths are measured
-    to and Turn Thread programs. The insert extends toward +X.
-    """
+    """Threading insert: a profile of ProfileAngle with TipRadius, drawn from its reference
+    point, the profile's theoretical sharp point (which Turn Thread programs)."""
     name = "Threading"
     aliases = ("threading", "thread")
 

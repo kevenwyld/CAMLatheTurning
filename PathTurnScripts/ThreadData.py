@@ -1,19 +1,8 @@
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: LGPL-2.1-or-later
-"""
-Standard threads for Turn Thread: ISO metric coarse and fine (ISO 261) and
-Unified coarse and fine (UNC, UNF), as major diameter and pitch in mm.
-
-All four use the 60 degree basic profile (ISO 68-1 / ASME B1.1), with
-fundamental triangle height H = 0.866025 P:
-
-  external thread depth  h3 = 17/24 H = 0.61343 P  (from the major diameter)
-  internal thread depth  H1 =  5/8 H  = 0.54127 P  (from the minor diameter)
-  internal minor diameter   D1 = D - 1.08253 P
-
-The depths are to the theoretical sharp point of the threading insert,
-which is where Turn Thread programs it.
-"""
+"""Standard threads (ISO 261 metric, UNC, UNF) as major diameter and pitch in mm, with the
+60 degree basic profile's depths (h3 = 0.61343 P external, H1 = 0.54127 P internal, D1 = D - 1.08253 P)
+measured to the insert's theoretical sharp point."""
 
 EXTERNAL_DEPTH = 0.61343
 INTERNAL_DEPTH = 0.54127
@@ -114,12 +103,8 @@ def target_diameter(major, pitch, internal):
 
 
 def size_problem(major, pitch, internal, diameter):
-    """
-    A short description of how a selected diameter does not fit the size,
-    or None. External threads are turned to the major diameter or a little
-    under it (e.g. 11.701-11.966 for M12x1.75 6g); internal ones bored to
-    the minor diameter or a little over it.
-    """
+    """How a selected diameter does not fit the size (external: the major diameter or a
+    little under; internal: the minor or a little over), or None."""
     allowance = max(0.25, 0.2 * pitch)
     if internal:
         d1 = start_diameter(major, pitch, True)
@@ -135,22 +120,9 @@ def size_problem(major, pitch, internal, diameter):
     return None
 
 
-# ---------------------------------------------------------------------------
-# TODO: take the thread sizes from CAM's tables as well, so there is one set
-# of thread data shared with Thread Milling and new sizes arrive with CAM.
-# Not yet, because CAM's tables (as of FreeCAD 1.x / 27 dev) fall short:
-# - metric internal (6H) has 81 sizes, mostly coarse: few fine pitches, so
-#   most fine internal threads would need Custom (external 6g/4g6g has 175,
-#   fine pitches included, but only to M55);
-# - the internal Unified files name the large sizes "11/2-12", "13/4-5" for
-#   1-1/2-12, 1-3/4-5 (the external files have the latter), so names do not
-#   match between them;
-# - some metric pitches are not ISO 261 ones (e.g. M10 x 1.12, x 1.6).
-# Until then the sizes and pitches are this module's tables, and CAM's are
-# used for the tolerance ranges only. Worth reporting the last two upstream.
-#
-# Tolerance classes, from the tables CAM ships for Thread Milling
-# (Mod/CAM/Data/Threads): crest, pitch and minor diameter ranges per size.
+# Tolerance classes from CAM's Thread Milling tables (Mod/CAM/Data/Threads).
+# TODO: take the sizes from them too, once they have the fine pitches and consistent
+# Unified names (see README, Threading).
 
 BASIC = "Basic (no tolerance)"
 _CLASSES = {  # (internal, unified): classes, the first the default
@@ -193,13 +165,8 @@ def _table(cls):
 
 
 def tolerance(standard, size, internal, cls):
-    """
-    The class's diameter ranges for a size, in mm, or None (no class, or the
-    size is not in CAM's tables): major_min/max, pitch_min/max, minor_min/max.
-    For external threads CAM's minor diameters are the basic profile's flat
-    root (d1 based), not the root an insert cuts (d3); they are not used
-    for the root.
-    """
+    """The class's diameter ranges for a size in mm (major/pitch/minor _min/_max), or None.
+    External minor values are the basic profile's flat root (d1), not the root an insert cuts (d3)."""
     if cls == BASIC or cls not in _FILES:
         return None
     found = lookup(standard, size)
