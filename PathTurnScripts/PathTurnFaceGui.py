@@ -60,7 +60,7 @@ Command = PathOpGui.SetupOperation('TurnFace',
                                    'CAM-TurnFace',
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnFace", "Turn Face"),
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnFace",
-                                                            "Creates a Turning Facing object from a features of a base object"),
+                                                            "Faces the stock down to the part's front or a selected face"),
                                    PathTurnFace.SetupProperties)
 
 FreeCAD.Console.PrintLog("Loading PathTurnFaceGui... done\n")

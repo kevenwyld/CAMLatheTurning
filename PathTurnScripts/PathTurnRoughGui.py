@@ -60,7 +60,7 @@ Command = PathOpGui.SetupOperation('TurnRough',
                                    'CAM-TurnRough',
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnRough", "Turn Rough"),
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnRough",
-                                                            "Creates a Path Turning Roughing object from a features of a base object"),
+                                                            "Roughs the part in passes along Z with a turning insert, outside or boring"),
                                    PathTurnRough.SetupProperties)
 
 FreeCAD.Console.PrintLog("Loading PathTurnRoughGui... done\n")

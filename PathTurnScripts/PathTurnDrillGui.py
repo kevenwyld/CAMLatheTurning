@@ -60,8 +60,8 @@ class TaskPanelOpPage(PathTurnBaseGui.TaskPanelTurnBase):
         if getattr(obj, "DrillReport", ""):
             self.form.drillReport.setText(obj.DrillReport)
         else:
-            self.form.drillReport.setText("Select the hole to drill (its cylindrical face) on the Z Range page, or "
-                                          "tick Back (Z) there and set where the hole ends.")
+            self.form.drillReport.setText("Select the hole (its cylindrical face) on the Z Range page, or "
+                                          "tick Back (Z) there and set the hole's end.")
 
     def updateData(self, obj, prop):
         if prop in ("LastRefusal", "IgnoredChecks"):

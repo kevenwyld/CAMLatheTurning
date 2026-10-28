@@ -43,8 +43,7 @@ class ObjectTurnChamfer(PathTurnBase.ObjectOp):
     def add_corner_properties(self, obj):
         if not hasattr(obj, "CornerType"):
             obj.addProperty("App::PropertyEnumeration", "CornerType", "Chamfer", translate(
-                "TurnPath", "Chamfer (equal legs: 45 degrees at a square corner) or Fillet (an arc tangent to both "
-                            "edges)"))
+                "TurnPath", "Chamfer: equal legs, 45 degrees at a square corner. Fillet: an arc tangent to both edges"))
             obj.CornerType = KINDS
         if not hasattr(obj, "CornerSize"):
             obj.addProperty("App::PropertyLength", "CornerSize", "Chamfer", translate(
@@ -86,8 +85,8 @@ class ObjectTurnChamfer(PathTurnBase.ObjectOp):
     def op_generate_gcode(self, obj, turnTool):
         corners, other = self.selected_corners(obj)
         if other:
-            FreeCAD.Console.PrintWarning("{}: {} selected item(s) are not circular edges round the spindle axis, "
-                                         "and are ignored\n".format(obj.Label, other))
+            FreeCAD.Console.PrintWarning("{}: {} selected item(s) are not circular edges round the spindle axis "
+                                         "and were ignored\n".format(obj.Label, other))
         if not corners:
             raise RuntimeError(translate('PathTurn', "Select the circular edges (the corners) to chamfer or fillet"))
         kind = "fillet" if obj.CornerType == "Fillet" else "chamfer"

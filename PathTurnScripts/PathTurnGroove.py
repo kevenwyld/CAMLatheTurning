@@ -45,13 +45,11 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
     def add_strategy_properties(self, obj):
         if not hasattr(obj, "Strategy"):
             obj.addProperty("App::PropertyEnumeration", "Strategy", "Turn Path", translate(
-                "TurnPath", "Plunge: full-depth plunges side by side. Side-turn: a plunge of one step down, then a "
-                            "pass along Z at that depth, alternating direction, level by level: less tool pressure "
-                            "in wide grooves"))
+                "TurnPath", "Plunge: plunges side by side at full depth. Side-turn: one step down, then a pass "
+                            "along Z, level by level, alternating direction; less tool pressure in wide grooves"))
             obj.Strategy = list(self.STRATEGIES)
             obj.Strategy = self.default_strategy
-        tip = ("Side-turn: depth of each level. Unticked: 90% of the insert's turning depth (half its width without "
-               "one), shown greyed")
+        tip = "Side-turn: depth of each level. Unticked: 90% of the insert's turning depth, or half its width"
         if not hasattr(obj, "StepDown"):
             obj.addProperty("App::PropertyLength", "StepDown", "Turn Path", translate("TurnPath", tip))
         if not hasattr(obj, "SetStepDown"):
@@ -77,9 +75,9 @@ class ObjectTurnGroove(PathTurnBase.ObjectOp):
 
     def add_direction_property(self, obj):
         obj.addProperty("App::PropertyEnumeration", "FinishDirection", "Turn Path",
-                        translate("TurnPath", "In, across and out: down one wall, along the bottom and up the other "
-                                              "(best finish). From each wall to the middle: down each wall and along "
-                                              "the bottom toward the middle"))
+                        translate("TurnPath", "In, across and out: down one wall, along the bottom, up the other "
+                                              "(best finish). From each wall to the middle: down each wall toward "
+                                              "the middle"))
         obj.FinishDirection = list(self.FINISH_DIRECTIONS)
 
     def add_groove_properties(self, obj):

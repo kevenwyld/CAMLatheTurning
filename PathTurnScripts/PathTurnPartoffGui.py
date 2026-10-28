@@ -62,7 +62,7 @@ Command = PathOpGui.SetupOperation('TurnPartoff',
                                    'CAM-TurnPartoff',
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnPartoff", "Turn Partoff"),
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnPartoff",
-                                                            "Parts off at the part's back face (or the selection's) with a parting or grooving insert"),
+                                                            "Parts off at the part's back face with a parting or grooving insert"),
                                    PathTurnPartoff.SetupProperties)
 
 FreeCAD.Console.PrintLog("Loading PathTurnPartoffGui... done\n")

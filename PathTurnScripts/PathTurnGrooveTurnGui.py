@@ -26,8 +26,8 @@ Command = PathOpGui.SetupOperation('TurnGrooveTurn',
                                    'CAM-TurnGrooveTurn',
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnGrooveTurn", "Turn Groove-Turn"),
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnGrooveTurn",
-                                                            "Groove turning (plunge turning) along the whole profile "
-                                                            "with a grooving or full radius insert, in both directions"),
+                                                            "Groove turning along the whole profile with a grooving "
+                                                            "or full radius insert, in both directions"),
                                    PathTurnGrooveTurn.SetupProperties)
 
 FreeCAD.Console.PrintLog("Loading PathTurnGrooveTurnGui... done\n")

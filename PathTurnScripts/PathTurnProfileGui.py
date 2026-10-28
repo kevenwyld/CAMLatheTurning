@@ -58,7 +58,7 @@ Command = PathOpGui.SetupOperation('TurnProfile',
                                    'CAM-TurnProfile',
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnProfile", "Turn Profile"),
                                    QtCore.QT_TRANSLATE_NOOP("PathTurnProfile",
-                                                            "Creates a Path Turning Profile object from a features of a base object"),
+                                                            "Finishes the part's outline with a turning insert, outside or boring"),
                                    PathTurnProfile.SetupProperties)
 
 FreeCAD.Console.PrintLog("Loading PathTurnProfileGui... done\n")

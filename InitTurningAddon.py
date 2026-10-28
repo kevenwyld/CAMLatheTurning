@@ -169,11 +169,11 @@ def turning_feed_squawks(sanity):
         plunging = tool is not None and (PathTurnBase.is_drill_tool(tool) or PathTurnBase.is_grooving_tool(tool))
         where = "Tool Controller '{}' ({})".format(tc.Label, ", ".join(labels))
         if plunging:
-            note = ("{}: No vertical feedrate. A drill or a grooving or parting blade plunges with it: set one. "
-                    "Falling back to horizontal feedrate of {}").format(where, tc.HorizFeed.UserString)
+            note = ("{}: No vertical feedrate; a drill or a grooving or parting blade plunges with it. Set one. "
+                    "Falling back to the horizontal feedrate of {}").format(where, tc.HorizFeed.UserString)
             kind = "WARNING"
         else:
-            note = "{}: No vertical feedrate, falling back to horizontal feedrate of {}".format(where, tc.HorizFeed.UserString)
+            note = "{}: No vertical feedrate, falling back to the horizontal feedrate of {}".format(where, tc.HorizFeed.UserString)
             kind = "CAUTION"
         squawks.append(sanity.squawk("CAMSanity", note, squawkType=kind))
     return squawks

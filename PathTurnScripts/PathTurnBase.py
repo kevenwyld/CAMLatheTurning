@@ -91,27 +91,25 @@ AXIS_TOLERANCE = 0.01
 # Min / Max Diameter are worked out unless set by hand: (switch, value, tooltip)
 DIAMETER_SWITCHES = (
     ("SetMinDiameter", "MinDiameter",
-     "Set Min Diameter by hand: Rough, Profile and Turn Groove then turn to it across the Z range (into the model "
-     "where it is bigger), Face and Partoff stop at it (e.g. a bore). Otherwise no inner limit: the op follows the part"),
+     "Set Min Diameter by hand: Rough, Profile and Turn Groove turn to it; Face and Partoff stop at it. "
+     "Unticked: no inner limit, the op follows the part"),
     ("SetMaxDiameter", "MaxDiameter",
-     "Set Max Diameter by hand: where the material starts (e.g. a surface already turned smaller). Otherwise the stock"),
+     "Set Max Diameter by hand: the diameter the material starts at. Unticked: the stock's diameter"),
 )
 
 # the lift-off between passes and the radial clearance: worked out unless set
 CLEARANCE_SWITCHES = (
     ("SetRetract", "Retract",
-     "Radial lift-off at the end of each pass, beyond the furthest the tool reached. Unset: step over x finish "
-     "passes outside, 0.5 (or a quarter of the hole's radius) when boring"),
+     "Radial lift-off at the end of each pass. Unticked: step over x finish passes, or 0.5 mm when boring"),
     ("SetRadialClearance", "RadialClearance",
-     "Radial distance of the safe position (and radial approaches) from the stock, or from the hole when boring. "
-     "Unset: the Setup Sheet's safe height offset outside, 0.5 (or a quarter of the hole's radius) when boring"),
+     "Radial distance of the safe position from the stock, or from the hole when boring. "
+     "Unticked: the Setup Sheet's safe height offset, or 0.5 mm when boring"),
 )
 BORING_CLEARANCE = 0.5      # mm, and at most a quarter of the hole's radius
 
-STOCK_X_TIP = ("Material to leave radially, per side (on diameters). Negative cuts under the model's size, e.g. "
-               "-0.075 to turn a 12 mm model to 11.85, a thread's major diameter turned to its tolerance")
-STOCK_Z_TIP = ("Material to leave axially (on faces and shoulders). Negative cuts under the model's size, "
-               "moving faces into the part")
+STOCK_X_TIP = ("Material to leave radially, per side. Negative cuts under the model's size "
+               "(-0.075 turns a 12 mm model to 11.85)")
+STOCK_Z_TIP = "Material to leave axially, on faces and shoulders. Negative cuts under the model's size"
 
 
 class ObjectOp(PathOp.ObjectOp):
@@ -157,7 +155,7 @@ class ObjectOp(PathOp.ObjectOp):
         self.add_css_properties(obj)
         self.add_check_properties(obj)
         obj.addProperty("App::PropertyBool", "AllowGrooving", "Turn Path",
-                        translate("TurnPath", "Let the tool follow the part into grooves and undercuts as far as its "
+                        translate("TurnPath", "Follow the part into grooves and undercuts as far as the insert's "
                                               "cutting angle allows"))
 
         obj.StepOver = FreeCAD.Units.Quantity(1.0, FreeCAD.Units.Length)
@@ -187,10 +185,8 @@ class ObjectOp(PathOp.ObjectOp):
         in along Z (Turn Thread has its own, along the thread).'''
         if not self.uses_pass_lead_in:
             return
-        tip = ("How far in front of the Z range's start the passes begin, along Z; 0 enters them radially. "
-               "Unticked: a clearance in front; through the stock in front when the range starts inside the "
-               "stock with only stock there (e.g. a diameter selected up to the part's front); radially when "
-               "part of the model is in front")
+        tip = ("How far in front of the Z range the passes start along Z; 0 enters them radially. "
+               "Unticked: worked out from the stock and part in front of the range")
         if not hasattr(obj, "LeadIn"):
             obj.addProperty("App::PropertyLength", "LeadIn", "Turn Path", translate("TurnPath", tip))
         if not hasattr(obj, "SetLeadIn"):
@@ -237,8 +233,8 @@ class ObjectOp(PathOp.ObjectOp):
     def add_break_edges_properties(self, obj):
         if not self.uses_break_edges:
             return
-        tip = ("Break edges: chamfer every sharp outside corner of the part the finishing pass goes over by this much "
-               "(45 degrees at a square corner). Not inside corners, nor corners already chamfered or filleted")
+        tip = ("Chamfer every sharp outside corner the finishing pass goes over by this much. "
+               "Inside corners and modelled chamfers or fillets are left alone")
         if not hasattr(obj, "BreakEdges"):
             obj.addProperty("App::PropertyBool", "BreakEdges", "Turn Path", translate("TurnPath", tip))
         if not hasattr(obj, "BreakEdgeSize"):
@@ -250,17 +246,16 @@ class ObjectOp(PathOp.ObjectOp):
         see liblathe.base.refusal), and the last refusal, for the panel.'''
         if not hasattr(obj, "IgnoredChecks"):
             obj.addProperty("App::PropertyStringList", "IgnoredChecks", "Turn Path", translate("TurnPath",
-                "Checks waived for this operation: instead of refusing the path, it warns and generates it anyway. "
-                "Use the Generate anyway button on the operation's page, or add a check's name here; remove it to "
-                "restore the check"))
+                "Checks waived for this operation: it warns and generates the path instead of refusing. "
+                "Set with Generate anyway on the operation's page, or edit the names here"))
         if not hasattr(obj, "LastRefusal"):
             obj.addProperty("App::PropertyStringList", "LastRefusal", "Turn Path", translate("TurnPath",
-                "The check that refused the path at the last recompute, and why (empty: none)"))
+                "The check that refused the path at the last recompute, and why"))
         obj.setEditorMode("LastRefusal", 2)
 
     # the addon's own waivable checks, beside liblathe's (liblathe.base.refusal.CHECKS):
     # name -> what the operation does when it is waived
-    CHECKS = {"css-no-max-rpm": "posts G96 without D (the machine's own limit)"}
+    CHECKS = {"css-no-max-rpm": "posts G96 without D, so the machine's own limit applies"}
 
     def refuse(self, obj, check, message):
         '''The addon's own waivable refusals, as liblathe's: raise a Refusal
@@ -273,16 +268,15 @@ class ObjectOp(PathOp.ObjectOp):
 
     CSS_PROPERTIES = (
         ("App::PropertyBool", "ConstantSurfaceSpeed",
-         "Constant surface speed (G96): vary the spindle speed with the cutting diameter to keep the surface speed, "
-         "up to the maximum spindle speed; back to the tool controller's speed (G97) at the end"),
+         "Constant surface speed (G96): the spindle speed follows the cutting diameter, up to Max spindle speed. "
+         "G97 restores the tool controller's rpm at the end"),
         ("App::PropertyFloat", "SurfaceSpeed",
-         "Surface speed for constant surface speed, m/min: the tool's Feeds & Speeds preset for the stock material "
-         "and this kind of operation, else the stock material's for the tool's material (HSS or Carbide), unless set"),
+         "Surface speed, m/min. Unticked: the tool's Feeds & Speeds preset for the stock material, "
+         "else the material's speed for HSS or Carbide"),
         ("App::PropertyBool", "SetSurfaceSpeed", "Set the surface speed by hand"),
         ("App::PropertyString", "SurfaceSpeedSource", "Where the surface speed comes from"),
         ("App::PropertyFloat", "MaxSpindleSpeed",
-         "Maximum spindle speed under constant surface speed, rpm: the Job's machine's (its spindle's maximum), "
-         "unless set, e.g. lower for the workholding or a long part"),
+         "Maximum spindle speed under constant surface speed, rpm. Unticked: the Job's machine's spindle maximum"),
         ("App::PropertyBool", "SetMaxSpindleSpeed", "Set the maximum spindle speed by hand"),
     )
 
@@ -331,17 +325,17 @@ class ObjectOp(PathOp.ObjectOp):
 
         if obj.SurfaceSpeed <= 0:
             raise RuntimeError(translate("TurnPath",
-                "Constant surface speed needs a surface speed: {}. Add a preset with a surface speed on the tool's "
-                "Feeds & Speeds tab, give the Job's stock a material (Job > Stock), or set Surface speed").format(
+                "Constant surface speed needs a surface speed: {}. Add a Feeds & Speeds preset to the tool, "
+                "give the Job's stock a material, or set Surface speed").format(
                     why or translate("TurnPath", "it is set to 0")))
         if obj.MaxSpindleSpeed <= 0:
             self.refuse(obj, "css-no-max-rpm", translate("TurnPath",
-                "Constant surface speed needs a maximum spindle speed, or the spindle runs away near the centre: set "
-                "the spindle's maximum rpm in the Job's machine definition, or set Max spindle speed"))
+                "Constant surface speed needs a maximum spindle speed. Set the spindle's maximum rpm in the Job's "
+                "machine, or set Max spindle speed"))
         rpm = float(tc.SpindleSpeed or 0.0)
         if rpm <= 0:
             raise RuntimeError(translate("TurnPath",
-                "Constant surface speed needs the tool controller's spindle speed: G97 returns to it at the end"))
+                "Constant surface speed needs the tool controller's spindle speed (G97 returns to it)"))
         if obj.SetMaxSpindleSpeed and 0 < machine_max < obj.MaxSpindleSpeed:
             FreeCAD.Console.PrintWarning("{}: {}\n".format(obj.Label, translate("TurnPath",
                 "Max spindle speed ({:.0f} rpm) is above the machine's ({:.0f} rpm)").format(
@@ -371,7 +365,7 @@ class ObjectOp(PathOp.ObjectOp):
                 ("PeckDepth", "App::PropertyLength", "How far each peck feeds in", 2.0),
                 ("PeckRetract", "App::PropertyLength", "How far the tool backs off between pecks", 0.2),
                 ("PeckFullRetract", "App::PropertyBool",
-                 "Retract out of the cut between pecks (clearing the chips), not just back off", False)):
+                 "Retract out of the cut between pecks, not just back off", False)):
             if not hasattr(obj, prop):
                 obj.addProperty(typ, prop, "Pecking", translate("TurnPath", tip))
                 setattr(obj, prop, FreeCAD.Units.Quantity(default, FreeCAD.Units.Length) if typ.endswith("Length") else default)
@@ -386,8 +380,8 @@ class ObjectOp(PathOp.ObjectOp):
         '''Side (External / Internal) for the operations that can bore.'''
         if self.supports_internal and not hasattr(obj, "Side"):
             obj.addProperty("App::PropertyEnumeration", "Side", "Turn Path", translate(
-                "TurnPath", "External turns the outside; Internal bores: it cuts the bore from the hole set as "
-                            "Min Diameter (e.g. the drill size) out to the model, with a boring tool"))
+                "TurnPath", "External turns the outside. Internal bores from the hole set as Min Diameter "
+                            "out to the model, with a boring tool"))
             obj.Side = SIDES
 
     def is_internal(self, obj):
@@ -515,16 +509,16 @@ class ObjectOp(PathOp.ObjectOp):
         self.maxDia = obj.MaxDiameter.Value
 
         if self.minDia >= self.maxDia:
-            raise RuntimeError(translate('PathTurn', "Minimum diameter is equal or greater than maximum diameter"))
+            raise RuntimeError(translate('PathTurn', "Min Diameter must be below Max Diameter"))
 
         # bounding boxes are padded by the modelling tolerance (~1e-7 mm), so a
         # flat face selected on the Z Range page gives a tiny positive range
         if obj.StartDepth.Value - obj.FinalDepth.Value <= 1e-4:
             if self.depths_from_base(obj):
                 raise RuntimeError(translate('PathTurn',
-                    "The selection has no length along Z (e.g. a single shoulder face or circular "
-                    "edge): select geometry at two different Z positions, or set the depths"))
-            raise RuntimeError(translate('PathTurn', "Start depth is equal or less than final depth"))
+                    "The selection has no length along Z. Select geometry at two different Z positions, "
+                    "or set Front and Back by hand"))
+            raise RuntimeError(translate('PathTurn', "Front (Z) must be above Back (Z)"))
 
         self.startOffset = 0
         self.endOffset = 0
@@ -617,7 +611,7 @@ class ObjectOp(PathOp.ObjectOp):
         radius), so the bore becomes an outer profile; lathe_commands() maps the output back.'''
         if not getattr(obj, "SetMinDiameter", False) or obj.MinDiameter.Value <= 0:
             raise RuntimeError(translate('PathTurn',
-                "Internal: tick Min Diameter and set it to the hole you are boring from (e.g. the drill size)"))
+                "Internal: tick Min Diameter and set it to the hole to bore from (the drill size)"))
         model = self.job_model_shape(obj)
         mb = model.BoundBox
         R = max(self.stock.Shape.BoundBox.XLength / 2, mb.XMax, -mb.XMin, mb.YMax, -mb.YMin)
@@ -629,7 +623,7 @@ class ObjectOp(PathOp.ObjectOp):
         rect = Part.Face(Part.makePolygon([V(0, 0, z0), V(R, 0, z0), V(R, 0, z1), V(0, 0, z1), V(0, 0, z0)]))
         voids = [f for f in rect.cut(model).Faces if f.BoundBox.XMin < 1e-6]
         if not voids:
-            raise RuntimeError(translate('PathTurn', "Internal: the model has no bore (nothing open to the axis)"))
+            raise RuntimeError(translate('PathTurn', "Internal: the model has no bore open to the axis"))
         void = voids[0] if len(voids) == 1 else voids[0].fuse(voids[1:])
         # the op works from the hole out to the bore's surface: unless Max
         # Diameter is set, it is the bore's largest diameter (shown in the
@@ -762,7 +756,7 @@ class ObjectOp(PathOp.ObjectOp):
         chain, unchained = chain_profile(items)
         if unchained:
             FreeCAD.Console.PrintWarning(
-                "Turning: %d outline edge(s) are not connected to the main profile and were ignored\n" % unchained)
+                "Turning: %d outline edge(s) not connected to the profile were ignored\n" % unchained)
 
         part_segments = []
         for s, e, signed_angle in chain:
@@ -784,16 +778,15 @@ class ObjectOp(PathOp.ObjectOp):
         '''
         if any(c.Name in ("G1", "G2", "G3", "G33", "G76", "G73", "G81", "G82", "G83") for c in self.commandlist):
             return
-        message = translate('PathTurn', "{}: no path: nothing of the part to cut in the Z range and between the diameters").format(obj.Label)
+        message = translate('PathTurn', "{}: no path: nothing to cut in the Z range between Min and Max Diameter").format(obj.Label)
         part_dia = 2 * max((-seg.start.X for seg in getattr(self, "part_outline", None) or []), default=0.0)
         max_dia = getattr(obj, "MaxDiameter", None)
         # (not for a part only a little off the axis: its outline's side is up to
         # twice that much bigger)
         if max_dia is not None and max_dia.Value > 0 and part_dia > max_dia.Value + 2 * AXIS_TOLERANCE:
             message += translate('PathTurn',
-                ". Max Diameter ({:.3f}) is below the part ({:.3f}): it is where the material starts (a surface already "
-                "turned smaller). To turn to a diameter, tick Min Diameter and set it; to take a fixed amount off, use "
-                "a negative Stock to leave X").format(max_dia.Value, part_dia)
+                ". Max Diameter ({:.3f}) is below the part ({:.3f}); it is where the material starts. "
+                "To turn down to a diameter set Min Diameter, or use a negative Stock to leave X").format(max_dia.Value, part_dia)
         FreeCAD.Console.PrintWarning(message + "\n")
 
     def generate_gcode(self, obj):
@@ -826,16 +819,16 @@ class ObjectOp(PathOp.ObjectOp):
             return
         if is_grooving_tool(opTool):
             raise RuntimeError(translate('PathTurn',
-                "This operation needs a turning insert (ISO Turning Insert shape); "
-                "use Turn Groove for grooving and parting inserts"))
+                "This operation needs a turning insert (ISO Turning Insert shape). "
+                "Grooving and parting inserts are for Turn Groove and Turn Partoff"))
 
         # a turning insert has these; anything else (e.g. CAM's default end
         # mill on a new Job) cannot turn, and would fail obscurely later
         missing = [p for p in ("TipAngle", "EdgeLength", "TipRadius", "Rotation") if not hasattr(opTool, p)]
         if missing:
             raise RuntimeError(translate('PathTurn',
-                "This operation needs a turning insert (ISO Turning Insert shape); the tool controller's tool "
-                "({}) is not one (it has no {})").format(getattr(opTool, "Label", "?"), ", ".join(missing)))
+                "This operation needs a turning insert (ISO Turning Insert shape). "
+                "The tool {} has no {}").format(getattr(opTool, "Label", "?"), ", ".join(missing)))
 
         # create a liblathe tool and assign the toolbit parameters
         turnTool = Tool()

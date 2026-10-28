@@ -49,7 +49,7 @@
       </item>
       <item row="2" column="1">
        <widget class="QComboBox" name="threadType">
-        <property name="toolTip"><string>External or internal; from the selection, a bore is internal</string></property>
+        <property name="toolTip"><string>External or internal. From the selection: a bore is internal</string></property>
 
        </widget>
       </item>
@@ -60,7 +60,7 @@
       </item>
       <item row="3" column="1">
        <widget class="QComboBox" name="toleranceClass">
-        <property name="toolTip"><string>Tolerance class, from CAM's thread tables: the thread is cut so its pitch diameter is in the middle of the class's range. Basic cuts the basic profile.</string></property>
+        <property name="toolTip"><string>Tolerance class from CAM's thread tables: cut so the pitch diameter is mid-range. Basic cuts the basic profile</string></property>
        </widget>
       </item>
       <item row="4" column="0">
@@ -71,7 +71,7 @@
       </item>
       <item row="4" column="1">
        <widget class="Gui::QuantitySpinBox" name="pitch">
-        <property name="toolTip"><string>Thread pitch (from the standard unless Custom)</string></property>
+        <property name="toolTip"><string>Thread pitch, from the standard unless Custom</string></property>
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>
@@ -83,43 +83,43 @@
       </item>
       <item row="5" column="1">
        <widget class="Gui::QuantitySpinBox" name="threadDepth">
-        <property name="toolTip"><string>Radial depth to the insert's theoretical sharp point (from the standard unless Custom)</string></property>
+        <property name="toolTip"><string>Radial depth to the insert's sharp point: from the selected diameter to the standard's root (major if internal); entered for Custom</string></property>
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>
       <item row="6" column="0">
        <widget class="QCheckBox" name="setThreadLength">
-        <property name="toolTip"><string>Set the thread length by hand; otherwise the whole selected diameter, shown greyed out</string></property>
+        <property name="toolTip"><string>Set the thread length by hand. Unticked: the whole selected diameter</string></property>
         <property name="text"><string>Thread length</string></property>
        </widget>
       </item>
       <item row="6" column="1">
        <widget class="Gui::QuantitySpinBox" name="threadLength">
-        <property name="toolTip"><string>Length from the front of the selected diameter</string></property>
+        <property name="toolTip"><string>Length of the thread from the front of the selected diameter. Unticked: its whole length</string></property>
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>
       <item row="7" column="0">
        <widget class="QCheckBox" name="setPasses">
-        <property name="toolTip"><string>Set the number of infeed passes by hand; otherwise the recommended number for the pitch, shown greyed out</string></property>
+        <property name="toolTip"><string>Set the number of infeed passes by hand. Unticked: the recommended number for the pitch</string></property>
         <property name="text"><string>Passes</string></property>
        </widget>
       </item>
       <item row="7" column="1">
        <widget class="Gui::IntSpinBox" name="passes">
-        <property name="toolTip"><string>Infeed passes to full depth</string></property>
+        <property name="toolTip"><string>Infeed passes to full depth. Unticked: the recommended number for the pitch</string></property>
         <property name="minimum"><number>0</number></property><property name="maximum"><number>999</number></property>
        </widget>
       </item>
       <item row="8" column="0">
        <widget class="QCheckBox" name="setFirstPassDepth">
-        <property name="toolTip"><string>Set the first pass depth by hand; otherwise from the passes and the degression, shown greyed out</string></property>
+        <property name="toolTip"><string>Set the first pass depth by hand. Unticked: from the passes and the degression</string></property>
         <property name="text"><string>First pass depth</string></property>
        </widget>
       </item>
       <item row="8" column="1">
        <widget class="Gui::QuantitySpinBox" name="firstPassDepth">
-        <property name="toolTip"><string>Depth of the first pass</string></property>
+        <property name="toolTip"><string>Depth of the first pass. Unticked: from the passes and the degression</string></property>
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>
@@ -143,7 +143,7 @@
       </item>
       <item row="10" column="1">
        <widget class="QDoubleSpinBox" name="degression">
-        <property name="toolTip"><string>How pass depths decrease: 1.5 (default) is gentle, with a light first pass, close to insert makers' tables; 2 removes the same area each pass, the first deepest; 1 the same depth each pass</string></property>
+        <property name="toolTip"><string>How pass depths decrease. 1.5: gentle, with a light first pass. 2: the same area each pass, the first deepest. 1: the same depth each pass</string></property>
         <property name="decimals"><number>2</number></property>
         <property name="minimum"><double>1.000000000000000</double></property>
         <property name="maximum"><double>2.000000000000000</double></property>
@@ -176,31 +176,31 @@
       </item>
       <item row="13" column="0">
        <widget class="QCheckBox" name="setLeadIn">
-        <property name="toolTip"><string>Set the lead-in by hand; otherwise three pitches, shown greyed out</string></property>
+        <property name="toolTip"><string>Set the lead-in by hand. Unticked: three pitches, or less where the part in front leaves less room</string></property>
         <property name="text"><string>Lead-in</string></property>
        </widget>
       </item>
       <item row="13" column="1">
        <widget class="Gui::QuantitySpinBox" name="leadIn">
-        <property name="toolTip"><string>Distance in front of the thread each pass starts at, for Z to reach speed</string></property>
+        <property name="toolTip"><string>Distance in front of the thread each pass starts at, for Z to reach speed. Unticked: three pitches, or less where the part in front leaves less room</string></property>
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>
       <item row="14" column="0">
        <widget class="QCheckBox" name="setRunOut">
-        <property name="toolTip"><string>Set the run-out by hand (0: stop dead, into a relief groove); otherwise one pitch, shown greyed out</string></property>
+        <property name="toolTip"><string>Set the run-out by hand; 0 stops dead, for a relief groove. Unticked: one pitch</string></property>
         <property name="text"><string>Run-out</string></property>
        </widget>
       </item>
       <item row="14" column="1">
        <widget class="Gui::QuantitySpinBox" name="runOut">
-        <property name="toolTip"><string>Over this last length of the thread each pass tapers out to the crest, still synchronised with the spindle, instead of stopping dead at full depth. 0 stops dead (a relief groove)</string></property>
+        <property name="toolTip"><string>Over this last length each pass tapers out to the crest instead of stopping dead at full depth. 0 stops dead, for a relief groove. Unticked: one pitch</string></property>
         <property name="minimum"><double>0.000000000000000</double></property>
        </widget>
       </item>
       <item row="15" column="0" colspan="2">
        <widget class="QCheckBox" name="useG76">
-        <property name="toolTip"><string>Output one G76 threading cycle (controls that have it) instead of explicit G33 passes</string></property>
+        <property name="toolTip"><string>One G76 threading cycle instead of G33 passes, on controls that have it</string></property>
         <property name="text"><string>Use G76 cycle</string></property>
        </widget>
       </item>

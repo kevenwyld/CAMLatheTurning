@@ -90,9 +90,8 @@ def report_off_axis(obj, job):
     for thing, dx, dy in offsets(job):
         FreeCAD.Console.PrintError(translate(
             "PathTurn",
-            "{}: {} is {:.4f} mm off the spindle axis (centre at {:+.4f}, {:+.4f}): a turned part must be round "
-            "about the axis. Use Turning > Put on spindle axis (CAM's Center in XY, Set Origin on a face and new "
-            "stock place by bounding boxes FreeCAD takes from the display mesh, a few microns off)\n").format(
+            "{}: {} is {:.4f} mm off the spindle axis (centre at {:+.4f}, {:+.4f}). A turned part must be round "
+            "about the axis: use Turning > Put on Spindle Axis\n").format(
                 obj.Label, thing.Label, math.hypot(dx, dy), dx, dy))
 
 
@@ -121,9 +120,8 @@ class CommandTurnSpindleAxis:
             "MenuText": QtCore.QT_TRANSLATE_NOOP("CAM_TurnSpindleAxis", "Put on Spindle Axis"),
             "ToolTip": QtCore.QT_TRANSLATE_NOOP(
                 "CAM_TurnSpindleAxis",
-                "Move the Job's models and stock in X and Y so they are exactly round about the spindle axis (Z): "
-                "a model by its turned diameter's circle, the stock by its exact bounding box. Select the Job (or "
-                "anything in it) first if the document has more than one"),
+                "Move the Job's models and stock in X and Y so they are exactly on the spindle axis. "
+                "Select the Job first if the document has more than one"),
         }
 
     def IsActive(self):
@@ -137,7 +135,7 @@ class CommandTurnSpindleAxis:
         title = translate("CAM_TurnSpindleAxis", "Put on Spindle Axis")
         if job is None:
             QtGui.QMessageBox.information(FreeCADGui.getMainWindow(), title, translate(
-                "CAM_TurnSpindleAxis", "Select the Job (or anything in it) to put on the spindle axis"))
+                "CAM_TurnSpindleAxis", "Select the Job to put on the spindle axis"))
             return
         job.Document.openTransaction(title)
         try:
@@ -150,8 +148,8 @@ class CommandTurnSpindleAxis:
         if left:
             lines.append(translate(
                 "CAM_TurnSpindleAxis",
-                "Not moved: {} works its shape out from the models' bounding box on every recompute (Create from "
-                "base). Use cylinder stock for turning, then run this again").format(", ".join(left)))
+                "Not moved: {} is made from the models' bounding box on every recompute (Create from base). "
+                "Use cylinder stock, then run this again").format(", ".join(left)))
         if not lines:
             lines.append(translate("CAM_TurnSpindleAxis", "{}: the models and stock are already on the spindle axis").format(job.Label))
         QtGui.QMessageBox.information(FreeCADGui.getMainWindow(), title, "\n\n".join(lines))

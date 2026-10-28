@@ -109,17 +109,13 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
 
     NOTE = QtCore.QT_TRANSLATE_NOOP(
         "PathTurn",
-        "Turning uses the selection only for its position along the Z axis: the "
-        "operation is limited to the Z range from the front-most to the back-most "
-        "selected face, edge or object (e.g. a sketch or wire), and everything in that "
-        "range is turned, including geometry between them that is not selected. With "
-        "nothing selected, the operation covers the whole stock. Front and Back below "
-        "show the range used; tick either to set it by hand.")
+        "The selection only sets the Z range: everything between the front-most and back-most selected "
+        "face, edge or object is turned. Nothing selected: the whole stock. Tick Front or Back to set it by hand.")
 
     CORNER_NOTE = QtCore.QT_TRANSLATE_NOOP(
         "PathTurn",
-        "Select the circular edges of the corners to chamfer or fillet (circles round the spindle axis). Only "
-        "sharp outside corners between two straight edges can be; the others are reported and left alone.")
+        "Select the circular edges of the corners to chamfer or fillet. Only sharp outside corners between two "
+        "straight edges can be; the others are reported and left alone.")
 
     def getTitle(self, obj):
         if getattr(getattr(obj, "Proxy", None), "selects_corners", False):
@@ -159,17 +155,15 @@ class TaskPanelTurnBaseGeometryPage(PathOpGui.TaskPanelBaseGeometryPage):
     # (property, checkbox text, tooltip)
     LIMITS = (
         ("StartDepth", "Front (Z)",
-         "The front of the Z range. Unticked: the selection's front, or without one the op's own (the stock's "
-         "front), shown greyed out. Ticked: this value, whatever is selected"),
+         "The front of the Z range. Unticked: the selection's front, or the stock's front. Ticked: this value"),
         ("FinalDepth", "Back (Z)",
-         "The back of the Z range. Unticked: the selection's back, or without one the op's own (e.g. the part's "
-         "back), shown greyed out. Ticked: this value, whatever is selected"),
+         "The back of the Z range. Unticked: the selection's back, or the operation's own. Ticked: this value"),
     )
 
     ARROW_TIPS = {
-        "StartDepth": "Transfer the Z of the selected feature as the front: a vertex, a flat face or circular edge, "
+        "StartDepth": "Take the Z of the selected feature as the front: a vertex, flat face, circular edge, "
                       "or the front end of a cylinder, cone or object",
-        "FinalDepth": "Transfer the Z of the selected feature as the back: a vertex, a flat face or circular edge, "
+        "FinalDepth": "Take the Z of the selected feature as the back: a vertex, flat face, circular edge, "
                       "or the back end of a cylinder, cone or object",
     }
 
@@ -432,22 +426,20 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
     # property, field, label, tooltip)
     CLEARANCES = (
         ("setRetract", "SetRetract", "Retract", "retract", "Retract",
-         "Radial lift-off at the end of each pass, beyond the furthest the tool reached. Unticked: step over x "
-         "finish passes outside, 0.5 mm (or a quarter of the hole's radius) when boring, shown greyed out"),
+         "Radial lift-off at the end of each pass. Unticked: step over x finish passes, or 0.5 mm when boring"),
         ("setRadialClearance", "SetRadialClearance", "RadialClearance", "radialClearance", "Radial clearance",
-         "Radial distance of the safe position (and radial approaches) from the stock, or from the hole when "
-         "boring. Unticked: the Setup Sheet's safe height offset outside, 0.5 mm (or a quarter of the hole's "
-         "radius) when boring, shown greyed out"),
+         "Radial distance of the safe position from the stock, or from the hole when boring. "
+         "Unticked: the Setup Sheet's safe height offset, or 0.5 mm when boring"),
     )
 
     def getForm(self):
         form = super().getForm()
         form.startDepthSet.setToolTip(QtCore.QCoreApplication.translate("PathTurn",
-            "Transfer the diameter of the selected feature (a circular edge, cylindrical face, vertex, or the "
-            "inner circle of a flat face such as a tube's end) as the minimum diameter"))
+            "Take the diameter of the selected feature as the minimum: a circular edge, cylindrical face, vertex, "
+            "or a flat ring face's inner circle"))
         form.finalDepthSet.setToolTip(QtCore.QCoreApplication.translate("PathTurn",
-            "Transfer the diameter of the selected feature (a circular edge, cylindrical face, vertex, or the "
-            "outer circle of a flat face) as the maximum diameter"))
+            "Take the diameter of the selected feature as the maximum: a circular edge, cylindrical face, vertex, "
+            "or a flat ring face's outer circle"))
         self.add_switches(form)
         self.add_clearance_rows(form)
         # a new row at the bottom of CAM's grid: CAM's widgets are not moved or
@@ -516,12 +508,10 @@ class TaskPanelTurnDiametersPage(PathOpGui.TaskPanelDiametersPage):
         value out (greyed, showing what it uses); ticked, it uses the value.'''
         layout = form.layout()
         tips = {"setMinDiameter": QtCore.QCoreApplication.translate("PathTurn",
-                    "Set Min Diameter by hand: Rough, Profile and Turn Groove turn to it across the Z range "
-                    "(into the model where it is bigger, left at it where smaller); Face and Partoff stop at it "
-                    "(e.g. a bore). Unticked: no inner limit, the op follows the part"),
+                    "Set Min Diameter by hand: Rough, Profile and Turn Groove turn to it; Face and Partoff stop at it. "
+                    "Unticked: no inner limit, the op follows the part"),
                 "setMaxDiameter": QtCore.QCoreApplication.translate("PathTurn",
-                    "Set Max Diameter by hand: where the material starts (e.g. a surface already turned "
-                    "smaller). Unticked: the stock's diameter")}
+                    "Set Max Diameter by hand: the diameter the material starts at. Unticked: the stock's diameter")}
         for box, _, _, _, label in self.SWITCHES:
             old = getattr(form, label, None)
             if old is None or layout is None or not hasattr(layout, "getItemPosition"):
@@ -752,13 +742,13 @@ class TaskPanelTurnBase(PathOpGui.TaskPanelPage):
         refusal.setWordWrap(True)
         refusal.setStyleSheet("color: #d0453a;")
         generate = QtGui.QPushButton(tr("Generate anyway"))
-        generate.setToolTip(tr("Waive this check for this operation: it warns instead of refusing, and makes the path"))
+        generate.setToolTip(tr("Waive this check for this operation: it warns instead of refusing and makes the path"))
         waived_label = QtGui.QLabel(tr("Checks waived for this operation (generated anyway):"))
         waived = QtGui.QListWidget()
         waived.setMaximumHeight(72)
         waived.setWordWrap(True)
         restore = QtGui.QPushButton(tr("Restore selected check"))
-        restore.setToolTip(tr("The operation checks this again, and refuses the path if it fails"))
+        restore.setToolTip(tr("Check this again, and refuse the path if it fails"))
         for w in (refusal, generate, waived_label, waived, restore):
             v.addWidget(w)
         generate.clicked.connect(lambda _=False: self.generate_anyway())

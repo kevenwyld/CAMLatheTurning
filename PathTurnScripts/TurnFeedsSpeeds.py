@@ -77,12 +77,12 @@ def surface_speed(tool, job, op_type):
         return found.surface_speed, translate("TurnPath", "stock material {} ({} tool)").format(
             material.name or "?", tool_ctx.tool_material)
     if material.name is None:
-        why = translate("TurnPath", "the tool has no Feeds & Speeds preset with a surface speed, and the Job's stock "
+        why = translate("TurnPath", "the tool has no Feeds & Speeds preset with a surface speed and the Job's stock "
                                     "has no material")
     else:
-        why = translate("TurnPath", "the tool has no Feeds & Speeds preset with a surface speed for this kind of "
-                                    "operation and the stock's material ({}), and that material has no surface speed "
-                                    "for a {} tool").format(material.name, tool_ctx.tool_material)
+        why = translate("TurnPath", "the tool has no Feeds & Speeds preset with a surface speed for this operation "
+                                    "and the stock material ({}), which has none for a {} tool").format(
+                                        material.name, tool_ctx.tool_material)
     return None, why
 
 

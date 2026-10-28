@@ -22,15 +22,14 @@ def translate(context, text, disambig=None):
 # Values the op works out unless set by hand: (switch, value, tooltip). Passes and
 # First pass depth are alternatives (see EXCLUSIVE).
 AUTO_VALUES = (
-    ("SetThreadLength", "ThreadLength", "Set the thread length by hand; otherwise the whole selected diameter"),
-    ("SetPasses", "Passes", "Set the number of infeed passes by hand; otherwise the recommended number for the pitch"),
-    ("SetFirstPassDepth", "FirstPassDepth", "Set the first pass depth by hand; otherwise from the passes and the degression"),
-    ("SetLeadIn", "LeadIn", "Set the lead-in by hand; otherwise three pitches, or less where the part in front leaves less room (a neck)"),
-    ("SetRunOut", "RunOut", "Set the run-out by hand (0: stop dead, into a relief groove); otherwise one pitch"),
+    ("SetThreadLength", "ThreadLength", "Set the thread length by hand. Unticked: the whole selected diameter"),
+    ("SetPasses", "Passes", "Set the number of infeed passes by hand. Unticked: the recommended number for the pitch"),
+    ("SetFirstPassDepth", "FirstPassDepth", "Set the first pass depth by hand. Unticked: from the passes and the degression"),
+    ("SetLeadIn", "LeadIn", "Set the lead-in by hand. Unticked: three pitches, or less where the part in front leaves less room"),
+    ("SetRunOut", "RunOut", "Set the run-out by hand; 0 stops dead, for a relief groove. Unticked: one pitch"),
 )
-RUN_OUT_TIP = ("Run-out: over this last length of the thread (along Z) each pass tapers out to the crest, still "
-               "synchronised with the spindle, instead of stopping dead at full depth (G76's E, with L2). 0 stops "
-               "dead, for a thread ending in a relief groove. One pitch unless Set Run Out")
+RUN_OUT_TIP = ("Over this last length each pass tapers out to the crest instead of stopping dead at full depth. "
+               "0 stops dead, for a relief groove. Unticked: one pitch")
 EXCLUSIVE = {"SetPasses": "SetFirstPassDepth", "SetFirstPassDepth": "SetPasses"}
 
 # spindle-synchronized commands, which posts do not list by default
@@ -63,7 +62,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         self.add_auto_switches(obj, migrate=True)
         self.add_tolerance_class(obj)
         for prop, tip in (("PassSchedule", "The passes the thread is cut in (read only)"),
-                          ("SizeWarning", "How the selected diameter does not fit the thread size, if it does not (read only)")):
+                          ("SizeWarning", "Why the selected diameter does not fit the thread size (read only)")):
             if not hasattr(obj, prop):
                 obj.addProperty("App::PropertyString", prop, "Thread", translate("TurnPath", tip))
                 obj.setEditorMode(prop, 1)
@@ -72,8 +71,8 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         '''ToleranceClass (and the ThreadReport), added to older ops too.'''
         if not hasattr(obj, "ToleranceClass"):
             obj.addProperty("App::PropertyEnumeration", "ToleranceClass", "Thread", translate(
-                "TurnPath", "Tolerance class (from CAM's thread tables): the thread is cut so its pitch diameter is "
-                            "in the middle of the class's range; Basic cuts the basic profile"))
+                "TurnPath", "Tolerance class from CAM's thread tables: cut so the pitch diameter is mid-range. "
+                            "Basic cuts the basic profile"))
             try:
                 internal = self.internal(obj)
             except Exception:       # a Job dialog prototype: no selection
@@ -81,8 +80,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             obj.ToleranceClass = ThreadData.classes(getattr(obj, "ThreadStandard", "Metric coarse"), internal)
         if not hasattr(obj, "ThreadReport"):
             obj.addProperty("App::PropertyString", "ThreadReport", "Thread", translate(
-                "TurnPath", "What the thread needs and how it is cut: diameters to turn or bore first, pitch "
-                            "diameter, measurement over wires, root, passes, Z range (read only)"))
+                "TurnPath", "What the thread needs and how it is cut (read only)"))
             obj.setEditorMode("ThreadReport", 1)
 
     def update_classes(self, obj):
@@ -117,36 +115,39 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
     def add_thread_properties(self, obj):
         group = "Thread"
         add = obj.addProperty
-        add("App::PropertyEnumeration", "ThreadStandard", group, translate("TurnPath", "Thread standard, or Custom"))
+        add("App::PropertyEnumeration", "ThreadStandard", group,
+            translate("TurnPath", "Thread standard, or Custom to enter the pitch and depth"))
         add("App::PropertyEnumeration", "ThreadSize", group, translate("TurnPath", "Thread size in the standard"))
         add("App::PropertyEnumeration", "ThreadType", group,
-            translate("TurnPath", "External or internal; from the selection: a bore is internal"))
-        add("App::PropertyLength", "Pitch", group, translate("TurnPath", "Thread pitch (from the standard unless Custom)"))
+            translate("TurnPath", "External or internal. From the selection: a bore is internal"))
+        add("App::PropertyLength", "Pitch", group, translate("TurnPath", "Thread pitch, from the standard unless Custom"))
         add("App::PropertyLength", "ThreadDepth", group,
-            translate("TurnPath", "Radial depth to the insert's theoretical sharp point: for a standard thread from the "
-                                  "selected diameter to the standard's root (or major, internal); entered for Custom"))
+            translate("TurnPath", "Radial depth to the insert's sharp point: from the selected diameter to the "
+                                  "standard's root (major if internal); entered for Custom"))
         add("App::PropertyLength", "ThreadDiameter", group,
             translate("TurnPath", "Diameter the thread is cut from: the selected diameter (read only)"))
         add("App::PropertyInteger", "Passes", group,
-            translate("TurnPath", "Infeed passes to full depth (the recommended number for the pitch unless Set Passes)"))
+            translate("TurnPath", "Infeed passes to full depth. Unticked: the recommended number for the pitch"))
         add("App::PropertyLength", "FirstPassDepth", group,
-            translate("TurnPath", "Depth of the first pass (from the passes and the degression unless Set First Pass Depth)"))
+            translate("TurnPath", "Depth of the first pass. Unticked: from the passes and the degression"))
         add("App::PropertyLength", "MinPassDepth", group, translate("TurnPath", "Smallest depth increase per pass"))
         add("App::PropertyFloat", "Degression", group,
-            translate("TurnPath", "How pass depths decrease: 1.5 (default) is gentle, with a light first pass; 2 removes the same area each pass, the first deepest; 1 the same depth each pass"))
+            translate("TurnPath", "How pass depths decrease. 1.5: gentle, with a light first pass. 2: the same area "
+                                  "each pass, the first deepest. 1: the same depth each pass"))
         add("App::PropertyEnumeration", "Infeed", group,
             translate("TurnPath", "How the insert feeds in: along the flank (29.5 or 30 degrees) or straight in"))
         add("App::PropertyInteger", "SpringPasses", group, translate("TurnPath", "Passes repeated at full depth"))
         add("App::PropertyLength", "LeadIn", group,
-            translate("TurnPath", "Distance in front of the thread each pass starts at, for Z to reach speed (three pitches unless Set Lead In, or less where the part in front of the thread leaves less room, e.g. a thread behind a neck)"))
+            translate("TurnPath", "Distance in front of the thread each pass starts at, for Z to reach speed. "
+                                  "Unticked: three pitches, or less where the part in front leaves less room"))
         add("App::PropertyLength", "ThreadLength", group,
-            translate("TurnPath", "Length of the thread from the front of the selected diameter (its whole length unless Set Thread Length)"))
+            translate("TurnPath", "Length of the thread from the front of the selected diameter. Unticked: its whole length"))
         add("App::PropertyString", "PassSchedule", group,
             translate("TurnPath", "The passes the thread is cut in (read only)"))
         add("App::PropertyString", "SizeWarning", group,
-            translate("TurnPath", "How the selected diameter does not fit the thread size, if it does not (read only)"))
+            translate("TurnPath", "Why the selected diameter does not fit the thread size (read only)"))
         add("App::PropertyBool", "UseG76", group,
-            translate("TurnPath", "Output one G76 threading cycle (controls that have it) instead of explicit G33 passes"))
+            translate("TurnPath", "One G76 threading cycle instead of G33 passes, on controls that have it"))
         obj.setEditorMode("ThreadDiameter", 1)
         obj.setEditorMode("PassSchedule", 1)
         obj.setEditorMode("SizeWarning", 1)
@@ -342,13 +343,12 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
         if obj.UseG76 and (flank or run_out):
             lost = []
             if flank:
-                lost.append("Q word (the infeed angle: the control then feeds in radially)")
+                lost.append("Q (the infeed angle: the control feeds in radially)")
             if run_out:
-                lost.append("E word through a machine definition (the run-out: the control then pulls "
-                            "straight out at the thread's end)")
+                lost.append("E (the run-out: the control pulls straight out at the end)")
             FreeCAD.Console.PrintWarning(
-                "{}: CAM's own posts drop G76's {}. Post with the addon's linuxcnc_lathe post, which keeps them, "
-                "or use the explicit passes (Use G76 cycle off)\n".format(obj.Label, "; and ".join(lost)))
+                "{}: CAM's own posts drop G76's {}. Use the addon's linuxcnc_lathe post, or turn Use G76 cycle "
+                "off\n".format(obj.Label, " and ".join(lost)))
 
     def report(self, obj, internal, radius, major, pitch, tol, depth, n, cuts, lead, z_front, z_back, run_out=0.0):
         '''What the thread needs and how it is cut, for the page: one item a
@@ -404,7 +404,7 @@ class ObjectTurnThread(PathTurnBase.ObjectOp):
             lines.append("Full depth to Z {}, then a run-out ({} long) out to the crest at Z {}".format(
                 pos(z_back + run_out), pos(run_out), pos(z_back)))
         else:
-            lines.append("No run-out: the passes stop dead at Z {} (a relief groove there)".format(pos(z_back)))
+            lines.append("No run-out: the passes stop dead at Z {}".format(pos(z_back)))
         return "\n".join(lines)
 
     def outline_radius(self, face):

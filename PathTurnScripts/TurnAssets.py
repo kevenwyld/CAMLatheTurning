@@ -105,7 +105,7 @@ class CommandTurnInstallTools:
             "MenuText": QtCore.QT_TRANSLATE_NOOP("CAM_TurnInstallTools", "Install Turning Tools"),
             "ToolTip": QtCore.QT_TRANSLATE_NOOP(
                 "CAM_TurnInstallTools",
-                "Add the turning insert shape and an example turning tool bit to your CAM tool assets",
+                "Add the addon's turning tool shapes and example bits to your CAM tool assets",
             ),
         }
 
@@ -125,8 +125,8 @@ class CommandTurnInstallTools:
             lines.append(translate("CAM_TurnInstallTools", "Failed (see Report view):") + "\n  " + "\n  ".join(failed))
         lines.append(translate(
             "CAM_TurnInstallTools",
-            "Add the example bit to a tool library, or create your own bits from the "
-            "ISO Turning Insert shape. Reopen the tool library to see the changes."))
+            "Add the example bits to a tool library, or make your own from the shapes. "
+            "Reopen the tool library to see them."))
         QtGui.QMessageBox.information(
             FreeCADGui.getMainWindow(),
             translate("CAM_TurnInstallTools", "Install Turning Tools"),

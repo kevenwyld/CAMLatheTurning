@@ -82,22 +82,21 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
             return False
 
         if add("App::PropertyEnumeration", "Cycle",
-               "Peck (G83): back out of the hole after each peck; Chip break (G73): back off a little; "
-               "Drill (G81): straight to depth; Dwell (G82): to depth, then a dwell"):
+               "Peck (G83) backs out of the hole after each peck. Chip break (G73) backs off a little. "
+               "Drill (G81) goes straight to depth. Dwell (G82) pauses at the bottom"):
             obj.Cycle = CYCLES
         if add("App::PropertyLength", "PeckDepth", "Depth of each peck (Peck and Chip break)"):
             obj.PeckDepth = FreeCAD.Units.Quantity(2.0, FreeCAD.Units.Length)
         if add("App::PropertyFloat", "DwellTime", "Seconds at the bottom (Dwell)"):
             obj.DwellTime = 0.5
         if add("App::PropertyLength", "RetractHeight",
-               "Distance in front of the hole where each peck starts and the drill retracts to (the R plane)"):
+               "Distance in front of the hole where pecks start and the drill retracts to (the R plane)"):
             obj.RetractHeight = FreeCAD.Units.Quantity(1.0, FreeCAD.Units.Length)
         add("App::PropertyBool", "DepthToTip",
-            "Drill to the tip: the drill's point reaches Back (Z). Off (default): its full diameter does, so the "
-            "point goes deeper by its length")
+            "On: the drill's point reaches Back (Z). Off: its full diameter does, so the point goes deeper "
+            "by its length")
         if add("App::PropertyBool", "UseCannedCycle",
-               "Write the cycle as a canned cycle (G81/G82/G83/G73, in G17, then back to G18); off: the same "
-               "moves written out"):
+               "Write a canned cycle (G81/G82/G83/G73 in G17, then back to G18). Off: the same moves written out"):
             obj.UseCannedCycle = True
         if add("App::PropertyString", "DrillReport", "What is drilled and how (read only)"):
             obj.setEditorMode("DrillReport", 1)
@@ -136,13 +135,13 @@ class ObjectTurnDrill(PathTurnBase.ObjectOp):
         if hole is not None:
             axis_offset = math.hypot(hole.Surface.Center.x, hole.Surface.Center.y)
             if axis_offset > 0.01 or abs(abs(hole.Surface.Axis.z) - 1) > 1e-6:
-                raise RuntimeError(translate('PathTurn', "The selected hole is not on the spindle axis: Turn Drill drills on the axis"))
+                raise RuntimeError(translate('PathTurn', "The selected hole is not on the spindle axis; Turn Drill only drills on the axis"))
         front, back = obj.StartDepth.Value, obj.FinalDepth.Value
         depth = front - back
         if depth <= 1e-6:
             raise RuntimeError(translate('PathTurn',
-                "Select the hole to drill (its cylindrical face) on the Z Range page, or tick Back (Z) there and set "
-                "where the hole ends"))
+                "Select the hole (its cylindrical face) on the Z Range page, or tick Back (Z) there and set "
+                "the hole's end"))
         d = tool.Diameter.Value
         tip_angle = tool.TipAngle.Value
         tip = (d / 2) / math.tan(math.radians(tip_angle) / 2) if 0 < tip_angle < 180 else 0.0

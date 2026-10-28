@@ -188,14 +188,14 @@ class ToolBitShapeFullRadius(ToolBitShape):
             ),
             "NeckWidth": (
                 FreeCAD.Qt.translate("ToolBitShape",
-                                     "Width of the body behind the head (ISO BW): the width itself for tangent "
-                                     "flanks, less for a lollipop groove-turn insert"),
+                                     "Body width behind the head (ISO BW): the width for tangent flanks, "
+                                     "less for a lollipop groove-turn insert"),
                 "App::PropertyLength",
             ),
             "SideRelief": (
                 FreeCAD.Qt.translate("ToolBitShape",
-                                     "Flank relief (α) for tangent flanks (Neck width = Width): they lean inward by "
-                                     "this angle from the head. A lollipop's neck is straight: it does not cut"),
+                                     "Relief angle of tangent flanks (Neck width = Width), leaning inward from "
+                                     "the head. A lollipop's neck is straight"),
                 "App::PropertyAngle",
             ),
             "Diameter": (

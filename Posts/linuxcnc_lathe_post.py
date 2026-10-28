@@ -153,9 +153,8 @@ class Linuxcnc_Lathe(Linuxcnc):
 
     @property
     def tooltip(self):
-        return translate("CAM", "LinuxCNC lathe post processor: G18 G8 (radius mode), G33 and G76 threading, "
-                                "G96 constant surface speed, "
-                                "no up-and-back between operations")
+        return translate("CAM", "LinuxCNC lathe post: G18 G8 radius mode, G33 and G76 threading, "
+                                "G96 constant surface speed, no up-and-back between operations")
 
 
 _MODAL_ONLY = re.compile(r"^(?:N\d+\s+)?G1[789]$")
