@@ -117,11 +117,18 @@ class Linuxcnc_Lathe(Linuxcnc):
         self._lathe_preamble()
         super()._expand_prefix(postables)
 
-    def export(self):
-        sections = super().export()
+    @staticmethod
+    def _trimmed(sections):
         if not sections:
             return sections
         return [(name, drop_redundant_rapids(text) if isinstance(text, str) else text) for name, text in sections]
+
+    def export(self):
+        return self._trimmed(super().export())
+
+    def export2(self):
+        # the machine-based path (the Post Process dialog with a machine definition) too
+        return self._trimmed(super().export2())
 
     @property
     def tooltip(self):
