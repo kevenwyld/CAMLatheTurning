@@ -42,8 +42,16 @@ The ranges come from CAM's `Mod/CAM/Data/Threads` tables, converted to mm for Un
 
 ## Tool shapes
 
-Each shape is drawn with the insert's top (rake) face on the centre line, and the path is
-programmed to its reference point.
+Each shape's origin is its reference point (below), the point the path is programmed to,
+in the plane of the insert's top (rake) face: the rake face is Y = 0, and the insert and its
+holder lie on the +Y side of it. This is in the shape's geometry; the tool's Placement is the
+identity, so a reader can take `tool.Shape` as it is. The cutting outline is the section just
+inside the rake face, at a small positive Y (e.g. +0.01).
+
+Older tools in documents differ until rebuilt (CAM menu > Rebuild Turning Tool Models): made
+before 0.17.4, the rake face is at Y -1 (`isoshape`) or the insert spans Y -1.5 to +1.5 (the
+others), identity Placement; made with 0.17.4 to 0.18.0, the geometry is as before 0.17.4 and
+the tool's Placement moves it by +1 or +1.5 in Y.
 
 | ShapeID | Shape | Reference point |
 |---|---|---|
