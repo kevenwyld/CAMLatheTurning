@@ -121,6 +121,13 @@ themselves are brought up to date in your store whenever the CAM workbench
 loads; a copy of yours that differs is kept in
 `Backup/CAMLatheTurning` in your CAM asset folder (the Report view says where).
 
+Tools already in a document keep the 3D model they were made with. **Rebuild
+Turning Tool Models** (CAM menu, at the end of the turning commands; no
+toolbar button) rebuilds them from the current shapes, keeping their values:
+the selected tool controllers or tools, every tool of a selected Job, or with
+nothing selected every turning tool in the document. Tool controllers,
+operations and paths are unchanged.
+
 * **ISO turning insert**: TipAngle, EdgeLength, TipRadius (the nose radius),
   Rotation. Programmed to the imaginary tip.
 * **Grooving**: Width, CornerRadius (at most half the width), GroovingDepth

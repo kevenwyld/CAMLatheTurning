@@ -42,6 +42,7 @@ from PathTurnScripts import PathTurnRoughGui  # noqa: F401
 from PathTurnScripts import PathTurnToolHelperGui  # noqa: F401
 from PathTurnScripts import TurnAssets  # noqa: F401
 from PathTurnScripts import TurnSpindleAxis  # noqa: F401
+from PathTurnScripts import TurnToolRebuild  # noqa: F401
 from PathTurnScripts import cam_patches
 
 __dir__ = os.path.dirname(__file__)
@@ -55,6 +56,9 @@ FreeCADGui.addIconPath(iconPath)
 COMMANDS = ['CAM_TurnFace', 'CAM_TurnDrill', 'CAM_TurnRough', 'CAM_TurnProfile', 'CAM_TurnChamfer', 'CAM_TurnGroove', 'CAM_TurnGrooveTurn', 'CAM_TurnThread', 'CAM_TurnPartoff',
             'CAM_TurnSpindleAxis', 'CAM_TurnToolHelper',
             'CAM_TurnInstallTools']
+
+# in the menu only, after the others (no toolbar button)
+MENU_ONLY = ['CAM_TurnRebuildTools']
 
 # Existing CAM command to insert after. It only exists in the CAM workbench's
 # menu, so the manipulator is a no-op in every other workbench.
@@ -70,7 +74,7 @@ class TurningMenuManipulator:
         # Result: ... CAM_Pocket3D, Separator, <turning commands>, Separator ...
         items = []
         previous = ANCHOR
-        for cmd in COMMANDS:
+        for cmd in COMMANDS + MENU_ONLY:
             # chain each insert after the previous one to keep the order
             items.append({"insert": cmd, "menuItem": previous, "after": ""})
             previous = cmd
